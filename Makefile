@@ -23,8 +23,6 @@ $(JINC)/util.h
 jmgc: jmgc.cpp $(JMG_HEADERS)
 	$(CXX) $(CXXFLAGS) $< -o $@
 
-test_safe_types: test/test_safe_types.cpp $(JMG_HEADERS)
-	$(CXX) -o test_safe_types $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main
 test_conversion: test/test_conversion.cpp $(JMG_HEADERS)
 	$(CXX) -o test_conversion $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main
 
@@ -39,3 +37,6 @@ test_ptree: test/test_ptree.cpp $(JMG_HEADERS)
 
 #experiments: experiments.cpp $(JMG_HEADERS)
 #	$(CXX) $(CXXFLAGS) $< -o $@
+test_safe_types: test/test_safe_types.cpp $(JMG_HEADERS)
+	$(CXX) -o test_safe_types $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main
+
