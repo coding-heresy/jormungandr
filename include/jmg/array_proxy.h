@@ -15,7 +15,11 @@ template<typename ProxiedItrT, typename ValueProxyT>
 class AdaptingConstItrProxy
 {
 public:
+  using difference_type = ptrdiff_t;
   using value_type = ValueProxyT;
+  using pointer = ValueProxyT*;
+  using reference = ValueProxyT&;
+  using iterator_category = std::input_iterator_tag;
 
   AdaptingConstItrProxy() = delete;
   explicit AdaptingConstItrProxy(ProxiedItrT&& itr) : itr_(std::move(itr)) {}

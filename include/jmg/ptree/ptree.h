@@ -143,6 +143,11 @@ class ElementsItrProxy
 public:
   using ProxiedItr = boost::property_tree::ptree::const_iterator;
   using Base = AdaptingConstItrProxy<ProxiedItr, T>;
+  using difference_type = Base::difference_type;
+  using value_type = Base::value_type;
+  using pointer = Base::pointer;
+  using reference = Base::reference;
+  using iterator_category = Base::iterator_category;
 
   explicit ElementsItrProxy(ProxiedItr&& itr) : Base(std::move(itr)) {
     maybeSkipAttr();
