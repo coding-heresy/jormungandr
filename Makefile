@@ -8,6 +8,7 @@ JINC := include/jmg
 
 JMG_HEADERS := \
 $(JINC)/array_proxy.h \
+$(JINC)/conversion.h \
 $(JINC)/field.h \
 $(JINC)/file_util.h \
 $(JINC)/meta.h \
@@ -23,6 +24,8 @@ jmgc: jmgc.cpp $(JMG_HEADERS)
 
 test_safe_types: test/test_safe_types.cpp $(JMG_HEADERS)
 	$(CXX) -o test_safe_types $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main
+test_conversion: test/test_conversion.cpp $(JMG_HEADERS)
+	$(CXX) -o test_conversion $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main
 
 test_meta: test/test_meta.cpp $(JMG_HEADERS)
 	$(CXX) -o test_meta $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main
