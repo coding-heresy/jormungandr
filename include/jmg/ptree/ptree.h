@@ -70,7 +70,7 @@ struct ElementAttr {};
  * structured as XML
  */
 template<typename... Fields>
-struct Object : ObjectDef<ElementTag, Fields...>
+class Object : public ObjectDef<ElementTag, Fields...>
 {
 public:
   using adapted_type = boost::property_tree::ptree::value_type;
@@ -80,7 +80,7 @@ public:
     : node_(&node) {}
 
   /**
-   * Delegate for jmg::get()
+   * delegate for jmg::get()
    */
   template<RequiredField FldT>
   auto get() const {
@@ -97,7 +97,7 @@ public:
   }
 
   /**
-   * Delegate for jmg::try_get()
+   * delegate for jmg::try_get()
    */
   template<OptionalField FldT>
   std::optional<typename FldT::type> try_get() const {
