@@ -36,6 +36,37 @@ template<typename T>
 concept TypeList = isTypeList<T>();
 
 ////////////////////////////////////////////////////////////////////////////////
+// concept for numeric types
+////////////////////////////////////////////////////////////////////////////////
+template<typename T>
+concept NumericT = std::integral<T> || std::floating_point<T>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for string-like types
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct IsStringLikeImpl { using type = std::false_type; };
+
+template<>
+struct IsStringLikeImpl<std::string> { using type = std::true_type; };
+
+template<>
+struct IsStringLikeImpl<std::string_view> { using type = std::true_type; };
+
+template<>
+struct IsStringLikeImpl<char*> { using type = std::true_type; };
+} // namespace detail
+
+template<typename T>
+using IsStringLikeT = meta::_t<detail::IsStringLikeImpl<std::remove_cvref_t<T>>>;
+
+template<typename T>
+concept StringLikeT = IsStringLikeT<T>{}();
+
+////////////////////////////////////////////////////////////////////////////////
 // replacements for meta::front and meta::back that work on empty lists
 ////////////////////////////////////////////////////////////////////////////////
 
