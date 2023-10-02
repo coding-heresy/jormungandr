@@ -5,3 +5,4 @@ test_meta
 test_object
 test_ptree
 test_safe_types
+test_conversion
