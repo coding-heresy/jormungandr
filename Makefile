@@ -15,6 +15,7 @@ $(JINC)/meta.h \
 $(JINC)/object.h \
 $(JINC)/preprocessor.h \
 $(JINC)/ptree/ptree.h \
+$(JINC)/quickfix/quickfix.h \
 $(JINC)/safe_types.h \
 $(JINC)/union.h \
 $(JINC)/util.h
