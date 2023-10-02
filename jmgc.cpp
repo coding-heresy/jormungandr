@@ -21,6 +21,11 @@ using namespace jmg;
 using namespace std;
 namespace xml = ptree::xml;
 
+namespace
+{
+constexpr string_view kEnumTypeSuffix = "Enum";
+}
+
 namespace quickfix_spec
 {
 constexpr string_view kTopLevelTag = "fix";
@@ -141,7 +146,7 @@ class AllFixData
     for (const auto& field : fields) {
       const auto& fieldTag = jmg::get<ptree::xml::ElementTag>(field);
       if (kFixGroup == fieldTag) {
-	cout << "WARNING: skipping 'group' element of message definition for ["
+	cerr << "WARNING: skipping 'group' element of message definition for ["
 	     << name << "]\n";
 	continue;
       }
@@ -203,9 +208,23 @@ public:
    */
   void processEnum(const string& fieldName, const string& fieldType,
 		   const auto& enumValues) {
-    bool isCharValue = false;
+    char delim = '\'';
+    EnumType enumType = EnumType::kInt;
     if (kCharFieldTypes_.count(fieldType)) {
-      isCharValue = true;
+      if (("STRING" == fieldType)
+	  && (enumValues.size() > 1)
+	  && (enumValues.end() !=
+	      // TODO fix proxy iterator and array to allow ranges to be used
+	   find_if(enumValues.begin(), enumValues.end(),
+		   [&](const auto& enumVal) {
+		     return jmg::get<EnumValue>(enumVal).size() > 1;
+		   }))) {
+	enumType = EnumType::kString;
+	delim = '"';
+      }
+      else {
+	enumType = EnumType::kChar;
+      }
     }
     else {
       JMG_ENFORCE("INT" == fieldType, "unexpected type [" << fieldType
@@ -213,7 +232,8 @@ public:
     }
     auto [entry, inserted] = enums_.insert({fieldName, {}});
     JMG_ENFORCE(inserted, "duplicate enumerations for field [" << fieldName << "]");
-    auto& values = value_of(*entry);
+    std::get<0>(value_of(*entry)) = enumType;
+    auto& values = std::get<1>(value_of(*entry));
     for (const auto& enumVal : enumValues) {
       const auto& tag = jmg::get<ptree::xml::ElementTag>(enumVal);
       JMG_ENFORCE(kEnumValue == tag, "unexpected XML tag [" << tag
@@ -221,13 +241,14 @@ public:
 		  << fieldName << "]");
       const auto& rawValue = jmg::get<EnumValue>(enumVal);
       ostringstream value;
-      if (isCharValue) {
-	value << "'";
+      if (EnumType::kInt != enumType) {
+	value << delim;
       }
       value << rawValue;
-      if (isCharValue) {
-	value << "'";
+      if (EnumType::kInt != enumType) {
+	value << delim;
       }
+      // TODO add the first field of the tuple indicating the base type of CHAR, STRING or INT
       values.push_back({ .value = value.str(), .name = jmg::get<EnumDescription>(enumVal) });
     }
   }
@@ -267,11 +288,25 @@ public:
    * emit C++ text output
    */
   void emit() {
-    cout << "// enumerations\n\n";
-    for (const auto& [name, values] : enums_) {
-      cout << "enum class " << name << "Values {\n";
-      for (const auto& spec : values) {
-	cout << "  k" << spec.name << " = " << spec.value << ",\n";
+    cout << "#pragma once\n";
+    cout << "#include \"jmg/quickfix/quickfix.h\"\n";
+    cout << "\nnamespace jmg\n{\n";
+    cout << "\n// enumerations\n\n";
+    for (const auto& [name, def] : enums_) {
+      string prefix = "";
+      string term = ",";
+      if (EnumType::kString == std::get<0>(def)) {
+	cout << "struct " << name << kEnumTypeSuffix << " {\n";
+	prefix = "inline static const std::string ";
+	term = ";";
+      }
+      else {
+	cout << "enum class " << name << kEnumTypeSuffix
+	     << " : " << ((EnumType::kInt == std::get<0>(def)) ? "uint8_t"s : "char"s)
+	     << " {\n";
+      }
+      for (const auto& spec : std::get<1>(def)) {
+	cout << "  " << prefix << "k" << spec.name << " = " << spec.value << term << "\n";
       }
       cout << "};\n";
     }
@@ -290,14 +325,15 @@ public:
 	cout << value_of(*entry);
       }
       else {
-	cout << key_of(*enumEntry) << "Values";
+	cout << key_of(*enumEntry) << kEnumTypeSuffix;
       }
       cout << ";\n";
       // TODO not all fields should be required at all times but this
       // brings up the thorny question of fields being required in
       // some messages and not in others...
       cout << "  using required = std::true_type;\n";
-      cout << "  constexpr unsigned kFixTag = " << spec.tag << ";\n";
+      cout << "  static constexpr uint32_t kFixTag = " << spec.tag << ";\n";
+      cout << "  using FixType = FIX::" << name << ";\n";
       cout << "};\n\n";
     }
     cout << "\n// message header\n\n";
@@ -312,10 +348,11 @@ public:
 
     cout << "\n// messages\n\n";
     for (const auto& [name, fields] : msgs_) {
-      cout << "using " << name << " = meta::list<MsgHeader,";
+      cout << "using " << name << " = jmg::quickfix::Object<MsgHeader,";
       ranges::copy(fields, ostream_iterator<string>(cout, ","));
       cout << "MsgTrailer>;\n";
     }
+    cout << "\n} // namespace jmg\n";
   }
 
 private:
@@ -349,6 +386,10 @@ private:
     string value;
     string name;
   };
+  enum class EnumType : uint8_t {
+    kChar, kString, kInt
+  };
+  using EnumSpec = tuple<EnumType, vector<FieldEnumeration>>;
 
   // translation from type string in the XML declaration to the
   // appropriate C++ type
@@ -360,7 +401,7 @@ private:
   vector<string> headerFields_;
   vector<string> trailerFields_;
   unordered_map<string, FieldSpec> fields_;
-  unordered_map<string, vector<FieldEnumeration>> enums_;
+  unordered_map<string, EnumSpec> enums_;
   unordered_map<string, vector<string>> msgs_;
 };
 
