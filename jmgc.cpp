@@ -14,7 +14,7 @@
 #include "jmg/meta.h"
 #include "jmg/object.h"
 #include "jmg/preprocessor.h"
-#include "jmg/ptree_object.h"
+#include "jmg/ptree/ptree.h"
 #include "jmg/util.h"
 
 using namespace jmg;
