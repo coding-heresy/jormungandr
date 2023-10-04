@@ -51,7 +51,9 @@ TEST(PtreeTests, TestXmlPtreeDataRetrieval) {
     EXPECT_EQ("test"s, jmg::get<TopLevelAttribute>(topLvl));
     {
       size_t ctr2 = 0;
-      for (const auto& rec : jmg::get<Records>(topLvl)) {
+      const auto& recs = jmg::get<Records>(topLvl);
+      EXPECT_EQ(2, recs.size());
+      for (const auto& rec : recs) {
 	EXPECT_EQ("string"s, jmg::get<RecordValueType>(rec));
 	if (!ctr2) {
 	  EXPECT_EQ("foo"s, jmg::get<RecordValue>(rec));

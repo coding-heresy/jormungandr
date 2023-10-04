@@ -2,7 +2,8 @@
 CXX := g++
 # TODO extra system paths should be configurable via environment
 # variable
-CXXFLAGS := -std=c++20 -isystem /home/bd/install/include -Iinclude -Wall -Werror
+CXXFLAGS := -g -std=c++20 -isystem /home/bd/install/include -Iinclude -Wall -Werror -fconcepts-diagnostics-depth=10
+LIBS := -L/home/bd/install/lib
 
 JINC := include/jmg
 
@@ -22,6 +23,9 @@ $(JINC)/util.h
 
 jmgc: jmgc.cpp $(JMG_HEADERS)
 	$(CXX) $(CXXFLAGS) $< -o $@
+
+test_array_proxy: test/test_array_proxy.cpp $(JMG_HEADERS)
+	$(CXX) $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main
 
 test_conversion: test/test_conversion.cpp $(JMG_HEADERS)
 	$(CXX) -o test_conversion $(CXXFLAGS) $< -o $@ -lgtest -lgtest_main

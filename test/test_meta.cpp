@@ -31,56 +31,65 @@ TEST(MetaprogrammingTests, TestTypeListConcept) {
 }
 
 TEST(MetaprogrammingTests, TestPolicyResolver) {
-  struct BasePolicy1 {};
-  struct DefaultPolicy1 : BasePolicy1 {};
-  struct OptionalPolicy1 : BasePolicy1 {};
+  struct Policy1Tag {};
+  struct DefaultPolicy1 : Policy1Tag {};
+  struct OptionalPolicy1 : Policy1Tag {};
 
-  struct BasePolicy2 {};
-  struct DefaultPolicy2 : BasePolicy2 {};
-  struct OptionalPolicy2 : BasePolicy2 {};
+  struct Policy2Tag {};
+  struct DefaultPolicy2 : Policy2Tag {};
+  struct OptionalPolicy2 : Policy2Tag {};
 
+  using AllTags = meta::list<Policy1Tag, Policy2Tag>;
   {
     using AllDefaultPolicies = meta::list<>;
     EXPECT_TRUE((is_same_v<DefaultPolicy1,
-		 PolicyResolverT<BasePolicy1,
+		 PolicyResolverT<Policy1Tag,
 		 DefaultPolicy1,
+		 AllTags,
 		 AllDefaultPolicies>>));
     EXPECT_TRUE((is_same_v<DefaultPolicy2,
-		 PolicyResolverT<BasePolicy2,
+		 PolicyResolverT<Policy2Tag,
 		 DefaultPolicy2,
+		 AllTags,
 		 AllDefaultPolicies>>));
   }
   {
     using Default1Optional2 = meta::list<OptionalPolicy2>;
     EXPECT_TRUE((is_same_v<DefaultPolicy1,
-		 PolicyResolverT<BasePolicy1,
+		 PolicyResolverT<Policy1Tag,
 		 DefaultPolicy1,
+		 AllTags,
 		 Default1Optional2>>));
     EXPECT_TRUE((is_same_v<OptionalPolicy2,
-		 PolicyResolverT<BasePolicy2,
+		 PolicyResolverT<Policy2Tag,
 		 DefaultPolicy2,
+		 AllTags,
 		 Default1Optional2>>));
   }
   {
     using Optional1Default2 = meta::list<OptionalPolicy1>;
     EXPECT_TRUE((is_same_v<OptionalPolicy1,
-		 PolicyResolverT<BasePolicy1,
+		 PolicyResolverT<Policy1Tag,
 		 DefaultPolicy1,
+		 AllTags,
 		 Optional1Default2>>));
     EXPECT_TRUE((is_same_v<DefaultPolicy2,
-		 PolicyResolverT<BasePolicy2,
+		 PolicyResolverT<Policy2Tag,
 		 DefaultPolicy2,
+		 AllTags,
 		 Optional1Default2>>));
   }
   {
     using AllOptionalPolicies = meta::list<OptionalPolicy1, OptionalPolicy2>;
     EXPECT_TRUE((is_same_v<OptionalPolicy1,
-		 PolicyResolverT<BasePolicy1,
+		 PolicyResolverT<Policy1Tag,
 		 DefaultPolicy1,
+		 AllTags,
 		 AllOptionalPolicies>>));
     EXPECT_TRUE((is_same_v<OptionalPolicy2,
-		 PolicyResolverT<BasePolicy2,
+		 PolicyResolverT<Policy2Tag,
 		 DefaultPolicy2,
+		 AllTags,
 		 AllOptionalPolicies>>));
   }
 }

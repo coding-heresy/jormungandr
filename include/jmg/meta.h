@@ -99,26 +99,8 @@ template<TypeList T>
 using safe_back = meta::_t<detail::safe_back_<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// support code for using policies to configure class templates at
-// compile time
+// helper metafunctions for checking list membership
 ////////////////////////////////////////////////////////////////////////////////
-
-// TODO find some way to detect when a policy in PolicyList doesn't
-// resolve to any policy
-namespace detail
-{
-template<typename BasePolicy, typename DefaultPolicy, TypeList PolicyList>
-struct PolicyResolver
-{
-  using Recognizer = meta::bind_front<meta::quote<std::is_base_of>, BasePolicy>;
-  using SearchResult = meta::find_if<PolicyList, Recognizer>;
-  using SearchFailed = meta::empty<SearchResult>;
-  using type = meta::if_<SearchFailed, DefaultPolicy, safe_front<SearchResult>>;
-};
-} // namespace detail
-
-template<typename BasePolicy, typename DefaultPolicy, TypeList PolicyList>
-using PolicyResolverT = meta::_t<detail::PolicyResolver<BasePolicy, DefaultPolicy, PolicyList>>;
 
 namespace detail
 {
@@ -132,6 +114,67 @@ template<typename T, TypeList Lst>
 inline constexpr bool isMemberOfList() {
   return detail::IsMemberOf<T, Lst>{}();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// support code for using policies to configure class templates at
+// compile time
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+using namespace meta::placeholders;
+template<typename T>
+using SubclassOfLambda = meta::lambda<_a, _b, meta::lazy::or_<_a, std::is_base_of<_b, T>>>;
+template<typename T, TypeList Lst>
+using IsSubclassMemberOf = meta::fold<Lst, std::false_type, SubclassOfLambda<T>>;
+template<typename T, TypeList Lst>
+using IsNotSubclassMemberOf = meta::not_<detail::IsSubclassMemberOf<T, Lst>>;
+
+template<TypeList AllTags, TypeList PolicyList>
+struct PolicyCheckerImpl {
+  using NotSubclassPred = meta::bind_back<meta::quote<IsNotSubclassMemberOf>, AllTags>;
+  using SubclassCheckResult = meta::find_if<PolicyList, NotSubclassPred>;
+  using type = meta::empty<SubclassCheckResult>;
+};
+template<TypeList AllTags, TypeList PolicyList>
+using PolicyListValidT = meta::_t<PolicyCheckerImpl<AllTags, PolicyList>>;
+
+template<typename BasePolicy, typename DefaultPolicy, TypeList AllTags, TypeList PolicyList>
+requires (std::is_base_of_v<BasePolicy, DefaultPolicy>
+	  && isMemberOfList<BasePolicy, AllTags>()
+	  && PolicyListValidT<AllTags, PolicyList>{}())
+struct PolicyResolver
+{
+  using Recognizer = meta::bind_front<meta::quote<std::is_base_of>, BasePolicy>;
+  using SearchResult = meta::find_if<PolicyList, Recognizer>;
+  using SearchFailed = meta::empty<SearchResult>;
+  using type = meta::if_<SearchFailed, DefaultPolicy, safe_front<SearchResult>>;
+};
+} // namespace detail
+
+template<typename BasePolicy, typename DefaultPolicy, TypeList AllTags, TypeList PolicyList>
+using PolicyResolverT =
+  meta::_t<detail::PolicyResolver<BasePolicy, DefaultPolicy, AllTags, PolicyList>>;
+
+////////////////////////////////////////////////////////////////////////////////
+// helper macro for concept checking
+////////////////////////////////////////////////////////////////////////////////
+
+#define JMG_MAKE_CONCEPT_CHECKER(name, concept)		\
+  namespace detail##__FILE__ {				\
+    template<typename T>				\
+    struct Is##name {					\
+      static constexpr bool value = false;		\
+    };							\
+    template<concept T>					\
+    struct Is##name<T> {				\
+      static constexpr bool value = true;		\
+    };							\
+  } /* namespace detail##__FILE__ */			\
+  template<typename T>					\
+  inline constexpr bool is##name() {			\
+    return detail##__FILE__::Is##name<T>::value;	\
+  }
 
 ////////////////////////////////////////////////////////////////////////////////
 // type name demangler functions

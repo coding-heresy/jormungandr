@@ -214,8 +214,7 @@ public:
       if (("STRING" == fieldType)
 	  && (enumValues.size() > 1)
 	  && (enumValues.end() !=
-	      // TODO fix proxy iterator and array to allow ranges to be used
-	   find_if(enumValues.begin(), enumValues.end(),
+	      ranges::find_if(enumValues,
 		   [&](const auto& enumVal) {
 		     return jmg::get<EnumValue>(enumVal).size() > 1;
 		   }))) {

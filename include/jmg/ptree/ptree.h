@@ -145,17 +145,25 @@ public:
   using Base = AdaptingConstItrProxy<ProxiedItr, T>;
   using difference_type = Base::difference_type;
   using value_type = Base::value_type;
-  using pointer = Base::pointer;
   using reference = Base::reference;
   using iterator_category = Base::iterator_category;
 
+  ElementsItrProxy() = default;
   explicit ElementsItrProxy(ProxiedItr&& itr) : Base(std::move(itr)) {
     maybeSkipAttr();
   }
 
-  auto operator++() {
+  ElementsItrProxy& operator++() {
     ++Base::itr_;
     maybeSkipAttr();
+    return *this;
+  }
+
+  ElementsItrProxy operator++(int) {
+    auto rslt = *this;
+    ++Base::itr_;
+    maybeSkipAttr();
+    return rslt;
   }
 
 private:
@@ -177,8 +185,21 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 namespace detail
 {
+
+/**
+ * policy that accounts for '<xmlattr>' elements when retrieving the
+ * size of the array
+ */
+template<typename SrcContainerT>
+struct XmlSizePolicy : SizePolicyTag
+{
+  static size_t size(const SrcContainerT* src) {
+    return src->size() - src->count("<xmlattr>");
+  }
+};
+
 template<ObjectDefT Obj>
-struct ElementsArrayFactory
+struct ElementsArrayTypeFactory
 {
   // TODO the result of calling size() and empty() on this proxy for
   // an array of XML elements will generally not agree with the
@@ -186,11 +207,12 @@ struct ElementsArrayFactory
   // XML data handles attributes, which should be fixed eventually
   using ItrProxy = ElementsItrProxy<Obj>;
   using ItrPolicy = ProxiedItrPolicy<boost::property_tree::ptree, ItrProxy>;
-  using type = ArrayProxy<boost::property_tree::ptree, ItrPolicy>;
+  using SzPolicy = XmlSizePolicy<boost::property_tree::ptree>;
+  using type = ArrayProxy<boost::property_tree::ptree, ItrPolicy, SzPolicy>;
 };
 } // namespace detail
 template<ObjectDefT Obj>
-using ElementsArrayT = meta::_t<detail::ElementsArrayFactory<Obj>>;
+using ElementsArrayT = meta::_t<detail::ElementsArrayTypeFactory<Obj>>;
 
 /**
  * Field definition used to return the children of an XML element.
