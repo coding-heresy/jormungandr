@@ -119,22 +119,6 @@ concept HasValidContent = ValidObjectContent<typename T::Fields>;
 template<typename T>
 concept ObjectDefT = detail::HasFields<T> && detail::HasValidContent<T>;
 
-namespace detail
-{
-template<typename T, typename Lst>
-struct IsMemberOfUnwrap {
-  static inline constexpr bool isMemberOf() {
-    return false;
-  }
-};
-
-template<typename T, typename... Ts>
-struct IsMemberOfUnwrap<T, meta::list<Ts...>> {
-  static inline constexpr bool isMemberOf() {
-    return (std::same_as<T, Ts> || ...);
-  }
-};
-} // namespace detail
 template<FieldDefT T, ObjectDefT ObjT>
 inline constexpr bool isMemberOfObject() {
   return isMemberOfList<T, typename ObjT::Fields>();
