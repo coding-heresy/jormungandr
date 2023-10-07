@@ -100,7 +100,7 @@ using AnyFixDefinitionSection = Union<boost::property_tree::ptree,
 // sections
 struct FixDefinition : FieldDef
 {
-  static constexpr char const * name = xml::detail::kPlaceholder;
+  static constexpr char const * name = kPlaceholder;
   using type = AnyFixDefinitionSection;
   using required = std::true_type;
 };

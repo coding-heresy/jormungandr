@@ -66,6 +66,11 @@ template<typename T>
 concept OptionalField = FieldDefT<T>
   && std::same_as<typename T::required, std::false_type>;
 
+/**
+ * common field name constant for fields that have no string name
+ */
+inline constexpr char kPlaceholder[] = "";
+
 } // namespace jmg
 
 /**

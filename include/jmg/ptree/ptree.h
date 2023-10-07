@@ -37,24 +37,13 @@ inline std::optional<T> convertOptional(boost::optional<T>&& src) {
 namespace xml
 {
 
-namespace detail
-{
 /**
- * empty string placeholder that facilitates making an element's tag
- * and children accessible as Jormungandr fields even though they are
- * actually structural elements of the underlying ptree data structure
- * and not fields in a ptree object.
- */
-constexpr char kPlaceholder[] = "";
-} // namespace detail
-
-/**
- * Jormungandr field definition for the XML element 'tag', which is
- * effectively the name of the element
+ * field definition for the XML element 'tag', which is effectively
+ * the name of the element
  */
 struct ElementTag : FieldDef
 {
-  static constexpr char const * name = detail::kPlaceholder;
+  static constexpr char const * name = kPlaceholder;
   using type = std::string;
   using required = std::true_type;
 };
@@ -220,7 +209,7 @@ using ElementsArrayT = meta::_t<detail::ElementsArrayTypeFactory<Obj>>;
 template<typename T, typename Required = std::false_type>
 struct Elements : FieldDef
 {
-  static constexpr char const * name = detail::kPlaceholder;
+  static constexpr char const * name = kPlaceholder;
   using type = ElementsArrayT<T>;
   using required = Required;
 };
