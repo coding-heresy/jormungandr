@@ -32,14 +32,32 @@
 
 #include <gtest/gtest.h>
 
+#include "jmg/meta.h"
 #include "jmg/safe_types.h"
 
+using namespace jmg;
+using namespace std;
+
+JMG_SAFE_ID_32(TestId32);
+JMG_SAFE_ID(TestIdStr, string);
+
 TEST(SafeTypesTests, IdsAreComparable) {
-  JMG_SAFE_ID_32(TestId32);
   TestId32 val1{42};
   TestId32 val2{42};
   TestId32 val3{20010911};
 
   EXPECT_EQ(val1, val2);
   EXPECT_NE(val1, val3);
+}
+
+TEST(SafeTypesTests, RetrieveUnsafeType) {
+  EXPECT_TRUE((is_same_v<uint32_t, UnsafeTypeFromT<TestId32>>));
+  EXPECT_TRUE((is_same_v<string, UnsafeTypeFromT<TestIdStr>>));
+}
+
+TEST(SafeTypesTests, StreamOutput) {
+  TestId32 id{42};
+  ostringstream strm;
+  strm << id;
+  EXPECT_EQ("42"s, strm.str());
 }

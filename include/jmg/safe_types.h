@@ -33,27 +33,41 @@
 
 #include <st/st.hpp>
 
-#define JMG_SAFE_TYPE(strong_type, base_type, ...)	\
-  using strong_type = st::type<base_type,		\
-    struct strong_type ## SafeTag, __VA_ARGS__)
+#define JMG_SAFE_TYPE(safe_type, unsafe_type, ...)	\
+  using safe_type = st::type<unsafe_type,		\
+    struct safe_type ## SafeTag, __VA_ARGS__)
 
-#define JMG_SAFE_ID_32(strong_type)		\
-  using strong_type = st::type<uint32_t,	\
-    struct strong_type ## SafeTag,		\
+#define JMG_SAFE_ID(safe_type, unsafe_type)	\
+  using safe_type = st::type<unsafe_type,	\
+    struct safe_type ## SafeTag,		\
     st::equality_comparable>
 
-#define JMG_SAFE_ID_64(strong_type)		\
-  using strong_type = st::type<uint64_t,	\
-    struct strong_type ## SafeTag,		\
+#define JMG_SAFE_ID_32(safe_type)		\
+  using safe_type = st::type<uint32_t,		\
+    struct safe_type ## SafeTag,		\
+    st::equality_comparable>
+
+#define JMG_SAFE_ID_64(safe_type)		\
+  using safe_type = st::type<uint64_t,		\
+    struct safe_type ## SafeTag,		\
     st::equality_comparable>
 
 namespace jmg
 {
 template <typename T>
-concept StrongType = st::is_strong_type_v<T>;
+concept SafeType = st::is_strong_type_v<T>;
 
-auto unsafe(StrongType auto safe) {
+auto unsafe(SafeType auto safe) {
   return safe.value();
 }
 
+template<SafeType T>
+using UnsafeTypeFromT = typename T::value_type;
+
 } // namespace jmg
+
+template<jmg::SafeType T>
+std::ostream& operator<<(std::ostream& strm, const T& val) {
+  strm << jmg::unsafe(val);
+  return strm;
+}

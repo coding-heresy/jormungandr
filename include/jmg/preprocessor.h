@@ -39,27 +39,19 @@
  * token that is already a macro, (e.g. __LINE__).
  */
 #define JMG_STRINGIFY_(x) #x
-#define JMG_STRINGIFY(x) JRL_STRINGIFY_(x)
+#define JMG_STRINGIFY(x) JMG_STRINGIFY_(x)
 
 #define JMG_ERR_MSG_LOCATION "at " __FILE__ "(" JMG_STRINGIFY(__LINE__) "), "
 
-/**
- * produce an error message that has file name and line number
- * embedded in it.
- */
-#define JMG_ERR_MSG_HELPER(msg) JMG_ERR_MSG_LOCATION msg
+////////////////////////////////////////////////////////////////////////////////
+// branch prediction hints
+////////////////////////////////////////////////////////////////////////////////
 
-/**
- * throw an instance of std::system_error which embeds the file name,
- * line number and a user defined string.
- */
-#define JMG_THROW_SYSTEM_ERROR(msg)					\
-  do {									\
-    std::ostringstream ss;						\
-    const std::string location(ERR_MSG_LOCATION);			\
-    ss << location << msg;						\
-    throw std::system_error(errno, std::system_category(), ss.str());	\
-  } while (0)
+#define JMG_UNLIKELY(pred) __builtin_expect(pred, false)
+
+////////////////////////////////////////////////////////////////////////////////
+// macro that simplifies definition of new custom exception types
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * easily define an exception type that derives from
@@ -72,6 +64,45 @@
     name(const std::string &what)		\
       : std::runtime_error(what) {}		\
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// macros that simplify throwing exceptions in error conditions
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * produce an error message that has file name and line number
+ * embedded in it.
+ */
+#define JMG_ERR_MSG_HELPER(msg) JMG_ERR_MSG_LOCATION msg
+
+/**
+ * throw an instance of std::system_error which embeds the file name,
+ * line number and a user defined string.
+ */
+#define JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(err_num, msg)			\
+  do {									\
+    std::ostringstream ss;						\
+    const std::string location(JMG_ERR_MSG_LOCATION);			\
+    ss << location << msg;						\
+    throw std::system_error(err_num, std::system_category(), ss.str());	\
+  } while (0)
+
+/**
+ * throw an instance of std::system_error which embeds the file name,
+ * line number and a user defined string.
+ */
+#if 1
+#define JMG_THROW_SYSTEM_ERROR(msg)					\
+  JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(errno, msg)
+#else
+#define JMG_THROW_SYSTEM_ERROR(msg)					\
+  do {									\
+    std::ostringstream ss;						\
+    const std::string location(JMG_ERR_MSG_LOCATION);			\
+    ss << location << msg;						\
+    throw std::system_error(errno, std::system_category(), ss.str());	\
+  } while (0)
+#endif
 
 /**
  * helper macro for simplifying the use of exceptions.
@@ -91,7 +122,7 @@
  */
 #define JMG_ENFORCE_ANY(predicate, ExceptionType, msg)	\
   do {							\
-    if (!(predicate)) {					\
+    if (JMG_UNLIKELY(!(predicate))) {			\
       JMG_THROW_EXCEPTION(ExceptionType, msg);		\
     }							\
   } while (0)
@@ -119,7 +150,7 @@
  */
 #define JMG_CALL_SYSTEM_FUNC(func, errVal, errMsg)	\
   do {							\
-    if (errVal == (func)) {				\
+    if (JMG_UNLIKELY(errVal == (func))) {		\
       JMG_THROW_SYSTEM_ERROR(errMsg);			\
     }							\
   } while (0)
@@ -134,8 +165,21 @@
     JMG_CALL_SYSTEM_FUNC(func, -1, errMsg);	\
   } while (0)
 
+/**
+ * call a POSIX-style system function that returns 0 on success and
+ * -errno on failure, and throw an exception of type std::system_error
+ * if it fails
+ */
+#define JMG_SYSTEM_ERRNO_RETURN(func, errMsg)				\
+  do {									\
+    const auto rc = (func);						\
+    if (JMG_UNLIKELY(rc != 0)) {					\
+      JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(-rc, errMsg);			\
+    }									\
+  } while (0)
+
 ////////////////////////////////////////////////////////////////////////////////
-// Helper macros for commonly used declarations
+// helper macros for commonly used declarations
 ////////////////////////////////////////////////////////////////////////////////
 
 #define JMG_DEFAULT_COPYABLE(Class)		\
