@@ -91,18 +91,8 @@
  * throw an instance of std::system_error which embeds the file name,
  * line number and a user defined string.
  */
-#if 1
-#define JMG_THROW_SYSTEM_ERROR(msg)					\
+#define JMG_THROW_SYSTEM_ERROR(msg)		\
   JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(errno, msg)
-#else
-#define JMG_THROW_SYSTEM_ERROR(msg)					\
-  do {									\
-    std::ostringstream ss;						\
-    const std::string location(JMG_ERR_MSG_LOCATION);			\
-    ss << location << msg;						\
-    throw std::system_error(errno, std::system_category(), ss.str());	\
-  } while (0)
-#endif
 
 /**
  * helper macro for simplifying the use of exceptions.
@@ -120,11 +110,11 @@
  * throw an exception of a specified type constructed with the
  * argument error message if a predicate fails
  */
-#define JMG_ENFORCE_ANY(predicate, ExceptionType, msg)	\
-  do {							\
-    if (JMG_UNLIKELY(!(predicate))) {			\
-      JMG_THROW_EXCEPTION(ExceptionType, msg);		\
-    }							\
+#define JMG_ENFORCE_USING(exception_type, predicate, msg)	\
+  do {								\
+    if (JMG_UNLIKELY(!(predicate))) {				\
+      JMG_THROW_EXCEPTION(exception_type, msg);			\
+    }								\
   } while (0)
 
 /**
@@ -133,7 +123,7 @@
  */
 #define JMG_ENFORCE(predicate, msg)				\
   do {								\
-    JMG_ENFORCE_ANY(predicate, std::runtime_error, msg);	\
+    JMG_ENFORCE_USING(std::runtime_error, predicate, msg);	\
   } while (0)
 
 /**
