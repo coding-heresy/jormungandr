@@ -90,6 +90,10 @@ inline constexpr bool isFieldOrGroup() {
   return std::same_as<IsFieldOrGroupDefT<T>, std::true_type>;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// concept that constrains an object to have valid fields
+////////////////////////////////////////////////////////////////////////////////
+
 namespace detail
 {
 template<typename T>
@@ -112,6 +116,11 @@ inline constexpr bool isValidObjectContent() {
 }
 template<typename T>
 concept ValidObjectContent = isValidObjectContent<T>();
+
+////////////////////////////////////////////////////////////////////////////////
+// type metafunction that expands field groups within an object
+// declaration to produce a flattened list of fields
+////////////////////////////////////////////////////////////////////////////////
 
 namespace detail
 {
@@ -137,6 +146,10 @@ struct ObjectDef
   using Fields = ExpandedFields<meta::list<FieldsT...>>;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// concept that constrains an object to be valid
+////////////////////////////////////////////////////////////////////////////////
+
 namespace detail
 {
 template<typename T>
@@ -150,6 +163,11 @@ concept HasValidContent = ValidObjectContent<typename T::Fields>;
 template<typename T>
 concept ObjectDefT = detail::HasFields<T> && detail::HasValidContent<T>;
 
+////////////////////////////////////////////////////////////////////////////////
+// compile-time function used to prevent attempts to access or modify
+// a field that is not declared to be contained by an object
+////////////////////////////////////////////////////////////////////////////////
+
 template<FieldDefT T, ObjectDefT ObjT>
 inline constexpr bool isMemberOfObject() {
   return isMemberOfList<T, typename ObjT::Fields>();
@@ -160,12 +178,14 @@ inline constexpr bool isMemberOfObject() {
 ////////////////////////////////////////////////////////////////////////////////
 
 template<FieldDefT FieldT, ObjectDefT ObjectT>
-auto get(const ObjectT& obj) requires (isMemberOfObject<FieldT, ObjectT>()) {
+typename FieldT::type get(const ObjectT& obj)
+  requires (isMemberOfObject<FieldT, ObjectT>()) {
   return obj.template get<FieldT>();
 }
 
 template<FieldDefT FieldT, ObjectDefT ObjectT>
-auto try_get(const ObjectT& obj) requires (isMemberOfObject<FieldT, ObjectT>()) {
+std::optional<typename FieldT::type> try_get(const ObjectT& obj)
+  requires (isMemberOfObject<FieldT, ObjectT>()) {
   return obj.template try_get<FieldT>();
 }
 

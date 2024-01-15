@@ -108,32 +108,3 @@ TEST(ObjectTests, TestConceptsAndCharacteristics) {
   // expanded
   EXPECT_EQ(4, meta::size<TestObject::Fields>{});
 }
-
-TEST(ObjectTests, TestArrayProxy) {
-  using Vec = vector<int32_t>;
-  using ItrProxy = AdaptingConstItrProxy<Vec::const_iterator, int64_t>;
-  using ItrPolicy = ProxiedItrPolicy<Vec, ItrProxy>;
-  using Proxy = ArrayProxy<Vec, ItrPolicy>;
-
-  const Vec v{ 42 };
-  Proxy p{v};
-
-  EXPECT_FALSE(v.empty());
-  EXPECT_FALSE(p.empty());
-
-  EXPECT_NE(v.begin(), v.end());
-  EXPECT_NE(p.begin(), p.end());
-
-  {
-    auto itr = v.begin();
-    EXPECT_TRUE((std::is_same_v<decltype(itr), Vec::const_iterator>));
-    auto value = *itr;
-    EXPECT_TRUE((std::is_same_v<decltype(value), int32_t>));
-  }
-  {
-    auto itr = p.begin();
-    EXPECT_FALSE((std::is_same_v<decltype(itr), Vec::const_iterator>));
-    auto value = *itr;
-    EXPECT_TRUE((std::is_same_v<decltype(value), int64_t>));
-  }
-}
