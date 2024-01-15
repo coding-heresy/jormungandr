@@ -96,8 +96,8 @@ public:
   using adapted_type = boost::property_tree::ptree::value_type;
 
   Object() = delete;
-  explicit Object(const adapted_type& node)
-    : node_(&node) {}
+  explicit Object(const adapted_type& elem)
+    : elem_(&elem) {}
 
   /**
    * delegate for jmg::get()
@@ -105,14 +105,14 @@ public:
   template<RequiredField FldT>
   auto get() const {
     if constexpr (std::same_as<ElementTag, FldT>) {
-      return key_of(*node_);
+      return key_of(*elem_);
     }
     else if constexpr (std::derived_from<FldT, ElementAttr>) {
-      return value_of(*node_).get<typename FldT::type>(getAttrXPath(FldT::name));
+      return value_of(*elem_).get<typename FldT::type>(getAttrXPath(FldT::name));
     }
     else if constexpr (IsUnionT<typename FldT::type>{}()
-		       || IsArrayProxyT<typename FldT::type>{}()) {
-      return typename FldT::type{value_of(*node_)};
+		       || IsViewingArrayProxyT<typename FldT::type>{}()) {
+      return typename FldT::type{value_of(*elem_)};
     }
   }
 
@@ -122,11 +122,11 @@ public:
   template<OptionalField FldT>
   std::optional<typename FldT::type> try_get() const {
     if constexpr (std::derived_from<FldT, ElementAttr>) {
-      auto rslt = value_of(*node_).get_optional<typename FldT::type>(getAttrXPath(FldT::name));
+      auto rslt = value_of(*elem_).get_optional<typename FldT::type>(getAttrXPath(FldT::name));
       return jmg::ptree::detail::convertOptional(std::move(rslt));
     }
-    else if constexpr (IsArrayProxyT<typename FldT::type>{}()) {
-      const auto& val = value_of(*node_);
+    else if constexpr (IsViewingArrayProxyT<typename FldT::type>{}()) {
+      const auto& val = value_of(*elem_);
       if (val.empty()) {
 	return std::nullopt;
       }
@@ -138,7 +138,7 @@ public:
       return typename FldT::type{val};
     }
     else if constexpr (IsUnionT<typename FldT::type>{}()) {
-      return typename FldT::type{*node_};
+      return typename FldT::type{*elem_};
     }
   }
 
@@ -150,7 +150,7 @@ private:
     return kBase + attrName;
   }
 
-  const adapted_type* node_;
+  const adapted_type* elem_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -221,14 +221,10 @@ struct XmlSizePolicy : SizePolicyTag
 template<ObjectDefT Obj>
 struct ElementsArrayTypeFactory
 {
-  // TODO the result of calling size() and empty() on this proxy for
-  // an array of XML elements will generally not agree with the
-  // results of iteration due to the way in which ptree encoding of
-  // XML data handles attributes, which should be fixed eventually
   using ItrProxy = ElementsItrProxy<Obj>;
   using ItrPolicy = ProxiedItrPolicy<boost::property_tree::ptree, ItrProxy>;
   using SzPolicy = XmlSizePolicy<boost::property_tree::ptree>;
-  using type = ArrayProxy<boost::property_tree::ptree, ItrPolicy, SzPolicy>;
+  using type = ViewingArrayProxy<boost::property_tree::ptree, ItrPolicy, SzPolicy>;
 };
 } // namespace detail
 template<ObjectDefT Obj>

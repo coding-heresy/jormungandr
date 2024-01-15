@@ -33,6 +33,7 @@
 #include <gtest/gtest.h>
 
 #include <ranges>
+#include <span>
 #include <vector>
 
 #include "jmg/array_proxy.h"
@@ -49,45 +50,73 @@ using IntVec = vector<int>;
 const IntVec raw{1, 2, 3};
 } // namespace
 
-TEST(ArrayProxyTests, TestTrivialProxy) {
-  using IntVecProxy = ArrayProxy<IntVec, RawItrPolicy<IntVec>>;
+TEST(ArrayProxyTests, TestTrivialViewProxy) {
+  // non-owning proxy for a vector of integers that can be iterated
+  // over using the native iterator
+  using IntVecProxy = ViewingArrayProxy<IntVec, RawItrPolicy<IntVec>>;
   IntVecProxy proxy{raw};
-  EXPECT_TRUE(!proxy.empty());
+  EXPECT_FALSE(proxy.empty());
   auto pred = [](const auto val) { return 3 == val; };
   const auto entry = ranges::find_if(proxy, pred);
   EXPECT_NE(proxy.end(), entry);
   EXPECT_EQ(3, *entry);
 }
 
-TEST(ArrayProxyTests, TestAdaptingProxy) {
-  struct IntProxy {
-    explicit IntProxy(int i) : val(i) {}
+TEST(ArrayProxyTests, TestAdaptingViewProxy) {
+  // proxy object that wraps (and owns) a raw integer
+  struct IntOwningProxy {
+    explicit IntOwningProxy(int i) : val(i) {}
     int val;
   };
 
-  using ItrProxy = AdaptingConstItrProxy<IntVec::const_iterator, IntProxy>;
+  // proxy for an iterator over a container where the entries are
+  // adapted using IntOwningProxy
+  using ItrProxy = AdaptingConstItrProxy<IntVec::const_iterator, IntOwningProxy>;
   EXPECT_TRUE(isInputIterator<ItrProxy>());
   EXPECT_TRUE(isInputOrOutputIterator<ItrProxy>());
+  // policy declaring that a iteration over a vector of integers will
+  // be accomplished via proxy
   using ItrPolicy = ProxiedItrPolicy<IntVec, ItrProxy>;
-  using AdaptingProxy = ArrayProxy<IntVec, ItrPolicy>;
+  // non-owning proxy for a vector of integers that can be iterated
+  // over using a proxy iterator
+  using AdaptingProxy = ViewingArrayProxy<IntVec, ItrPolicy>;
 
   const AdaptingProxy proxy{raw};
   EXPECT_TRUE(!proxy.empty());
+  EXPECT_NE(proxy.begin(), proxy.end());
   auto pred = [](const auto val) { return 3 == val.val; };
 
   {
-    // std::ranges iteration works
+    // check that std::ranges iteration works
     const auto entry = ranges::find_if(proxy, pred);
-    EXPECT_NE(proxy.end(), entry);
     EXPECT_NE(proxy.begin(), entry);
+    EXPECT_NE(proxy.end(), entry);
     EXPECT_EQ(3, (*entry).val);
   }
 
   {
-    // STL iteration works
+    // check that STL iteration works
     const auto entry = find_if(proxy.begin(), proxy.end(), pred);
-    EXPECT_NE(proxy.end(), entry);
     EXPECT_NE(proxy.begin(), entry);
+    EXPECT_NE(proxy.end(), entry);
     EXPECT_EQ(3, (*entry).val);
   }
+}
+
+TEST(ArrayProxyTests, TestOwningProxy) {
+  auto spanAsProxy = span{raw};
+  using SpanAsProxy = decltype(spanAsProxy);
+
+  // owning proxy that owns the span that is viewing the array
+  using IntVecSpanProxy = OwningArrayProxy<SpanAsProxy>;
+  // @todo: OLD CODE IntVecSpanProxy proxy{span{raw}};
+  IntVecSpanProxy proxy{std::move(spanAsProxy)};
+  EXPECT_FALSE(proxy.empty());
+
+  // check that std::ranges iteration works
+  auto pred = [](const auto val) { return 1 == val; };
+  const auto entry = ranges::find_if(proxy, pred);
+  EXPECT_EQ(proxy.begin(), entry);
+  EXPECT_NE(proxy.end(), entry);
+  EXPECT_EQ(1, *entry);
 }

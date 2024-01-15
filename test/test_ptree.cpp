@@ -32,9 +32,14 @@
 
 #include <gtest/gtest.h>
 
-#include <boost/property_tree/ptree.hpp>
+#include <filesystem>
 
 #include "jmg/ptree/ptree.h"
+
+#if defined(TEST_CONSTRUCTING_PTREE_XML_FROM_FILE)
+#include <boost/property_tree/xml_parser.hpp>
+#include "jmg/file_util.h"
+#endif
 
 using namespace jmg;
 using namespace std;
@@ -45,10 +50,21 @@ JMG_XML_FIELD_DEF(OptionalRecordValue, "optional_value", string, false);
 JMG_XML_FIELD_DEF(RecordValueType, "value_type", string, true);
 JMG_XML_FIELD_DEF(TopLevelAttribute, "attribute", string, true);
 
+#if defined(TEST_CONSTRUCTING_PTREE_XML_FROM_FILE)
+constexpr string_view kXmlText = R"(
+<top_level attribute="test">
+  <record value="foo" value_type="string"/>
+  <record value="bar" value_type="string" optional_value="baz"/>
+</top_level>
+)";
+#endif
+
 TEST(PtreeTests, TestXmlPtreeDataRetrieval) {
   namespace pt = boost::property_tree;
 
+  // construct a ptree representation equivalent to kXmlText
   pt::ptree allXmlData;
+#if !defined(TEST_CONSTRUCTING_PTREE_XML_FROM_FILE)
   {
     pt::ptree xmlTopLevel;
     {
@@ -67,6 +83,10 @@ TEST(PtreeTests, TestXmlPtreeDataRetrieval) {
     xmlTopLevel.put("<xmlattr>.attribute", "test");
     allXmlData.push_back(pt::ptree::value_type("top_level", std::move(xmlTopLevel)));
   }
+#else
+  TmpFile xmlFile{kXmlText};
+  pt::xml_parser::read_xml(string(xmlFile.name()).c_str(), allXmlData);
+#endif
 
   using namespace jmg::ptree;
   using Record = xml::Object<RecordValue, RecordValueType, OptionalRecordValue>;

@@ -134,7 +134,7 @@ protected:
 /**
  * tag that supports using the PolicyResolverT infrastructure to allow
  * specification of policies for how to iterate over the elements of a
- * container proxied with ArrayProxy
+ * container proxied as an array
  */
 struct ItrPolicyTag {};
 
@@ -157,7 +157,7 @@ struct RawItrPolicy : ItrPolicyTag
 
 /**
  * policy that specifies using a proxy for iterating over elements in
- * ArrayProxy
+ * a proxied container
  */
 template<typename SrcContainerT, typename ItrProxyT>
 struct ProxiedItrPolicy : ItrPolicyTag
@@ -187,16 +187,16 @@ struct DefaultSizePolicy : SizePolicyTag
 };
 
 /**
- * class template for a proxy that can be used to wrap an adapter some
- * container type to look like an array
+ * class template for a proxy that can be used to wrap some container
+ * type to look like an array
  *
  * TODO add more array-like features (such as random access) to the
  * proxy
  */
-template<typename ProxiedT, typename... Ps>
-class ArrayProxy
+template<typename ProxiedT, typename... PoliciesT>
+class ViewingArrayProxy
 {
-  using Policies = meta::list<Ps...>;
+  using Policies = meta::list<PoliciesT...>;
   using AllPolicyTags = meta::list<ItrPolicyTag, SizePolicyTag>;
   using DefaultItrPolicy = RawItrPolicy<ProxiedT>;
   using ItrPolicy = PolicyResolverT<ItrPolicyTag, DefaultItrPolicy, AllPolicyTags, Policies>;
@@ -204,8 +204,7 @@ class ArrayProxy
   using SizePolicy = PolicyResolverT<SizePolicyTag, DefaultSzPolicy, AllPolicyTags, Policies>;
 
 public:
-  ArrayProxy() = delete;
-  explicit ArrayProxy(const ProxiedT& src) : src_(&src) {}
+  explicit ViewingArrayProxy(const ProxiedT& src) : src_(&src) {}
 
   auto size() const { return SizePolicy::size(src_); }
   auto empty() const { return 0 == size(); }
@@ -217,26 +216,64 @@ public:
   auto cbegin() const { return ItrPolicy::cbegin(src_); }
   auto cend() const { return ItrPolicy::cend(src_); }
 
-private:
+protected:
+  ViewingArrayProxy() = default;
   const ProxiedT* src_;
 };
 
-// TODO add support for an array proxy that owns the data it is proxying
+/**
+ * class template for a proxy that can be used to wrap some
+ * container type to look like an array and actually owns the object
+ * being proxied
+ *
+ * TODO add more array-like features (such as random access) to the
+ * proxy
+ */
+template<typename ProxiedT, typename... PoliciesT>
+class OwningArrayProxy : public ViewingArrayProxy<ProxiedT, PoliciesT...>
+{
+  using Base = ViewingArrayProxy<ProxiedT, PoliciesT...>;
+public:
+  OwningArrayProxy() = delete;
+  explicit OwningArrayProxy(ProxiedT&& proxy) : proxy_(std::move(proxy)) {
+    Base::src_ = &proxy_;
+  }
+private:
+  const ProxiedT proxy_;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
-// ArrayProxyT concept
+// ViewingArrayProxyT concept
 ////////////////////////////////////////////////////////////////////////////////
+
 namespace detail
 {
 template<typename T>
-struct IsArrayProxyImpl { using type = std::false_type; };
+struct IsViewingArrayProxyImpl { using type = std::false_type; };
 template<typename... Ts>
-struct IsArrayProxyImpl<ArrayProxy<Ts...>> { using type = std::true_type; };
+struct IsViewingArrayProxyImpl<ViewingArrayProxy<Ts...>> { using type = std::true_type; };
 } // namespace detail
 template <typename T>
-using IsArrayProxyT = meta::_t<detail::IsArrayProxyImpl<T>>;
+using IsViewingArrayProxyT = meta::_t<detail::IsViewingArrayProxyImpl<T>>;
 
 template<typename T>
-concept ArrayProxyT = IsArrayProxyT<T>{}();
+concept ViewingArrayProxyT = IsViewingArrayProxyT<T>{}();
+
+////////////////////////////////////////////////////////////////////////////////
+// OwningArrayProxyT concept
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct IsOwningArrayProxyImpl { using type = std::false_type; };
+template<typename... Ts>
+struct IsOwningArrayProxyImpl<OwningArrayProxy<Ts...>> { using type = std::true_type; };
+} // namespace detail
+template <typename T>
+using IsOwningArrayProxyT = meta::_t<detail::IsOwningArrayProxyImpl<T>>;
+
+template<typename T>
+concept OwningArrayProxyT = IsOwningArrayProxyT<T>{}();
 
 } // namespace jmg
