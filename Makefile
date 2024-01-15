@@ -60,7 +60,8 @@ $(JINC)/ptree/ptree.h \
 $(JINC)/quickfix/quickfix.h \
 $(JINC)/safe_types.h \
 $(JINC)/union.h \
-$(JINC)/util.h
+$(JINC)/util.h \
+$(JINC)/yaml/yaml.h
 
 jmgc: jmgc.cpp $(JMG_HEADERS)
 	$(CXX) $(CXXFLAGS) $< -o $@
