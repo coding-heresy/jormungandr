@@ -32,6 +32,8 @@
 
 #include <gtest/gtest.h>
 
+#include <unordered_map>
+
 #include "jmg/meta.h"
 #include "jmg/safe_types.h"
 
@@ -48,6 +50,30 @@ TEST(SafeTypesTests, IdsAreComparable) {
 
   EXPECT_EQ(val1, val2);
   EXPECT_NE(val1, val3);
+}
+
+TEST(SafeTypesTests, IntIdsAreHashable) {
+  unordered_map<TestId32, string> dict;
+  const TestId32 key{20010911};
+  const string value = "foo"s;
+  const auto [itr, inserted] = dict.try_emplace(key, value);
+  EXPECT_TRUE(inserted);
+  EXPECT_TRUE(itr != dict.end());
+  EXPECT_FALSE(dict.empty());
+  EXPECT_EQ(dict.count(key), 1);
+  EXPECT_EQ(dict.at(key), value);
+}
+
+TEST(SafeTypesTests, StringIdsAreHashable) {
+  unordered_map<TestIdStr, int> dict;
+  const TestIdStr key{"foo"s};
+  const int value = 20010911;
+  const auto [itr, inserted] = dict.try_emplace(key, value);
+  EXPECT_TRUE(inserted);
+  EXPECT_TRUE(itr != dict.end());
+  EXPECT_FALSE(dict.empty());
+  EXPECT_EQ(dict.count(key), 1);
+  EXPECT_EQ(dict.at(key), value);
 }
 
 TEST(SafeTypesTests, RetrieveUnsafeType) {

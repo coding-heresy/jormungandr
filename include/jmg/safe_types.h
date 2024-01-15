@@ -37,20 +37,23 @@
   using safe_type = st::type<unsafe_type,		\
     struct safe_type ## SafeTag, __VA_ARGS__)
 
-#define JMG_SAFE_ID(safe_type, unsafe_type)	\
-  using safe_type = st::type<unsafe_type,	\
-    struct safe_type ## SafeTag,		\
-    st::equality_comparable>
+#define JMG_SAFE_ID(safe_type, unsafe_type)			\
+  using safe_type = st::type<unsafe_type,			\
+    struct safe_type ## SafeTag,	                        \
+    st::equality_comparable,					\
+    st::hashable>
 
 #define JMG_SAFE_ID_32(safe_type)		\
   using safe_type = st::type<uint32_t,		\
     struct safe_type ## SafeTag,		\
-    st::equality_comparable>
+    st::equality_comparable,			\
+    st::hashable>
 
 #define JMG_SAFE_ID_64(safe_type)		\
   using safe_type = st::type<uint64_t,		\
     struct safe_type ## SafeTag,		\
-    st::equality_comparable>
+    st::equality_comparable,			\
+    st::hashable>
 
 namespace jmg
 {
