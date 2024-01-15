@@ -34,6 +34,11 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <string_view>
+
+#include <ext/stdio_filebuf.h>
+
+#include "jmg/preprocessor.h"
 
 namespace jmg
 {
@@ -53,19 +58,74 @@ concept StringT = std::convertible_to<T, std::string_view>;
 } // namespace detail
 
 /**
- * Open an input or output stream for a file
+ * open an input or output stream for a file
  *
- * @param path filesystem path to the file, can be any type supported
- *        by the std::filesystem::path constructor
+ * @param filePath filesystem path to the file
  */
-template <detail::IoStreamT StreamT, detail::StringT PathNameT>
-auto openFile(PathNameT pathName) {
+template <detail::IoStreamT StreamT>
+auto openFile(const std::filesystem::path filePath) {
   StreamT strm;
   strm.exceptions(StreamT::badbit);
-  // convert to filesystem path for a bit of extra safety checking
-  std::filesystem::path filePath{pathName};
   strm.open(filePath);
   return strm;
 }
+
+/**
+ * open an input or output stream for a file
+ *
+ * @param pathName filesystem path to the file, can be any type
+ *        supported by the std::filesystem::path constructor
+ */
+template <detail::IoStreamT StreamT, detail::StringT PathNameT>
+auto openFile(PathNameT pathName) {
+  return openFile<StreamT>(std::filesystem::path{pathName});
+}
+
+/**
+ * class manages a temporary file, opening and writing data to it on
+ * instantiation, providing its name to clients and removing it from
+ * the filesystem when the instance is destroyed
+ */
+class TmpFile
+{
+public:
+  /**
+   * constructor
+   *
+   * @param data to write to the file after creation
+   */
+  explicit TmpFile(const std::string_view contents) {
+    char fileName[1024];
+    memset(fileName, 0, sizeof(fileName));
+    {
+      const auto tmpPath = std::filesystem::temp_directory_path() /= "XXXXXX";
+      JMG_ENFORCE(tmpPath.native().size() < 1024,
+		  "unable to create temporary file, intended file base name ["
+		  << tmpPath.native()
+		  << "] was longer than internal limit value [1024]");
+      tmpPath.native().copy(fileName, tmpPath.native().size());
+    }
+    const int fd = mkstemp(fileName);
+    if (-1 == fd) {
+      JMG_THROW_SYSTEM_ERROR("unable to create temporary file");
+    }
+    __gnu_cxx::stdio_filebuf<char> tmpBuf{fd, std::ios::out};
+    std::ostream strm{&tmpBuf};
+    strm.exceptions(std::ofstream::badbit);
+    strm << contents;
+    path_ = fileName;
+    native_ = path_.native();
+  }
+
+  std::string_view name() const { return native_; }
+
+  ~TmpFile() {
+    std::filesystem::remove(path_);
+  }
+
+private:
+  std::filesystem::path path_;
+  std::string native_;
+};
 
 } // namespace jmg
