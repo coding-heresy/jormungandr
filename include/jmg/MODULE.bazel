@@ -1,0 +1,10 @@
+
+module(
+    name = "libjmg",
+    version = "0.1.0",
+)
+
+bazel_dep(
+    name = "meta",
+    version = "1.0.0",
+)

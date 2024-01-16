@@ -1,0 +1,17 @@
+
+# TODO get boost build working under bzlmod
+# load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
+# boost_deps()
+
+cc_library(
+    name = "jmg",
+    visibility = ["//visibility:public"],
+    hdrs = glob(["include/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        "@github_ericniebler_meta//:meta",
+        "@github_doom_strong_type//:strong_type",
+        # TODO get boost build working under bzlmod
+        # "@com_github_nelhage_rules_boost//:property_tree",
+    ],
+)

@@ -1,0 +1,54 @@
+
+cc_test(
+    name = "test_array_proxy",
+    srcs = ["test_array_proxy.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
+
+cc_test(
+    name = "test_conversion",
+    srcs = ["test_conversion.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
+
+cc_test(
+    name = "test_file_util",
+    srcs = ["test_file_util.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
+
+cc_test(
+    name = "test_meta",
+    srcs = ["test_meta.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
+
+cc_test(
+    name = "test_object",
+    srcs = ["test_object.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
+
+cc_test(
+    name = "test_safe_types",
+    srcs = ["test_safe_types.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
