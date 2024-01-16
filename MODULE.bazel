@@ -1,0 +1,62 @@
+
+module(
+    name = "jormungandr",
+    version = "0.1.0",
+)
+
+########################################
+# google test
+########################################
+
+bazel_dep(
+    name = "googletest",
+    version = "1.14.0.bcr.1",
+    repo_name = "com_google_googletest",
+    dev_dependency = True
+)
+
+########################################
+# Eric Niebler meta-programming library
+########################################
+
+bazel_dep(
+    name = "meta",
+    version = "1.0.0-jmg",
+    repo_name = "github_ericniebler_meta",
+)
+
+# TODO migrate to github
+local_path_override(
+    module_name = "meta",
+    path = "/home/bd/src/bazel-experimental/meta",
+)
+
+########################################
+# strong type aliases from Doom
+########################################
+
+bazel_dep(
+    name = "strong_type",
+    version = "1.1.0-jmg",
+    repo_name = "github_doom_strong_type",
+)
+
+# TODO migrate to github
+local_path_override(
+    module_name = "strong_type",
+    path = "/home/bd/src/bazel-experimental/strong_type",
+)
+
+### TODO experimental, no idea if this will work
+
+# bazel_dep(
+#     name = "boost",
+#     version = "0.0.0",
+#     repo_name = "com_github_nelhage_rules_boost"
+# )
+
+# archive_override(
+#     module_name = "boost",
+#     strip_prefix = "rules_boost-96e9b631f104b43a53c21c87b01ac538ad6f3b48",
+#     urls = ["https://github.com/nelhage/rules_boost/archive/96e9b631f104b43a53c21c87b01ac538ad6f3b48.tar.gz"],
+# )

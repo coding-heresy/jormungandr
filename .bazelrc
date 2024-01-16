@@ -1,0 +1,13 @@
+
+# use bzlmod
+common --enable_bzlmod
+
+# builds with C++20
+common --cxxopt='-std=c++20'
+
+# be safe...
+common --cxxopt='-Wall'
+common --cxxopt='-Werror'
+
+# need to be able to diagnose severe errors in concepts
+common --cxxopt='-fconcepts-diagnostics-depth=10'

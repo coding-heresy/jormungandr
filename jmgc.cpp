@@ -36,6 +36,7 @@
 
 #include <iostream>
 #include <iterator>
+#include <optional>
 #include <string_view>
 #include <unordered_set>
 
