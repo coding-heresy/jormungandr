@@ -3,11 +3,35 @@
 common --enable_bzlmod
 
 # builds with C++20
-common --cxxopt='-std=c++20'
+build --cxxopt='-std=c++20'
 
 # be safe...
-common --cxxopt='-Wall'
-common --cxxopt='-Werror'
+build --cxxopt='-Wall'
+build --cxxopt='-Wextra'
+build --cxxopt='-Werror'
+build --cxxopt='-pedantic'
+build --cxxopt='-pedantic-errors'
 
 # need to be able to diagnose severe errors in concepts
-common --cxxopt='-fconcepts-diagnostics-depth=10'
+build --cxxopt='-fconcepts-diagnostics-depth=10'
+
+# debug builds
+build:dbg --cxxopt='-Og'
+build:dbg --cxxopt='-fno-inline'
+build:dbg --cxxopt='-g3'
+build:dbg --cxxopt='-fstack-protector-all'
+
+# optimized builds
+build:opt --cxxopt='-O3'
+build:opt --cxxopt='-g0'
+build:opt --cxxopt='-march=native'
+build:opt --cxxopt='-mtune=native'
+build:opt --cxxopt='-DNDEBUG'
+
+# TODO use this??
+#common --enable_platform_specific_config
+# Prevent Bazel from detecting the system's C++ toolchain.
+#build:linux --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+#build:linux --incompatible_strict_action_env=true
+# Enable the CC toolchain resolution based on platforms.
+#build:linux --incompatible_enable_cc_toolchain_resolution

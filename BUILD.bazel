@@ -9,8 +9,8 @@ cc_library(
     hdrs = glob(["include/**/*.h"]),
     includes = ["include"],
     deps = [
-        "@github_ericniebler_meta//:meta",
-        "@github_doom_strong_type//:strong_type",
+        "@ericniebler_meta//:meta",
+        "@doom_strong_type//:strong_type",
         # TODO get boost build working under bzlmod
         # "@com_github_nelhage_rules_boost//:property_tree",
     ],

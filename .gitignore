@@ -2,6 +2,7 @@
 experiments
 jmgc
 bazel-*
+MODULE.bazel.lock
 test_array_proxy
 test_conversion
 test_file_util
