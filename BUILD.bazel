@@ -6,11 +6,27 @@
 cc_library(
     name = "jmg",
     visibility = ["//visibility:public"],
-    hdrs = glob(["include/**/*.h"]),
+    #hdrs = glob(["include/**/*.h"]),
+    hdrs = [
+        "include/jmg/array_proxy.h",
+        "include/jmg/conversion.h",
+        "include/jmg/field.h",
+        "include/jmg/file_util.h",
+        "include/jmg/meta.h",
+        "include/jmg/object.h",
+        "include/jmg/preprocessor.h",
+        "include/jmg/ptree/ptree.h",
+        "include/jmg/quickfix/quickfix.h",
+        "include/jmg/safe_types.h",
+        "include/jmg/union.h",
+        "include/jmg/util.h",
+        "include/jmg/yaml/yaml.h",
+    ],
     includes = ["include"],
     deps = [
         "@ericniebler_meta//:meta",
         "@doom_strong_type//:strong_type",
+        "@jbeder_yaml_cpp//:yaml-cpp",
         # TODO get boost build working under bzlmod
         # "@com_github_nelhage_rules_boost//:property_tree",
     ],
