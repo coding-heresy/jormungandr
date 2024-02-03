@@ -17,6 +17,17 @@ bazel_dep(
 )
 
 ########################################
+# yaml library
+########################################
+
+bazel_dep(
+    name = "yaml-cpp",
+    version = "0.8.0",
+    repo_name = "jbeder_yaml_cpp",
+    dev_dependency = True
+)
+
+########################################
 # Eric Niebler meta-programming library
 ########################################
 
