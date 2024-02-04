@@ -31,8 +31,8 @@
  */
 #pragma once
 
-#include <stdexcept>
 #include <sstream>
+#include <stdexcept>
 
 /**
  * macro double expansion trick to produce a string from a non-string
@@ -57,13 +57,11 @@
  * easily define an exception type that derives from
  * std::runtime_error
  */
-#define JMG_DEFINE_RUNTIME_EXCEPTION(name)	\
-  class name : public std::runtime_error	\
-  {						\
-  public:					\
-    name(const std::string &what)		\
-      : std::runtime_error(what) {}		\
-}
+#define JMG_DEFINE_RUNTIME_EXCEPTION(name)                      \
+  class name : public std::runtime_error {                      \
+  public:                                                       \
+    name(const std::string& what) : std::runtime_error(what) {} \
+  }
 
 ////////////////////////////////////////////////////////////////////////////////
 // macros that simplify throwing exceptions in error conditions
@@ -79,19 +77,19 @@
  * throw an instance of std::system_error which embeds the file name,
  * line number and a user defined string.
  */
-#define JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(err_num, msg)			\
-  do {									\
-    std::ostringstream ss;						\
-    const std::string location(JMG_ERR_MSG_LOCATION);			\
-    ss << location << msg;						\
-    throw std::system_error(err_num, std::system_category(), ss.str());	\
+#define JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(err_num, msg)                 \
+  do {                                                                  \
+    std::ostringstream ss;                                              \
+    const std::string location(JMG_ERR_MSG_LOCATION);                   \
+    ss << location << msg;                                              \
+    throw std::system_error(err_num, std::system_category(), ss.str()); \
   } while (0)
 
 /**
  * throw an instance of std::system_error which embeds the file name,
  * line number and a user defined string.
  */
-#define JMG_THROW_SYSTEM_ERROR(msg)		\
+#define JMG_THROW_SYSTEM_ERROR(msg) \
   JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(errno, msg)
 
 /**
@@ -99,32 +97,30 @@
  *
  * @todo use basename of filename?
  */
-#define JMG_THROW_EXCEPTION(ExceptionType, msg)				\
-  do {									\
-    std::ostringstream what;						\
+#define JMG_THROW_EXCEPTION(ExceptionType, msg)                                \
+  do {                                                                         \
+    std::ostringstream what;                                                   \
     what << "'" << msg << "' on line " << __LINE__ << " of file " << __FILE__; \
-    throw ExceptionType(what.str());					\
-  } while(0)
+    throw ExceptionType(what.str());                                           \
+  } while (0)
 
 /**
  * throw an exception of a specified type constructed with the
  * argument error message if a predicate fails
  */
-#define JMG_ENFORCE_USING(exception_type, predicate, msg)	\
-  do {								\
-    if (JMG_UNLIKELY(!(predicate))) {				\
-      JMG_THROW_EXCEPTION(exception_type, msg);			\
-    }								\
+#define JMG_ENFORCE_USING(exception_type, predicate, msg) \
+  do {                                                    \
+    if (JMG_UNLIKELY(!(predicate))) {                     \
+      JMG_THROW_EXCEPTION(exception_type, msg);           \
+    }                                                     \
   } while (0)
 
 /**
  * throw an exception of type std::runtime_error constructed with the
  * argument error message if a predicate fails
  */
-#define JMG_ENFORCE(predicate, msg)				\
-  do {								\
-    JMG_ENFORCE_USING(std::runtime_error, predicate, msg);	\
-  } while (0)
+#define JMG_ENFORCE(predicate, msg) \
+  do { JMG_ENFORCE_USING(std::runtime_error, predicate, msg); } while (0)
 
 /**
  * helper macro for wrapping the behavior of calling a POSIX-style system
@@ -138,11 +134,9 @@
  * on error, or gethostbyname_r, which returns nullptr on error but
  * uses h_errno to report the cause)
  */
-#define JMG_CALL_SYSTEM_FUNC(func, errVal, errMsg)	\
-  do {							\
-    if (JMG_UNLIKELY(errVal == (func))) {		\
-      JMG_THROW_SYSTEM_ERROR(errMsg);			\
-    }							\
+#define JMG_CALL_SYSTEM_FUNC(func, errVal, errMsg)                          \
+  do {                                                                      \
+    if (JMG_UNLIKELY(errVal == (func))) { JMG_THROW_SYSTEM_ERROR(errMsg); } \
   } while (0)
 
 /**
@@ -150,40 +144,38 @@
  * most common behavior) and throw an exception of type
  * std::system_error if it fails
  */
-#define JMG_SYSTEM(func, errMsg)		\
-  do {						\
-    JMG_CALL_SYSTEM_FUNC(func, -1, errMsg);	\
-  } while (0)
+#define JMG_SYSTEM(func, errMsg) \
+  do { JMG_CALL_SYSTEM_FUNC(func, -1, errMsg); } while (0)
 
 /**
  * call a POSIX-style system function that returns 0 on success and
  * -errno on failure, and throw an exception of type std::system_error
  * if it fails
  */
-#define JMG_SYSTEM_ERRNO_RETURN(func, errMsg)				\
-  do {									\
-    const auto rc = (func);						\
-    if (JMG_UNLIKELY(rc != 0)) {					\
-      JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(-rc, errMsg);			\
-    }									\
+#define JMG_SYSTEM_ERRNO_RETURN(func, errMsg)         \
+  do {                                                \
+    const auto rc = (func);                           \
+    if (JMG_UNLIKELY(rc != 0)) {                      \
+      JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(-rc, errMsg); \
+    }                                                 \
   } while (0)
 
 ////////////////////////////////////////////////////////////////////////////////
 // helper macros for commonly used declarations
 ////////////////////////////////////////////////////////////////////////////////
 
-#define JMG_DEFAULT_COPYABLE(Class)		\
-  Class(const Class &src) = default;		\
-  Class& operator=(const Class &rhs) = default
+#define JMG_DEFAULT_COPYABLE(Class)  \
+  Class(const Class& src) = default; \
+  Class& operator=(const Class& rhs) = default
 
-#define JMG_NON_COPYABLE(Class)			\
-  Class(const Class &src) = delete;		\
-  Class& operator=(const Class &rhs) = delete
+#define JMG_NON_COPYABLE(Class)     \
+  Class(const Class& src) = delete; \
+  Class& operator=(const Class& rhs) = delete
 
-#define JMG_DEFAULT_MOVEABLE(Class)		\
-  Class(Class &&src) = default;			\
-  Class& operator=(Class &&rhs) = default
+#define JMG_DEFAULT_MOVEABLE(Class) \
+  Class(Class&& src) = default;     \
+  Class& operator=(Class&& rhs) = default
 
-#define JMG_NON_MOVEABLE(Class)			\
-  Class(Class &&src) = delete;			\
-  Class& operator=(Class &&rhs) = delete
+#define JMG_NON_MOVEABLE(Class) \
+  Class(Class&& src) = delete;  \
+  Class& operator=(Class&& rhs) = delete

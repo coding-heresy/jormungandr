@@ -31,9 +31,9 @@
  */
 #pragma once
 
-#include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <string_view>
 
 #include <ext/stdio_filebuf.h>
@@ -49,8 +49,8 @@ namespace jmg
 namespace detail
 {
 template<typename T>
-concept IoStreamT = std::same_as<T, std::ifstream>
-  || std::same_as<T, std::ofstream>;
+concept IoStreamT =
+  std::same_as<T, std::ifstream> || std::same_as<T, std::ofstream>;
 
 // TODO move to metaprogramming utility header?
 template<typename T>
@@ -62,7 +62,7 @@ concept StringT = std::convertible_to<T, std::string_view>;
  *
  * @param filePath filesystem path to the file
  */
-template <detail::IoStreamT StreamT>
+template<detail::IoStreamT StreamT>
 auto openFile(const std::filesystem::path filePath) {
   StreamT strm;
   strm.exceptions(StreamT::badbit);
@@ -76,7 +76,7 @@ auto openFile(const std::filesystem::path filePath) {
  * @param pathName filesystem path to the file, can be any type
  *        supported by the std::filesystem::path constructor
  */
-template <detail::IoStreamT StreamT, detail::StringT PathNameT>
+template<detail::IoStreamT StreamT, detail::StringT PathNameT>
 auto openFile(PathNameT pathName) {
   return openFile<StreamT>(std::filesystem::path{pathName});
 }
@@ -86,8 +86,7 @@ auto openFile(PathNameT pathName) {
  * instantiation, providing its name to clients and removing it from
  * the filesystem when the instance is destroyed
  */
-class TmpFile
-{
+class TmpFile {
 public:
   /**
    * constructor
@@ -100,15 +99,13 @@ public:
     {
       const auto tmpPath = std::filesystem::temp_directory_path() /= "XXXXXX";
       JMG_ENFORCE(tmpPath.native().size() < 1024,
-		  "unable to create temporary file, intended file base name ["
-		  << tmpPath.native()
-		  << "] was longer than internal limit value [1024]");
+                  "unable to create temporary file, intended file base name ["
+                    << tmpPath.native()
+                    << "] was longer than internal limit value [1024]");
       tmpPath.native().copy(fileName, tmpPath.native().size());
     }
     const int fd = mkstemp(fileName);
-    if (-1 == fd) {
-      JMG_THROW_SYSTEM_ERROR("unable to create temporary file");
-    }
+    if (-1 == fd) { JMG_THROW_SYSTEM_ERROR("unable to create temporary file"); }
     __gnu_cxx::stdio_filebuf<char> tmpBuf{fd, std::ios::out};
     std::ostream strm{&tmpBuf};
     strm.exceptions(std::ofstream::badbit);
@@ -119,9 +116,7 @@ public:
 
   std::string_view name() const { return native_; }
 
-  ~TmpFile() {
-    std::filesystem::remove(path_);
-  }
+  ~TmpFile() { std::filesystem::remove(path_); }
 
 private:
   std::filesystem::path path_;

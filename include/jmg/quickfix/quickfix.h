@@ -45,14 +45,12 @@ namespace quickfix
 {
 
 template<typename... Fields>
-class Object : public ObjectDef<Fields...>
-{
+class Object : public ObjectDef<Fields...> {
 public:
   using adapted_type = FIX::Message;
 
   Object() = delete;
   explicit Object(const adapted_type& adapted) : adapted_(&adapted) {}
-
 
   /**
    * delegate for jmg::get()
@@ -67,9 +65,7 @@ public:
    */
   template<OptionalField FldT>
   std::optional<typename FldT::type> try_get() const {
-    if (!adapted_->isSetField(FldT::kFixTag)) {
-      return std::nullopt;
-    }
+    if (!adapted_->isSetField(FldT::kFixTag)) { return std::nullopt; }
     return getImpl<FldT>();
   }
 

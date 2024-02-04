@@ -36,8 +36,8 @@
 #include "jmg/array_proxy.h"
 #include "jmg/object.h"
 #include "jmg/safe_types.h"
-#include "jmg/util.h"
 #include "jmg/union.h"
+#include "jmg/util.h"
 
 namespace jmg
 {
@@ -45,8 +45,7 @@ namespace yaml
 {
 
 template<typename... Fields>
-class Object : public ObjectDef<Fields...>
-{
+class Object : public ObjectDef<Fields...> {
 public:
   using adapted_type = YAML::Node;
 
@@ -60,16 +59,14 @@ public:
   typename FldT::type get() const {
     using RsltT = typename FldT::type;
     const char* name = FldT::name;
-    if constexpr(SafeType<typename FldT::type>) {
+    if constexpr (SafeType<typename FldT::type>) {
       using UnsafeT = UnsafeTypeFromT<RsltT>;
       return RsltT{node_[name].as<UnsafeT>()};
     }
-    else if constexpr(OwningArrayProxyT<typename FldT::type>) {
+    else if constexpr (OwningArrayProxyT<typename FldT::type>) {
       return RsltT{YAML::Node{node_[name]}};
     }
-    else {
-      return node_[name].as<RsltT>();
-    }
+    else { return node_[name].as<RsltT>(); }
   }
 
   /**
@@ -79,25 +76,23 @@ public:
   std::optional<typename FldT::type> try_get() const {
     const char* name = FldT::name;
     if (const auto entry = node_[name]; entry) {
-      if constexpr(SafeType<typename FldT::type>) {
-	using SafeT = typename FldT::type;
-	using RsltT = std::optional<SafeT>;
-	using UnsafeT = UnsafeTypeFromT<SafeT>;
-	return RsltT{entry.as<UnsafeT>()};
+      if constexpr (SafeType<typename FldT::type>) {
+        using SafeT = typename FldT::type;
+        using RsltT = std::optional<SafeT>;
+        using UnsafeT = UnsafeTypeFromT<SafeT>;
+        return RsltT{entry.as<UnsafeT>()};
       }
-      else if constexpr(OwningArrayProxyT<typename FldT::type>) {
-	using RsltT = std::optional<typename FldT::type>;
-	return RsltT{YAML::Node{entry}};
+      else if constexpr (OwningArrayProxyT<typename FldT::type>) {
+        using RsltT = std::optional<typename FldT::type>;
+        return RsltT{YAML::Node{entry}};
       }
       else {
-	using EffT = typename FldT::type;
-	using RsltT = std::optional<EffT>;
-	return RsltT{entry.as<EffT>()};
+        using EffT = typename FldT::type;
+        using RsltT = std::optional<EffT>;
+        return RsltT{entry.as<EffT>()};
       }
     }
-    else {
-      return std::nullopt;
-    }
+    else { return std::nullopt; }
   }
 
 private:
@@ -107,8 +102,7 @@ private:
 namespace detail
 {
 template<ObjectDefT Obj>
-struct ArrayTypeFactory
-{
+struct ArrayTypeFactory {
   using ItrProxy = AdaptingConstItrProxy<YAML::const_iterator, Obj>;
   using ItrPolicy = ProxiedItrPolicy<YAML::Node, ItrProxy>;
   using type = OwningArrayProxy<YAML::Node, ItrPolicy>;

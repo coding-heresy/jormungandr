@@ -36,7 +36,6 @@
 #include <string>
 #include <typeinfo>
 
-#include <cxxabi.h>
 #include <meta/meta.hpp>
 
 namespace jmg
@@ -49,10 +48,14 @@ namespace jmg
 namespace detail
 {
 template<typename T>
-struct IsTypeListImpl { using type = std::false_type; };
+struct IsTypeListImpl {
+  using type = std::false_type;
+};
 
 template<typename... Ts>
-struct IsTypeListImpl<meta::list<Ts...>> { using type = std::true_type; };
+struct IsTypeListImpl<meta::list<Ts...>> {
+  using type = std::true_type;
+};
 } // namespace detail
 
 template<typename T>
@@ -79,23 +82,33 @@ concept NumericT = std::integral<T> || std::floating_point<T>;
 namespace detail
 {
 template<typename T>
-struct IsStringLikeImpl { using type = std::false_type; };
+struct IsStringLikeImpl {
+  using type = std::false_type;
+};
 
 template<>
-struct IsStringLikeImpl<std::string> { using type = std::true_type; };
+struct IsStringLikeImpl<std::string> {
+  using type = std::true_type;
+};
 
 template<>
-struct IsStringLikeImpl<std::string_view> { using type = std::true_type; };
+struct IsStringLikeImpl<std::string_view> {
+  using type = std::true_type;
+};
 
 template<>
-struct IsStringLikeImpl<char*> { using type = std::true_type; };
+struct IsStringLikeImpl<char*> {
+  using type = std::true_type;
+};
 } // namespace detail
 
 template<typename T>
-using IsStringLikeT = meta::_t<detail::IsStringLikeImpl<std::remove_cvref_t<T>>>;
+using IsStringLikeT =
+  meta::_t<detail::IsStringLikeImpl<std::remove_cvref_t<T>>>;
 
 template<typename T>
-concept StringLikeT = IsStringLikeT<T>{}();
+concept StringLikeT = IsStringLikeT<T>
+{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // always_false wrapper to defer evaluation of static_assert
@@ -114,12 +127,18 @@ constexpr bool always_false = false;
 namespace detail
 {
 template<typename T>
-struct safe_front_ { using type = meta::nil_; };
-template <typename First, typename... Rest>
-struct safe_front_<meta::list<First, Rest...>> { using type = First; };
+struct safe_front_ {
+  using type = meta::nil_;
+};
+template<typename First, typename... Rest>
+struct safe_front_<meta::list<First, Rest...>> {
+  using type = First;
+};
 template<typename T>
-struct safe_back_ { using type = meta::nil_; };
-template <typename First, typename... Rest>
+struct safe_back_ {
+  using type = meta::nil_;
+};
+template<typename First, typename... Rest>
 struct safe_back_<meta::list<First, Rest...>> {
   using type = meta::at_c<meta::list<First, Rest...>, sizeof...(Rest)>;
 };
@@ -137,7 +156,8 @@ namespace detail
 {
 using namespace meta::placeholders;
 template<typename T>
-using SameAsLambda = meta::lambda<_a, _b, meta::lazy::or_<_a, std::is_same<T, _b>>>;
+using SameAsLambda =
+  meta::lambda<_a, _b, meta::lazy::or_<_a, std::is_same<T, _b>>>;
 template<typename T, TypeList Lst>
 using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
 } // namespace detail
@@ -155,27 +175,32 @@ namespace detail
 {
 using namespace meta::placeholders;
 template<typename T>
-using SubclassOfLambda = meta::lambda<_a, _b, meta::lazy::or_<_a, std::is_base_of<_b, T>>>;
+using SubclassOfLambda =
+  meta::lambda<_a, _b, meta::lazy::or_<_a, std::is_base_of<_b, T>>>;
 template<typename T, TypeList Lst>
-using IsSubclassMemberOf = meta::fold<Lst, std::false_type, SubclassOfLambda<T>>;
+using IsSubclassMemberOf =
+  meta::fold<Lst, std::false_type, SubclassOfLambda<T>>;
 template<typename T, TypeList Lst>
 using IsNotSubclassMemberOf = meta::not_<detail::IsSubclassMemberOf<T, Lst>>;
 
 template<TypeList AllTags, TypeList PolicyList>
 struct PolicyCheckerImpl {
-  using NotSubclassPred = meta::bind_back<meta::quote<IsNotSubclassMemberOf>, AllTags>;
+  using NotSubclassPred =
+    meta::bind_back<meta::quote<IsNotSubclassMemberOf>, AllTags>;
   using SubclassCheckResult = meta::find_if<PolicyList, NotSubclassPred>;
   using type = meta::empty<SubclassCheckResult>;
 };
 template<TypeList AllTags, TypeList PolicyList>
 using PolicyListValidT = meta::_t<PolicyCheckerImpl<AllTags, PolicyList>>;
 
-template<typename BasePolicy, typename DefaultPolicy, TypeList AllTags, TypeList PolicyList>
-requires (std::is_base_of_v<BasePolicy, DefaultPolicy>
-	  && isMemberOfList<BasePolicy, AllTags>()
-	  && PolicyListValidT<AllTags, PolicyList>{}())
-struct PolicyResolver
-{
+template<typename BasePolicy,
+         typename DefaultPolicy,
+         TypeList AllTags,
+         TypeList PolicyList>
+  requires(std::is_base_of_v<BasePolicy, DefaultPolicy>
+           && isMemberOfList<BasePolicy, AllTags>()
+           && PolicyListValidT<AllTags, PolicyList>{}())
+struct PolicyResolver {
   using Recognizer = meta::bind_front<meta::quote<std::is_base_of>, BasePolicy>;
   using SearchResult = meta::find_if<PolicyList, Recognizer>;
   using SearchFailed = meta::empty<SearchResult>;
@@ -183,7 +208,10 @@ struct PolicyResolver
 };
 } // namespace detail
 
-template<typename BasePolicy, typename DefaultPolicy, TypeList AllTags, TypeList PolicyList>
+template<typename BasePolicy,
+         typename DefaultPolicy,
+         TypeList AllTags,
+         TypeList PolicyList>
 using PolicyResolverT =
   meta::_t<detail::PolicyResolver<BasePolicy, DefaultPolicy, AllTags, PolicyList>>;
 
@@ -191,20 +219,20 @@ using PolicyResolverT =
 // helper macro for concept checking
 ////////////////////////////////////////////////////////////////////////////////
 
-#define JMG_MAKE_CONCEPT_CHECKER(name, concept)		\
-  namespace detail##__FILE__ {				\
-    template<typename T>				\
-    struct Is##name {					\
-      static constexpr bool value = false;		\
-    };							\
-    template<concept T>					\
-    struct Is##name<T> {				\
-      static constexpr bool value = true;		\
-    };							\
-  } /* namespace detail##__FILE__ */			\
-  template<typename T>					\
-  inline constexpr bool is##name() {			\
-    return detail##__FILE__::Is##name<T>::value;	\
+#define JMG_MAKE_CONCEPT_CHECKER(name, concept)  \
+  namespace detail##__FILE__ {                   \
+    template<typename T>                         \
+    struct Is##name {                            \
+      static constexpr bool value = false;       \
+    };                                           \
+    template<concept T>                          \
+    struct Is##name<T> {                         \
+      static constexpr bool value = true;        \
+    };                                           \
+  } /* namespace detail##__FILE__ */             \
+  template<typename T>                           \
+  inline constexpr bool is##name() {             \
+    return detail##__FILE__::Is##name<T>::value; \
   }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -219,25 +247,30 @@ using PolicyResolverT =
 std::string demangle(const std::type_info& id) {
   using namespace std;
 
-  // c.f. https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
+  // c.f.
+  // https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
   // for documentation of __cxa_demangle
 
   // note: -4 is not in the expected range of returned status values
   int status = -4;
-  unique_ptr<char, void(*)(void*)> rslt{
-    abi::__cxa_demangle(id.name(), nullptr, nullptr, &status), free};
+  unique_ptr<char, void (*)(void*)> rslt{abi::__cxa_demangle(id.name(), nullptr,
+                                                             nullptr, &status),
+                                         free};
   if (!rslt) {
     switch (status) {
-    case 0:
-      throw runtime_error("type name demangle returned success status but NULL result");
-    case -1:
-      throw runtime_error("unable to allocate memory for demangled type name");
-    case -2:
-      throw runtime_error("unexpected invalid type name when demangling");
-    case -3:
-      throw runtime_error("invalid argument to typename demangling function");
-    default:
-      throw runtime_error("unknown status result from failed typename demangle");
+      case 0:
+        throw runtime_error(
+          "type name demangle returned success status but NULL result");
+      case -1:
+        throw runtime_error(
+          "unable to allocate memory for demangled type name");
+      case -2:
+        throw runtime_error("unexpected invalid type name when demangling");
+      case -3:
+        throw runtime_error("invalid argument to typename demangling function");
+      default:
+        throw runtime_error(
+          "unknown status result from failed typename demangle");
     }
   }
   // NOTE: ignoring the possibility that status could be nonzero when
@@ -248,9 +281,7 @@ std::string demangle(const std::type_info& id) {
 /**
  * convenience overload of demangle for pointer argument
  */
-std::string demangle(const std::type_info* id) {
-  return demangle(*id);
-}
+std::string demangle(const std::type_info* id) { return demangle(*id); }
 
 /**
  * return the demangled name of a type
@@ -277,9 +308,7 @@ std::string type_name_for(const T& t) {
  */
 std::string current_exception_type_name() {
   const auto* excType = abi::__cxa_current_exception_type();
-  if (!excType) {
-    return "<no outstanding exceptions>";
-  }
+  if (!excType) { return "<no outstanding exceptions>"; }
   return demangle(excType);
 }
 

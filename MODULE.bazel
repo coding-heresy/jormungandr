@@ -1,6 +1,6 @@
 
 module(
-    name = "coding_heresy_jormungandr",
+    name = "jormungandr",
     repo_name = "coding_heresy_jormungandr",
     version = "0.1.0",
 )
@@ -23,8 +23,7 @@ bazel_dep(
 bazel_dep(
     name = "yaml-cpp",
     version = "0.8.0",
-    repo_name = "jbeder_yaml_cpp",
-    dev_dependency = True
+    repo_name = "yaml-cpp",
 )
 
 ########################################
@@ -64,17 +63,3 @@ archive_override(
     strip_prefix = "strong_type-1.1.0",
     urls = ["https://github.com/coding-heresy/strong_type/archive/refs/tags/1.1.0.tar.gz"],
 )
-
-### TODO experimental, no idea if this will work
-
-# bazel_dep(
-#     name = "boost",
-#     version = "0.0.0",
-#     repo_name = "com_github_nelhage_rules_boost"
-# )
-
-# archive_override(
-#     module_name = "boost",
-#     strip_prefix = "rules_boost-96e9b631f104b43a53c21c87b01ac538ad6f3b48",
-#     urls = ["https://github.com/nelhage/rules_boost/archive/96e9b631f104b43a53c21c87b01ac538ad6f3b48.tar.gz"],
-# )

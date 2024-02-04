@@ -52,25 +52,20 @@ namespace detail
  * string constant.
  */
 template<typename T>
-concept HasFieldName = requires {
-  std::same_as<decltype(T::name), char const *>;
-};
+concept HasFieldName =
+  requires { std::same_as<decltype(T::name), char const*>; };
 
 /**
  * field definition must have a 'type' member
  */
 template<typename T>
-concept HasFieldType = requires {
-  typename T::type;
-};
+concept HasFieldType = requires { typename T::type; };
 
 /**
  * field definition must have a 'required' member
  */
 template<typename T>
-concept HasRequiredSpec = requires {
-  typename T::required;
-};
+concept HasRequiredSpec = requires { typename T::required; };
 
 } // namespace detail
 
@@ -78,24 +73,22 @@ concept HasRequiredSpec = requires {
  * Concept for field definition
  */
 template<typename T>
-concept FieldDefT = std::derived_from<T, FieldDef>
-  && detail::HasFieldName<T>
-  && detail::HasFieldType<T>
-  && detail::HasRequiredSpec<T>;
+concept FieldDefT = std::derived_from<T, FieldDef> && detail::HasFieldName<T>
+                    && detail::HasFieldType<T> && detail::HasRequiredSpec<T>;
 
 /**
  * concept for required field, used by jmg::get
  */
 template<typename T>
-concept RequiredField = FieldDefT<T>
-  && std::same_as<typename T::required, std::true_type>;
+concept RequiredField =
+  FieldDefT<T> && std::same_as<typename T::required, std::true_type>;
 
 /**
  * concept for optional field, used by jmg::try_get
  */
 template<typename T>
-concept OptionalField = FieldDefT<T>
-  && std::same_as<typename T::required, std::false_type>;
+concept OptionalField =
+  FieldDefT<T> && std::same_as<typename T::required, std::false_type>;
 
 /**
  * common field name constant for fields that have no string name
@@ -107,10 +100,9 @@ inline constexpr char kPlaceholder[] = "";
 /**
  * helper macro to simplify declaration of fields
  */
-#define JMG_FIELD_DEF(field_name, str_name, field_type, is_required)	\
-  struct field_name : jmg::FieldDef					\
-  {									\
-    static constexpr char name[] = str_name;				\
-    using type = field_type;						\
-    using required = std::is_required##_type;				\
+#define JMG_FIELD_DEF(field_name, str_name, field_type, is_required) \
+  struct field_name : jmg::FieldDef {                                \
+    static constexpr char name[] = str_name;                         \
+    using type = field_type;                                         \
+    using required = std::is_required##_type;                        \
   }

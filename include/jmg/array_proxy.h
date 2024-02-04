@@ -44,8 +44,7 @@ namespace jmg
  * actual value in the container when dereferenced
  */
 template<typename ProxiedItrT, typename ValueProxyT>
-class StashingConstItrProxy
-{
+class StashingConstItrProxy {
 public:
   using difference_type = ptrdiff_t;
   using value_type = ValueProxyT;
@@ -77,13 +76,16 @@ public:
     return rslt;
   }
 
-  friend bool operator==(const StashingConstItrProxy& lhs, const StashingConstItrProxy& rhs) {
+  friend bool operator==(const StashingConstItrProxy& lhs,
+                         const StashingConstItrProxy& rhs) {
     return lhs.itr_ == rhs.itr_;
   }
 
-  friend bool operator!=(const StashingConstItrProxy& lhs, const StashingConstItrProxy& rhs) {
+  friend bool operator!=(const StashingConstItrProxy& lhs,
+                         const StashingConstItrProxy& rhs) {
     return lhs.itr_ != rhs.itr_;
   }
+
 protected:
   std::optional<ProxiedItrT> itr_;
   std::optional<ValueProxyT> stash_;
@@ -94,8 +96,7 @@ protected:
  * value in the container when dereferenced
  */
 template<typename ProxiedItrT, typename ValueProxyT>
-class AdaptingConstItrProxy
-{
+class AdaptingConstItrProxy {
 public:
   using difference_type = ptrdiff_t;
   using value_type = ValueProxyT;
@@ -120,13 +121,16 @@ public:
     return rslt;
   }
 
-  friend bool operator==(const AdaptingConstItrProxy& lhs, const AdaptingConstItrProxy& rhs) {
+  friend bool operator==(const AdaptingConstItrProxy& lhs,
+                         const AdaptingConstItrProxy& rhs) {
     return lhs.itr_ == rhs.itr_;
   }
 
-  friend bool operator!=(const AdaptingConstItrProxy& lhs, const AdaptingConstItrProxy& rhs) {
+  friend bool operator!=(const AdaptingConstItrProxy& lhs,
+                         const AdaptingConstItrProxy& rhs) {
     return lhs.itr_ != rhs.itr_;
   }
+
 protected:
   ProxiedItrT itr_;
 };
@@ -143,8 +147,7 @@ struct ItrPolicyTag {};
  * container in ArrayProxy
  */
 template<typename SrcContainerT>
-struct RawItrPolicy : ItrPolicyTag
-{
+struct RawItrPolicy : ItrPolicyTag {
   static auto begin(const SrcContainerT* src) { return std::begin(*src); }
   static auto end(const SrcContainerT* src) { return std::end(*src); }
   // NOTE: begin/end of non-const containers should return const
@@ -160,16 +163,23 @@ struct RawItrPolicy : ItrPolicyTag
  * a proxied container
  */
 template<typename SrcContainerT, typename ItrProxyT>
-struct ProxiedItrPolicy : ItrPolicyTag
-{
-  static auto begin(const SrcContainerT* src) { return ItrProxyT{std::begin(*src)}; }
-  static auto end(const SrcContainerT* src) { return ItrProxyT{std::end(*src)}; }
+struct ProxiedItrPolicy : ItrPolicyTag {
+  static auto begin(const SrcContainerT* src) {
+    return ItrProxyT{std::begin(*src)};
+  }
+  static auto end(const SrcContainerT* src) {
+    return ItrProxyT{std::end(*src)};
+  }
   // NOTE: begin/end of non-const containers should return const
   // iterators at this point
   static auto begin(SrcContainerT* src) { return ItrProxyT{std::cbegin(*src)}; }
   static auto end(SrcContainerT* src) { return ItrProxyT{std::cend(*src)}; }
-  static auto cbegin(const SrcContainerT* src) { return ItrProxyT{std::cbegin(*src)}; }
-  static auto cend(const SrcContainerT* src) { return ItrProxyT{std::cend(*src)}; }
+  static auto cbegin(const SrcContainerT* src) {
+    return ItrProxyT{std::cbegin(*src)};
+  }
+  static auto cend(const SrcContainerT* src) {
+    return ItrProxyT{std::cend(*src)};
+  }
 };
 
 struct SizePolicyTag {};
@@ -179,11 +189,8 @@ struct SizePolicyTag {};
  * the raw container interface
  */
 template<typename SrcContainerT>
-struct DefaultSizePolicy : SizePolicyTag
-{
-  static size_t size(const SrcContainerT* src) {
-    return src->size();
-  }
+struct DefaultSizePolicy : SizePolicyTag {
+  static size_t size(const SrcContainerT* src) { return src->size(); }
 };
 
 /**
@@ -194,14 +201,15 @@ struct DefaultSizePolicy : SizePolicyTag
  * proxy
  */
 template<typename ProxiedT, typename... PoliciesT>
-class ViewingArrayProxy
-{
+class ViewingArrayProxy {
   using Policies = meta::list<PoliciesT...>;
   using AllPolicyTags = meta::list<ItrPolicyTag, SizePolicyTag>;
   using DefaultItrPolicy = RawItrPolicy<ProxiedT>;
-  using ItrPolicy = PolicyResolverT<ItrPolicyTag, DefaultItrPolicy, AllPolicyTags, Policies>;
+  using ItrPolicy =
+    PolicyResolverT<ItrPolicyTag, DefaultItrPolicy, AllPolicyTags, Policies>;
   using DefaultSzPolicy = DefaultSizePolicy<ProxiedT>;
-  using SizePolicy = PolicyResolverT<SizePolicyTag, DefaultSzPolicy, AllPolicyTags, Policies>;
+  using SizePolicy =
+    PolicyResolverT<SizePolicyTag, DefaultSzPolicy, AllPolicyTags, Policies>;
 
 public:
   explicit ViewingArrayProxy(const ProxiedT& src) : src_(&src) {}
@@ -230,14 +238,15 @@ protected:
  * proxy
  */
 template<typename ProxiedT, typename... PoliciesT>
-class OwningArrayProxy : public ViewingArrayProxy<ProxiedT, PoliciesT...>
-{
+class OwningArrayProxy : public ViewingArrayProxy<ProxiedT, PoliciesT...> {
   using Base = ViewingArrayProxy<ProxiedT, PoliciesT...>;
+
 public:
   OwningArrayProxy() = delete;
   explicit OwningArrayProxy(ProxiedT&& proxy) : proxy_(std::move(proxy)) {
     Base::src_ = &proxy_;
   }
+
 private:
   const ProxiedT proxy_;
 };
@@ -249,15 +258,20 @@ private:
 namespace detail
 {
 template<typename T>
-struct IsViewingArrayProxyImpl { using type = std::false_type; };
+struct IsViewingArrayProxyImpl {
+  using type = std::false_type;
+};
 template<typename... Ts>
-struct IsViewingArrayProxyImpl<ViewingArrayProxy<Ts...>> { using type = std::true_type; };
+struct IsViewingArrayProxyImpl<ViewingArrayProxy<Ts...>> {
+  using type = std::true_type;
+};
 } // namespace detail
-template <typename T>
+template<typename T>
 using IsViewingArrayProxyT = meta::_t<detail::IsViewingArrayProxyImpl<T>>;
 
 template<typename T>
-concept ViewingArrayProxyT = IsViewingArrayProxyT<T>{}();
+concept ViewingArrayProxyT = IsViewingArrayProxyT<T>
+{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // OwningArrayProxyT concept
@@ -266,14 +280,19 @@ concept ViewingArrayProxyT = IsViewingArrayProxyT<T>{}();
 namespace detail
 {
 template<typename T>
-struct IsOwningArrayProxyImpl { using type = std::false_type; };
+struct IsOwningArrayProxyImpl {
+  using type = std::false_type;
+};
 template<typename... Ts>
-struct IsOwningArrayProxyImpl<OwningArrayProxy<Ts...>> { using type = std::true_type; };
+struct IsOwningArrayProxyImpl<OwningArrayProxy<Ts...>> {
+  using type = std::true_type;
+};
 } // namespace detail
-template <typename T>
+template<typename T>
 using IsOwningArrayProxyT = meta::_t<detail::IsOwningArrayProxyImpl<T>>;
 
 template<typename T>
-concept OwningArrayProxyT = IsOwningArrayProxyT<T>{}();
+concept OwningArrayProxyT = IsOwningArrayProxyT<T>
+{}();
 
 } // namespace jmg

@@ -30,7 +30,6 @@
  *
  */
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
 #include "jmg/field.h"
@@ -58,8 +57,10 @@ JMG_FIELD_DEF(ComplexArray, "complex", ComplexArrayProxy, true);
 // OptComplexArray is an optional array of non-primitive elements
 JMG_FIELD_DEF(OptComplexArray, "opt_complex", ComplexArrayProxy, false);
 
+// clang-format off
 using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field,
-			     PrimitiveArray, ComplexArray, OptComplexArray>;
+                             PrimitiveArray, ComplexArray, OptComplexArray>;
+// clang-format on
 
 TEST(YamlTests, FieldRetrieval) {
   // build initial tree of nodes, some portions of the tree are not

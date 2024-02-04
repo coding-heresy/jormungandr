@@ -51,11 +51,12 @@ struct FieldGroupDef {};
 namespace detail
 {
 template<typename T>
-struct IsFieldGroupDefImpl { using type = std::false_type; };
+struct IsFieldGroupDefImpl {
+  using type = std::false_type;
+};
 
 template<typename... Ts>
-struct IsFieldGroupDefImpl<FieldGroupDef<Ts...>>
-{
+struct IsFieldGroupDefImpl<FieldGroupDef<Ts...>> {
   using type = std::true_type;
 };
 } // namespace detail
@@ -64,7 +65,8 @@ template<typename T>
 using IsFieldGroupDefT = meta::_t<detail::IsFieldGroupDefImpl<T>>;
 
 template<typename T>
-concept FieldGroupDefT = IsFieldGroupDefT<T>{}();
+concept FieldGroupDefT = IsFieldGroupDefT<T>
+{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains a type to being a field or a field group
@@ -73,12 +75,18 @@ concept FieldGroupDefT = IsFieldGroupDefT<T>{}();
 namespace detail
 {
 template<typename T>
-struct IsFieldOrGroupDefImpl { using type = std::false_type; };
-template<FieldDefT T>
-struct IsFieldOrGroupDefImpl<T> { using type = std::true_type; };
-template<FieldGroupDefT T>
-struct IsFieldOrGroupDefImpl<T> { using type = std::true_type; };
+struct IsFieldOrGroupDefImpl {
+  using type = std::false_type;
 };
+template<FieldDefT T>
+struct IsFieldOrGroupDefImpl<T> {
+  using type = std::true_type;
+};
+template<FieldGroupDefT T>
+struct IsFieldOrGroupDefImpl<T> {
+  using type = std::true_type;
+};
+}; // namespace detail
 template<typename T>
 using IsFieldOrGroupDefT = meta::_t<detail::IsFieldOrGroupDefImpl<T>>;
 
@@ -98,15 +106,11 @@ namespace detail
 {
 template<typename T>
 struct ValidObjectContentCheckUnwrap {
-  static inline constexpr bool check() {
-    return false;
-  }
+  static inline constexpr bool check() { return false; }
 };
 template<typename... Ts>
 struct ValidObjectContentCheckUnwrap<meta::list<Ts...>> {
-  static inline constexpr bool check() {
-    return (isFieldOrGroup<Ts>() || ...);
-  }
+  static inline constexpr bool check() { return (isFieldOrGroup<Ts>() || ...); }
 };
 } // namespace detail
 
@@ -125,24 +129,28 @@ concept ValidObjectContent = isValidObjectContent<T>();
 namespace detail
 {
 template<typename T>
-struct FieldExpanderImpl { using type = meta::list<T>; };
+struct FieldExpanderImpl {
+  using type = meta::list<T>;
+};
 // TODO call recursively in case a field group contains another field group
 template<typename... Ts>
-struct FieldExpanderImpl<FieldGroupDef<Ts...>> { using type = meta::list<Ts...>; };
+struct FieldExpanderImpl<FieldGroupDef<Ts...>> {
+  using type = meta::list<Ts...>;
+};
 } // namespace detail
 template<typename T>
 using FieldExpanderT = meta::_t<detail::FieldExpanderImpl<T>>;
 
 template<TypeList T>
-using ExpandedFields = meta::join<meta::transform<T, meta::quote<FieldExpanderT>>>;
+using ExpandedFields =
+  meta::join<meta::transform<T, meta::quote<FieldExpanderT>>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // declaration of an object
 ////////////////////////////////////////////////////////////////////////////////
 
 template<FieldOrGroupT... FieldsT>
-struct ObjectDef
-{
+struct ObjectDef {
   using Fields = ExpandedFields<meta::list<FieldsT...>>;
 };
 
@@ -153,9 +161,7 @@ struct ObjectDef
 namespace detail
 {
 template<typename T>
-concept HasFields = requires {
-  typename T::Fields;
-};
+concept HasFields = requires { typename T::Fields; };
 template<typename T>
 concept HasValidContent = ValidObjectContent<typename T::Fields>;
 } // namespace detail
@@ -179,13 +185,15 @@ inline constexpr bool isMemberOfObject() {
 
 template<FieldDefT FieldT, ObjectDefT ObjectT>
 typename FieldT::type get(const ObjectT& obj)
-  requires (isMemberOfObject<FieldT, ObjectT>()) {
+  requires(isMemberOfObject<FieldT, ObjectT>())
+{
   return obj.template get<FieldT>();
 }
 
 template<FieldDefT FieldT, ObjectDefT ObjectT>
 std::optional<typename FieldT::type> try_get(const ObjectT& obj)
-  requires (isMemberOfObject<FieldT, ObjectT>()) {
+  requires(isMemberOfObject<FieldT, ObjectT>())
+{
   return obj.template try_get<FieldT>();
 }
 

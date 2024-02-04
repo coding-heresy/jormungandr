@@ -39,25 +39,18 @@ namespace jmg
 ////////////////////////////////////////////////////////////////////////////////
 // helper functions for accessing key and value fields of a map entry
 ////////////////////////////////////////////////////////////////////////////////
-const auto& key_of(const auto& rec) {
-  return std::get<0>(rec);
-}
+const auto& key_of(const auto& rec) { return std::get<0>(rec); }
 
-const auto& value_of(const auto& rec) {
-  return std::get<1>(rec);
-}
+const auto& value_of(const auto& rec) { return std::get<1>(rec); }
 
-auto& value_of(auto& rec) {
-  return std::get<1>(rec);
-}
+auto& value_of(auto& rec) { return std::get<1>(rec); }
 
 /**
  * class template that automatically executes a cleanup action on
  * scope exit unless it is canceled
  */
 template<typename Fcn>
-struct AutoCleanup
-{
+struct AutoCleanup {
   AutoCleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
   ~AutoCleanup() {
     if (isActive_) { fcn_(); }

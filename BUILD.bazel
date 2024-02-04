@@ -6,7 +6,6 @@
 cc_library(
     name = "jmg",
     visibility = ["//visibility:public"],
-    #hdrs = glob(["include/**/*.h"]),
     hdrs = [
         "include/jmg/array_proxy.h",
         "include/jmg/conversion.h",
@@ -26,7 +25,7 @@ cc_library(
     deps = [
         "@ericniebler_meta//:meta",
         "@doom_strong_type//:strong_type",
-        "@jbeder_yaml_cpp//:yaml-cpp",
+        "@yaml-cpp//:yaml-cpp",
         # TODO get boost build working under bzlmod
         # "@com_github_nelhage_rules_boost//:property_tree",
     ],

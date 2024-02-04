@@ -43,15 +43,17 @@ namespace jmg
  * types
  */
 template<typename Obj, typename... Ts>
-class Union
-{
+class Union {
   using Alternates = meta::list<Ts...>;
+
 public:
   Union() = delete;
   explicit Union(const Obj& obj) : obj_(&obj) {}
 
   template<typename Tgt>
-  Tgt as() const requires (isMemberOfList<Tgt, Alternates>()) {
+  Tgt as() const
+    requires(isMemberOfList<Tgt, Alternates>())
+  {
     return Tgt(*obj_);
   }
 
@@ -65,14 +67,19 @@ private:
 namespace detail
 {
 template<typename T>
-struct IsUnionImpl { using type = std::false_type; };
+struct IsUnionImpl {
+  using type = std::false_type;
+};
 template<typename T, typename... Ts>
-struct IsUnionImpl<Union<T, Ts...>> { using type = std::true_type; };
+struct IsUnionImpl<Union<T, Ts...>> {
+  using type = std::true_type;
+};
 } // namespace detail
 
 template<typename T>
 using IsUnionT = meta::_t<detail::IsUnionImpl<T>>;
 
 template<typename T>
-concept UnionT = IsUnionT<T>{}();
+concept UnionT = IsUnionT<T>
+{}();
 } // namespace jmg

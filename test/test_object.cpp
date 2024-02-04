@@ -33,8 +33,8 @@
 #include <gtest/gtest.h>
 
 #include "jmg/array_proxy.h"
-#include "jmg/object.h"
 #include "jmg/meta.h"
+#include "jmg/object.h"
 #include "jmg/union.h"
 
 using namespace jmg;
@@ -44,13 +44,15 @@ using namespace std;
  * helper macro that simplifies construction of metaprogramming types
  * that can be used to test concepts
  */
-#define MAKE_CONCEPT_TESTER(concept)		\
-  template<typename T>				\
-  struct Is##concept##Concept			\
-  { static constexpr bool value = false; };	\
-  template<concept T>				\
-  struct Is##concept##Concept<T>		\
-  { static constexpr bool value = true; }
+#define MAKE_CONCEPT_TESTER(concept)     \
+  template<typename T>                   \
+  struct Is##concept##Concept {          \
+    static constexpr bool value = false; \
+  };                                     \
+  template<concept T>                    \
+  struct Is##concept##Concept<T> {       \
+    static constexpr bool value = true;  \
+  }
 
 MAKE_CONCEPT_TESTER(FieldDefT);
 MAKE_CONCEPT_TESTER(FieldGroupDefT);
@@ -66,7 +68,8 @@ JMG_FIELD_DEF(GroupStringField, "group_string_field", string, true);
 JMG_FIELD_DEF(GroupDblField, "group_dbl_field", double, true);
 JMG_FIELD_DEF(GroupOptionalField, "group_optional_field", int, false);
 
-using TestFieldGroup = FieldGroupDef<GroupStringField, GroupDblField, GroupOptionalField>;
+using TestFieldGroup =
+  FieldGroupDef<GroupStringField, GroupDblField, GroupOptionalField>;
 using TestObject = ObjectDef<TestField, TestFieldGroup>;
 
 TEST(ObjectTests, TestConceptsAndCharacteristics) {

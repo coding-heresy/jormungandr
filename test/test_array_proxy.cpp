@@ -71,7 +71,8 @@ TEST(ArrayProxyTests, TestAdaptingViewProxy) {
 
   // proxy for an iterator over a container where the entries are
   // adapted using IntOwningProxy
-  using ItrProxy = AdaptingConstItrProxy<IntVec::const_iterator, IntOwningProxy>;
+  using ItrProxy =
+    AdaptingConstItrProxy<IntVec::const_iterator, IntOwningProxy>;
   EXPECT_TRUE(isInputIterator<ItrProxy>());
   EXPECT_TRUE(isInputOrOutputIterator<ItrProxy>());
   // policy declaring that a iteration over a vector of integers will

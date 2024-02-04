@@ -38,6 +38,7 @@
 
 #if defined(TEST_CONSTRUCTING_PTREE_XML_FROM_FILE)
 #include <boost/property_tree/xml_parser.hpp>
+
 #include "jmg/file_util.h"
 #endif
 
@@ -81,7 +82,8 @@ TEST(PtreeTests, TestXmlPtreeDataRetrieval) {
       xmlTopLevel.push_back(pt::ptree::value_type("record", std::move(rec2)));
     }
     xmlTopLevel.put("<xmlattr>.attribute", "test");
-    allXmlData.push_back(pt::ptree::value_type("top_level", std::move(xmlTopLevel)));
+    allXmlData.push_back(pt::ptree::value_type("top_level",
+                                               std::move(xmlTopLevel)));
   }
 #else
   TmpFile xmlFile{kXmlText};
@@ -105,16 +107,16 @@ TEST(PtreeTests, TestXmlPtreeDataRetrieval) {
       const auto& recs = jmg::get<Records>(topLvl);
       EXPECT_EQ(2, recs.size());
       for (const auto& rec : recs) {
-	EXPECT_EQ("string"s, jmg::get<RecordValueType>(rec));
-	if (!ctr2) {
-	  EXPECT_EQ("foo"s, jmg::get<RecordValue>(rec));
-	  EXPECT_FALSE(jmg::try_get<OptionalRecordValue>(rec).has_value());
-	}
-	else {
-	  EXPECT_EQ("bar"s, jmg::get<RecordValue>(rec));
-	  EXPECT_EQ("baz"s, *jmg::try_get<OptionalRecordValue>(rec));
-	}
-	++ctr2;
+        EXPECT_EQ("string"s, jmg::get<RecordValueType>(rec));
+        if (!ctr2) {
+          EXPECT_EQ("foo"s, jmg::get<RecordValue>(rec));
+          EXPECT_FALSE(jmg::try_get<OptionalRecordValue>(rec).has_value());
+        }
+        else {
+          EXPECT_EQ("bar"s, jmg::get<RecordValue>(rec));
+          EXPECT_EQ("baz"s, *jmg::try_get<OptionalRecordValue>(rec));
+        }
+        ++ctr2;
       }
       EXPECT_EQ(2, ctr2);
     }

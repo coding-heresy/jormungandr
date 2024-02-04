@@ -51,27 +51,26 @@ namespace jmg
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-struct StringConvertImpl
-{
+struct StringConvertImpl {
   static_assert(always_false<T>, "conversion not supported");
 };
 
 template<NumericT T>
-struct StringConvertImpl<T>
-{
+struct StringConvertImpl<T> {
   static T from_string(const std::string_view str) {
     T rslt{};
-    const auto [_, err] = std::from_chars(str.data(), str.data() + str.size(), rslt);
-    JMG_ENFORCE(std::errc() == err, "unable to convert string value [" << str
-		<< "] to integral value of type [" << type_name_for<T>() << "]: "
-		<< std::make_error_code(err).message());
+    const auto [_, err] =
+      std::from_chars(str.data(), str.data() + str.size(), rslt);
+    JMG_ENFORCE(std::errc() == err, "unable to convert string value ["
+                                      << str << "] to integral value of type ["
+                                      << type_name_for<T>() << "]: "
+                                      << std::make_error_code(err).message());
     return rslt;
   }
 };
 
 template<>
-struct StringConvertImpl<std::string>
-{
+struct StringConvertImpl<std::string> {
   static std::string from_string(const std::string_view str) {
     return std::string{str};
   }
@@ -88,11 +87,9 @@ struct StringConvertImpl<std::string>
  * implementation is added
  */
 template<typename T>
-concept ConversionTgtT = NumericT<T>
-  || std::same_as<T, std::string>;
+concept ConversionTgtT = NumericT<T> || std::same_as<T, std::string>;
 
-struct StringConvertT
-{
+struct StringConvertT {
   std::string_view str;
 
   template<ConversionTgtT T>
