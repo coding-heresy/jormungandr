@@ -78,7 +78,7 @@ auto openFile(const std::filesystem::path filePath) {
  */
 template<detail::IoStreamT StreamT, detail::StringT PathNameT>
 auto openFile(PathNameT pathName) {
-  return openFile<StreamT>(std::filesystem::path{pathName});
+  return openFile<StreamT>(std::filesystem::path(pathName));
 }
 
 /**
@@ -106,8 +106,8 @@ public:
     }
     const int fd = mkstemp(fileName);
     if (-1 == fd) { JMG_THROW_SYSTEM_ERROR("unable to create temporary file"); }
-    __gnu_cxx::stdio_filebuf<char> tmpBuf{fd, std::ios::out};
-    std::ostream strm{&tmpBuf};
+    auto tmpBuf = __gnu_cxx::stdio_filebuf<char>(fd, std::ios::out);
+    auto strm =  std::ostream(&tmpBuf);
     strm.exceptions(std::ofstream::badbit);
     strm << contents;
     path_ = fileName;

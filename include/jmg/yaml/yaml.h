@@ -61,10 +61,10 @@ public:
     const char* name = FldT::name;
     if constexpr (SafeT<typename FldT::type>) {
       using UnsafeT = UnsafeTypeFromT<RsltT>;
-      return RsltT{node_[name].as<UnsafeT>()};
+      return RsltT(node_[name].as<UnsafeT>());
     }
     else if constexpr (OwningArrayProxyT<typename FldT::type>) {
-      return RsltT{YAML::Node{node_[name]}};
+      return RsltT(YAML::Node(node_[name]));
     }
     else { return node_[name].as<RsltT>(); }
   }
@@ -80,16 +80,16 @@ public:
         using SafeT = typename FldT::type;
         using RsltT = std::optional<SafeT>;
         using UnsafeT = UnsafeTypeFromT<SafeT>;
-        return RsltT{entry.as<UnsafeT>()};
+        return RsltT(entry.as<UnsafeT>());
       }
       else if constexpr (OwningArrayProxyT<typename FldT::type>) {
         using RsltT = std::optional<typename FldT::type>;
-        return RsltT{YAML::Node{entry}};
+        return RsltT(YAML::Node(entry));
       }
       else {
         using EffT = typename FldT::type;
         using RsltT = std::optional<EffT>;
-        return RsltT{entry.as<EffT>()};
+        return RsltT(entry.as<EffT>());
       }
     }
     else { return std::nullopt; }

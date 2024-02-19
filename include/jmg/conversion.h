@@ -58,7 +58,7 @@ struct StringConvertImpl {
 template<NumericT T>
 struct StringConvertImpl<T> {
   static T from_string(const std::string_view str) {
-    T rslt{};
+    auto rslt = T();
     const auto [_, err] =
       std::from_chars(str.data(), str.data() + str.size(), rslt);
     JMG_ENFORCE(std::errc() == err, "unable to convert string value ["
@@ -72,7 +72,7 @@ struct StringConvertImpl<T> {
 template<>
 struct StringConvertImpl<std::string> {
   static std::string from_string(const std::string_view str) {
-    return std::string{str};
+    return std::string(str);
   }
 };
 
@@ -99,7 +99,7 @@ struct StringConvertT {
 };
 
 StringConvertT from_string(const std::string_view str) {
-  return StringConvertT{str};
+  return StringConvertT(str);
 }
 
 StringConvertT from_string(const std::string& str) {

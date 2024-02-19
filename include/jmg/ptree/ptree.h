@@ -105,7 +105,7 @@ public:
     }
     else if constexpr (IsUnionT<typename FldT::type>{}()
                        || IsViewingArrayProxyT<typename FldT::type>{}()) {
-      return typename FldT::type{value_of(*elem_)};
+      return typename FldT::type(value_of(*elem_));
     }
   }
 
@@ -130,7 +130,7 @@ public:
       return typename FldT::type{val};
     }
     else if constexpr (IsUnionT<typename FldT::type>{}()) {
-      return typename FldT::type{*elem_};
+      return typename FldT::type(*elem_);
     }
   }
 

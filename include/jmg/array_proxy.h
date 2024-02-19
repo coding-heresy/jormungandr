@@ -57,7 +57,7 @@ public:
   JMG_DEFAULT_MOVEABLE(StashingConstItrProxy);
   JMG_DEFAULT_COPYABLE(StashingConstItrProxy);
   explicit StashingConstItrProxy(ProxiedItrT&& itr) : itr_(std::move(itr)) {
-    if (itr_) { stash_ = ValueProxyT{*(itr_.value())}; }
+    if (itr_) { stash_ = ValueProxyT(*(itr_.value())); }
   }
 
   const ValueProxyT& operator*() const { return stash_.value(); }
@@ -65,14 +65,14 @@ public:
 
   StashingConstItrProxy& operator++() {
     ++(itr_.value());
-    stash_ = ValueProxyT{*(itr_.value())};
+    stash_ = ValueProxyT(*(itr_.value()));
     return *this;
   }
 
   StashingConstItrProxy operator++(int) {
     auto rslt = *this;
     ++(itr_.value());
-    stash_ = ValueProxyT{*(itr_.value())};
+    stash_ = ValueProxyT(*(itr_.value()));
     return rslt;
   }
 
@@ -108,7 +108,7 @@ public:
   JMG_DEFAULT_COPYABLE(AdaptingConstItrProxy);
   explicit AdaptingConstItrProxy(ProxiedItrT&& itr) : itr_(std::move(itr)) {}
 
-  ValueProxyT operator*() const { return ValueProxyT{*itr_}; }
+  ValueProxyT operator*() const { return ValueProxyT(*itr_); }
 
   AdaptingConstItrProxy& operator++() {
     ++itr_;
@@ -165,20 +165,20 @@ struct RawItrPolicy : ItrPolicyTag {
 template<typename SrcContainerT, typename ItrProxyT>
 struct ProxiedItrPolicy : ItrPolicyTag {
   static auto begin(const SrcContainerT* src) {
-    return ItrProxyT{std::begin(*src)};
+    return ItrProxyT(std::begin(*src));
   }
   static auto end(const SrcContainerT* src) {
-    return ItrProxyT{std::end(*src)};
+    return ItrProxyT(std::end(*src));
   }
   // NOTE: begin/end of non-const containers should return const
   // iterators at this point
-  static auto begin(SrcContainerT* src) { return ItrProxyT{std::cbegin(*src)}; }
-  static auto end(SrcContainerT* src) { return ItrProxyT{std::cend(*src)}; }
+  static auto begin(SrcContainerT* src) { return ItrProxyT(std::cbegin(*src)); }
+  static auto end(SrcContainerT* src) { return ItrProxyT(std::cend(*src)); }
   static auto cbegin(const SrcContainerT* src) {
-    return ItrProxyT{std::cbegin(*src)};
+    return ItrProxyT(std::cbegin(*src));
   }
   static auto cend(const SrcContainerT* src) {
-    return ItrProxyT{std::cend(*src)};
+    return ItrProxyT(std::cend(*src));
   }
 };
 
