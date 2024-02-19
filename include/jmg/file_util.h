@@ -38,8 +38,8 @@
 
 #include <ext/stdio_filebuf.h>
 
-#include "jmg/preprocessor.h"
 #include "jmg/meta.h"
+#include "jmg/preprocessor.h"
 
 namespace jmg
 {
@@ -109,7 +109,7 @@ public:
     const int fd = mkstemp(fileName);
     if (-1 == fd) { JMG_THROW_SYSTEM_ERROR("unable to create temporary file"); }
     auto tmpBuf = __gnu_cxx::stdio_filebuf<char>(fd, std::ios::out);
-    auto strm =  std::ostream(&tmpBuf);
+    auto strm = std::ostream(&tmpBuf);
     strm.exceptions(std::ofstream::badbit);
     strm << contents;
     path_ = fileName;

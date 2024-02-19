@@ -47,14 +47,14 @@ using OtherId32 = SafeId32<>;
 using TestIdStr = SafeIdStr<>;
 using OtherIdStr = SafeId<string>;
 
-#define CONFIRM_STRONG_TYPES(type1, type2)                      \
-  do {                                                          \
-    EXPECT_FALSE((is_same_v<type1, type2>));                    \
-    type1 t1, t2;                                               \
-    type2 t3;                                                   \
-    EXPECT_TRUE((is_same_v<decltype(t1), decltype(t2)>));       \
-    EXPECT_FALSE((is_same_v<decltype(t1), decltype(t3)>));      \
-  } while(0)
+#define CONFIRM_STRONG_TYPES(type1, type2)                 \
+  do {                                                     \
+    EXPECT_FALSE((is_same_v<type1, type2>));               \
+    type1 t1, t2;                                          \
+    type2 t3;                                              \
+    EXPECT_TRUE((is_same_v<decltype(t1), decltype(t2)>));  \
+    EXPECT_FALSE((is_same_v<decltype(t1), decltype(t3)>)); \
+  } while (0)
 
 TEST(SafeTypesTests, TypesAreStrong) {
   CONFIRM_STRONG_TYPES(TestId32, OtherId32);
@@ -75,13 +75,13 @@ TEST(SafeTypesTests, StreamOutput) {
   EXPECT_EQ("42"s, strm.str());
 }
 
-#define CONFIRM_COMPARABLE(type, val1, val2)    \
-  do {                                          \
-    const auto id1 = type(val1);                \
-    const auto id2 = type(val1);                \
-    const auto id3 = type(val2);                \
-    EXPECT_EQ(id1, id2);                        \
-    EXPECT_NE(id1, id3);                        \
+#define CONFIRM_COMPARABLE(type, val1, val2) \
+  do {                                       \
+    const auto id1 = type(val1);             \
+    const auto id2 = type(val1);             \
+    const auto id3 = type(val2);             \
+    EXPECT_EQ(id1, id2);                     \
+    EXPECT_NE(id1, id3);                     \
   } while (0)
 
 TEST(SafeTypesTests, IdsAreComparable) {
@@ -92,17 +92,17 @@ TEST(SafeTypesTests, IdsAreComparable) {
 #undef CONFIRM_COMPARABLE
 
 #define CONFIRM_DICT_HANDLING(dict, key_type, val_type, key_val, val_val) \
-  do {                                                                  \
-    dict<key_type, val_type> dict;                                      \
-    const auto key = key_type(key_val);                                 \
-    const val_type value = val_val;                                     \
-    const auto [itr, inserted] = dict.try_emplace(key, value);          \
-    EXPECT_TRUE(inserted);                                              \
-    EXPECT_TRUE(itr != dict.end());                                     \
-    EXPECT_FALSE(dict.empty());                                         \
-    EXPECT_EQ(dict.count(key), 1);                                      \
-    EXPECT_EQ(dict.at(key), value);                                     \
-  } while(0)
+  do {                                                                    \
+    dict<key_type, val_type> dict;                                        \
+    const auto key = key_type(key_val);                                   \
+    const val_type value = val_val;                                       \
+    const auto [itr, inserted] = dict.try_emplace(key, value);            \
+    EXPECT_TRUE(inserted);                                                \
+    EXPECT_TRUE(itr != dict.end());                                       \
+    EXPECT_FALSE(dict.empty());                                           \
+    EXPECT_EQ(dict.count(key), 1);                                        \
+    EXPECT_EQ(dict.at(key), value);                                       \
+  } while (0)
 
 TEST(SafeTypesTests, IdsAreHashable) {
   CONFIRM_DICT_HANDLING(unordered_map, TestId32, string, 20010911, "foo"s);

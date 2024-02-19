@@ -33,12 +33,12 @@
 
 #include <st/st.hpp>
 
-#define JMG_NEW_SAFE_PROTOTYPE(name, ...)                       \
-  template<::jmg::UnsafeT T, typename Tag = decltype([](){})>   \
+#define JMG_NEW_SAFE_PROTOTYPE(name, ...)                      \
+  template<::jmg::UnsafeT T, typename Tag = decltype([]() {})> \
   using name = ::st::type<T, Tag, __VA_ARGS__>
 
-#define JMG_NEW_SAFE_BASE_TYPE(name, unsafe_type, ...)          \
-  template<typename Tag = decltype([](){})>                     \
+#define JMG_NEW_SAFE_BASE_TYPE(name, unsafe_type, ...) \
+  template<typename Tag = decltype([]() {})>           \
   using name = ::st::type<unsafe_type, Tag, __VA_ARGS__>
 
 namespace jmg
@@ -58,8 +58,8 @@ concept UnsafeT = (!st::is_strong_type_v<T>);
 // type aliases
 ////////////////////////////////////////////////////////////////////////////////
 
-template<UnsafeT T, typename... Policies >
-using SafeType = st::type<T, decltype([](){}), Policies...>;
+template<UnsafeT T, typename... Policies>
+using SafeType = st::type<T, decltype([]() {}), Policies...>;
 
 /**
  * prototype for an ID type, which must be equality_comparable and
@@ -75,11 +75,17 @@ JMG_NEW_SAFE_PROTOTYPE(SafeId, st::equality_comparable, st::hashable);
  * base types for common cases of IDs: uint32_t, uint64_t and
  * std::string
  */
-JMG_NEW_SAFE_BASE_TYPE(SafeId32, uint32_t, st::equality_comparable,
+JMG_NEW_SAFE_BASE_TYPE(SafeId32,
+                       uint32_t,
+                       st::equality_comparable,
                        st::hashable);
-JMG_NEW_SAFE_BASE_TYPE(SafeId64, uint64_t, st::equality_comparable,
+JMG_NEW_SAFE_BASE_TYPE(SafeId64,
+                       uint64_t,
+                       st::equality_comparable,
                        st::hashable);
-JMG_NEW_SAFE_BASE_TYPE(SafeIdStr, std::string, st::equality_comparable,
+JMG_NEW_SAFE_BASE_TYPE(SafeIdStr,
+                       std::string,
+                       st::equality_comparable,
                        st::hashable);
 
 /**
@@ -96,11 +102,17 @@ JMG_NEW_SAFE_PROTOTYPE(SafeOrderedId, st::equality_comparable, st::orderable);
  * base types for common cases of IDs: uint32_t, uint64_t and
  * std::string
  */
-JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId32, uint32_t, st::equality_comparable,
+JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId32,
+                       uint32_t,
+                       st::equality_comparable,
                        st::orderable);
-JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId64, uint64_t, st::equality_comparable,
+JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId64,
+                       uint64_t,
+                       st::equality_comparable,
                        st::orderable);
-JMG_NEW_SAFE_BASE_TYPE(SafeOrderedIdStr, std::string, st::equality_comparable,
+JMG_NEW_SAFE_BASE_TYPE(SafeOrderedIdStr,
+                       std::string,
+                       st::equality_comparable,
                        st::orderable);
 
 ////////////////////////////////////////////////////////////////////////////////

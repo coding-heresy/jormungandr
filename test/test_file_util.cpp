@@ -46,7 +46,7 @@ TEST(FileUtilTests, TestTmpFile) {
   static constexpr string_view text = "foo";
   filesystem::path path;
   {
-    const auto tmpFile =  TmpFile(text);
+    const auto tmpFile = TmpFile(text);
     // text should be written to the file at this point
     path = tmpFile.name();
     EXPECT_TRUE(filesystem::exists(path));

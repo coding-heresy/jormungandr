@@ -187,12 +187,12 @@ class AllFixData {
     auto itr = std::begin(vec);
     cout << *itr;
     ++itr;
-    ranges::copy(ranges::subrange{itr, std::end(vec)} |
-                   views::transform([](const auto& fld) { return "," + fld; }),
+    ranges::copy(ranges::subrange{itr, std::end(vec)}
+                   | views::transform([](const auto& fld) { return "," + fld; }),
                  ostream_iterator<string>(cout));
   }
 
- public:
+public:
   /**
    * process all entries in the 'header' element
    */
@@ -242,11 +242,11 @@ class AllFixData {
     char delim = '\'';
     EnumType enumType = EnumType::kInt;
     if (kCharFieldTypes_.count(fieldType)) {
-      if (("STRING" == fieldType) && (enumValues.size() > 1) &&
-          (enumValues.end() !=
-           ranges::find_if(enumValues, [&](const auto& enumVal) {
-             return jmg::get<EnumValue>(enumVal).size() > 1;
-           }))) {
+      if (("STRING" == fieldType) && (enumValues.size() > 1)
+          && (enumValues.end()
+              != ranges::find_if(enumValues, [&](const auto& enumVal) {
+                   return jmg::get<EnumValue>(enumVal).size() > 1;
+                 }))) {
         enumType = EnumType::kString;
         delim = '"';
       }
@@ -382,7 +382,7 @@ class AllFixData {
     cout << "\n} // namespace jmg\n";
   }
 
- private:
+private:
   /**
    * field declarations for header/messages/trailer sections
    */

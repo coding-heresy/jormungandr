@@ -93,7 +93,7 @@ struct StringConvertT {
   std::string_view str;
 
   template<ConversionTgtT T>
-  operator T() const && {
+  operator T() const&& {
     return StringConvertImpl<T>::from_string(str);
   }
 };
