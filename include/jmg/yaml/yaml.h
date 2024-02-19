@@ -59,7 +59,7 @@ public:
   typename FldT::type get() const {
     using RsltT = typename FldT::type;
     const char* name = FldT::name;
-    if constexpr (SafeType<typename FldT::type>) {
+    if constexpr (SafeT<typename FldT::type>) {
       using UnsafeT = UnsafeTypeFromT<RsltT>;
       return RsltT{node_[name].as<UnsafeT>()};
     }
@@ -76,7 +76,7 @@ public:
   std::optional<typename FldT::type> try_get() const {
     const char* name = FldT::name;
     if (const auto entry = node_[name]; entry) {
-      if constexpr (SafeType<typename FldT::type>) {
+      if constexpr (SafeT<typename FldT::type>) {
         using SafeT = typename FldT::type;
         using RsltT = std::optional<SafeT>;
         using UnsafeT = UnsafeTypeFromT<SafeT>;

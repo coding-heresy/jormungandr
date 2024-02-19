@@ -32,6 +32,7 @@
 
 #include <gtest/gtest.h>
 
+#include <map>
 #include <unordered_map>
 
 #include "jmg/meta.h"
@@ -39,42 +40,28 @@
 
 using namespace jmg;
 using namespace std;
+using namespace std::string_literals;
 
-JMG_SAFE_ID_32(TestId32);
-JMG_SAFE_ID(TestIdStr, string);
+using TestId32 = SafeId32<>;
+using OtherId32 = SafeId32<>;
+using TestIdStr = SafeIdStr<>;
+using OtherIdStr = SafeId<string>;
 
-TEST(SafeTypesTests, IdsAreComparable) {
-  TestId32 val1{42};
-  TestId32 val2{42};
-  TestId32 val3{20010911};
+#define CONFIRM_STRONG_TYPES(type1, type2)                      \
+  do {                                                          \
+    EXPECT_FALSE((is_same_v<type1, type2>));                    \
+    type1 t1, t2;                                               \
+    type2 t3;                                                   \
+    EXPECT_TRUE((is_same_v<decltype(t1), decltype(t2)>));       \
+    EXPECT_FALSE((is_same_v<decltype(t1), decltype(t3)>));      \
+  } while(0)
 
-  EXPECT_EQ(val1, val2);
-  EXPECT_NE(val1, val3);
+TEST(SafeTypesTests, TypesAreStrong) {
+  CONFIRM_STRONG_TYPES(TestId32, OtherId32);
+  CONFIRM_STRONG_TYPES(TestIdStr, OtherIdStr);
 }
 
-TEST(SafeTypesTests, IntIdsAreHashable) {
-  unordered_map<TestId32, string> dict;
-  const TestId32 key{20010911};
-  const string value = "foo"s;
-  const auto [itr, inserted] = dict.try_emplace(key, value);
-  EXPECT_TRUE(inserted);
-  EXPECT_TRUE(itr != dict.end());
-  EXPECT_FALSE(dict.empty());
-  EXPECT_EQ(dict.count(key), 1);
-  EXPECT_EQ(dict.at(key), value);
-}
-
-TEST(SafeTypesTests, StringIdsAreHashable) {
-  unordered_map<TestIdStr, int> dict;
-  const TestIdStr key{"foo"s};
-  const int value = 20010911;
-  const auto [itr, inserted] = dict.try_emplace(key, value);
-  EXPECT_TRUE(inserted);
-  EXPECT_TRUE(itr != dict.end());
-  EXPECT_FALSE(dict.empty());
-  EXPECT_EQ(dict.count(key), 1);
-  EXPECT_EQ(dict.at(key), value);
-}
+#undef CONFIRM_STRONG_TYPES
 
 TEST(SafeTypesTests, RetrieveUnsafeType) {
   EXPECT_TRUE((is_same_v<uint32_t, UnsafeTypeFromT<TestId32>>));
@@ -82,8 +69,54 @@ TEST(SafeTypesTests, RetrieveUnsafeType) {
 }
 
 TEST(SafeTypesTests, StreamOutput) {
-  TestId32 id{42};
+  const auto id = TestId32(42);
   ostringstream strm;
   strm << id;
   EXPECT_EQ("42"s, strm.str());
 }
+
+#define CONFIRM_COMPARABLE(type, val1, val2)    \
+  do {                                          \
+    const auto id1 = type(val1);                \
+    const auto id2 = type(val1);                \
+    const auto id3 = type(val2);                \
+    EXPECT_EQ(id1, id2);                        \
+    EXPECT_NE(id1, id3);                        \
+  } while (0)
+
+TEST(SafeTypesTests, IdsAreComparable) {
+  CONFIRM_COMPARABLE(TestId32, 42, 20010911);
+  CONFIRM_COMPARABLE(TestIdStr, "foo"s, "bar"s);
+}
+
+#undef CONFIRM_COMPARABLE
+
+#define CONFIRM_DICT_HANDLING(dict, key_type, val_type, key_val, val_val) \
+  do {                                                                  \
+    dict<key_type, val_type> dict;                                      \
+    const auto key = key_type(key_val);                                 \
+    const val_type value = val_val;                                     \
+    const auto [itr, inserted] = dict.try_emplace(key, value);          \
+    EXPECT_TRUE(inserted);                                              \
+    EXPECT_TRUE(itr != dict.end());                                     \
+    EXPECT_FALSE(dict.empty());                                         \
+    EXPECT_EQ(dict.count(key), 1);                                      \
+    EXPECT_EQ(dict.at(key), value);                                     \
+  } while(0)
+
+TEST(SafeTypesTests, IdsAreHashable) {
+  CONFIRM_DICT_HANDLING(unordered_map, TestId32, string, 20010911, "foo"s);
+  CONFIRM_DICT_HANDLING(unordered_map, TestIdStr, int, "foo"s, 20010911);
+}
+
+using TestOrderedId32 = SafeOrderedId32<>;
+using TestOtherOrderedId32 = SafeOrderedId32<>;
+using TestOrderedIdStr = SafeOrderedIdStr<>;
+using OtherOrderedIdStr = SafeOrderedId<string>;
+
+TEST(SafeTypesTests, OrderedIdsAreOrderable) {
+  CONFIRM_DICT_HANDLING(map, TestOrderedId32, string, 20010911, "foo"s);
+  CONFIRM_DICT_HANDLING(map, TestOrderedIdStr, int, "foo"s, 20010911);
+}
+
+#undef CONFIRM_DICT_HANDLING

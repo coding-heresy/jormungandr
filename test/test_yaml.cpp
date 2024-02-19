@@ -33,6 +33,7 @@
 #include <gmock/gmock.h>
 
 #include "jmg/field.h"
+#include "jmg/safe_types.h"
 #include "jmg/yaml/yaml.h"
 
 using namespace jmg;
@@ -40,7 +41,7 @@ using namespace std;
 using namespace std::literals::string_literals;
 using testing::ElementsAre;
 
-JMG_SAFE_ID_32(Id32);
+using Id32 = SafeId32<>;
 
 JMG_FIELD_DEF(InnerField, "inner", int, true);
 using InnerObject = yaml::Object<InnerField>;

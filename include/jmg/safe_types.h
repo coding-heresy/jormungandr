@@ -33,35 +33,99 @@
 
 #include <st/st.hpp>
 
-#define JMG_SAFE_TYPE(safe_type, unsafe_type, ...) \
-  using safe_type = st::type<unsafe_type,		\
-    struct safe_type ## SafeTag, __VA_ARGS__)
+#define JMG_NEW_SAFE_PROTOTYPE(name, ...)                       \
+  template<::jmg::UnsafeT T, typename Tag = decltype([](){})>   \
+  using name = ::st::type<T, Tag, __VA_ARGS__>
 
-#define JMG_SAFE_ID(safe_type, unsafe_type)                          \
-  using safe_type = st::type<unsafe_type, struct safe_type##SafeTag, \
-                             st::equality_comparable, st::hashable>
-
-#define JMG_SAFE_ID_32(safe_type)                                 \
-  using safe_type = st::type<uint32_t, struct safe_type##SafeTag, \
-                             st::equality_comparable, st::hashable>
-
-#define JMG_SAFE_ID_64(safe_type)                                 \
-  using safe_type = st::type<uint64_t, struct safe_type##SafeTag, \
-                             st::equality_comparable, st::hashable>
+#define JMG_NEW_SAFE_BASE_TYPE(name, unsafe_type, ...)          \
+  template<typename Tag = decltype([](){})>                     \
+  using name = ::st::type<unsafe_type, Tag, __VA_ARGS__>
 
 namespace jmg
 {
+
+////////////////////////////////////////////////////////////////////////////////
+// concepts for safe types
+////////////////////////////////////////////////////////////////////////////////
+
 template<typename T>
-concept SafeType = st::is_strong_type_v<T>;
+concept SafeT = st::is_strong_type_v<T>;
 
-auto unsafe(SafeType auto safe) { return safe.value(); }
+template<typename T>
+concept UnsafeT = (!st::is_strong_type_v<T>);
 
-template<SafeType T>
+////////////////////////////////////////////////////////////////////////////////
+// type aliases
+////////////////////////////////////////////////////////////////////////////////
+
+template<UnsafeT T, typename... Policies >
+using SafeType = st::type<T, decltype([](){}), Policies...>;
+
+/**
+ * prototype for an ID type, which must be equality_comparable and
+ * hashable
+ *
+ * NOTE: ordering is not supported, so such IDs may be used as keys in
+ * unordered data structures (e.g. std::unordered_map) but not ordered
+ * data structures (e.g. std::map)
+ */
+JMG_NEW_SAFE_PROTOTYPE(SafeId, st::equality_comparable, st::hashable);
+
+/**
+ * base types for common cases of IDs: uint32_t, uint64_t and
+ * std::string
+ */
+JMG_NEW_SAFE_BASE_TYPE(SafeId32, uint32_t, st::equality_comparable,
+                       st::hashable);
+JMG_NEW_SAFE_BASE_TYPE(SafeId64, uint64_t, st::equality_comparable,
+                       st::hashable);
+JMG_NEW_SAFE_BASE_TYPE(SafeIdStr, std::string, st::equality_comparable,
+                       st::hashable);
+
+/**
+ * prototype for an orderable ID type, which must be equality_comparable and
+ * orderable
+ *
+ * NOTE: hashing is not supported, so such IDs may be used as keys in
+ * ordered data structures (e.g. std::map) but not unordered data
+ * structures (e.g. std::unordered_map)
+ */
+JMG_NEW_SAFE_PROTOTYPE(SafeOrderedId, st::equality_comparable, st::orderable);
+
+/**
+ * base types for common cases of IDs: uint32_t, uint64_t and
+ * std::string
+ */
+JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId32, uint32_t, st::equality_comparable,
+                       st::orderable);
+JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId64, uint64_t, st::equality_comparable,
+                       st::orderable);
+JMG_NEW_SAFE_BASE_TYPE(SafeOrderedIdStr, std::string, st::equality_comparable,
+                       st::orderable);
+
+////////////////////////////////////////////////////////////////////////////////
+// utility functions
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * 'unwrap' a safe type by converting it into the associated unsafe
+ * type
+ */
+auto unsafe(SafeT auto safe) { return safe.value(); }
+
+/**
+ * metafunction that returns the unsafe type associated with a safe
+ * type
+ */
+template<SafeT T>
 using UnsafeTypeFromT = typename T::value_type;
 
 } // namespace jmg
 
-template<jmg::SafeType T>
+/**
+ * overload of operator<< for safe types
+ */
+template<jmg::SafeT T>
 std::ostream& operator<<(std::ostream& strm, const T& val) {
   strm << jmg::unsafe(val);
   return strm;
