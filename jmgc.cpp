@@ -462,7 +462,7 @@ const unordered_set<string> AllFixData::kCharFieldTypes_ = {
   "CHAR", "STRING", "BOOLEAN", "MULTIPLEVALUESTRING"};
 
 void process(const string_view filePath) {
-  auto strm = openFile<ifstream>(filePath);
+  auto strm = open_file<ifstream>(filePath);
   boost::property_tree::ptree data;
   read_xml(strm, data);
 

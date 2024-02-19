@@ -38,6 +38,10 @@ using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
 
+TEST(FileUtilTests, TestMissingFileCausesException) {
+  EXPECT_ANY_THROW(auto strm = open_file<ifstream>("/no/such/file"));
+}
+
 TEST(FileUtilTests, TestTmpFile) {
   static constexpr string_view text = "foo";
   filesystem::path path;
@@ -49,14 +53,14 @@ TEST(FileUtilTests, TestTmpFile) {
     EXPECT_TRUE(path.has_filename());
     // confirm that the expected text was written
     const auto actual = [&]() {
-      auto strm = openFile<ifstream>(path);
+      auto strm = open_file<ifstream>(path);
       string rslt;
       strm >> rslt;
       return rslt;
     }();
     EXPECT_EQ(actual, text);
   }
-  // confirm that the file was removed when the object went out of
-  // scope
+  // confirm that the file was removed when the TmpFile object went
+  // out of scope
   EXPECT_FALSE(filesystem::exists(path));
 }

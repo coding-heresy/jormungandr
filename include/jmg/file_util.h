@@ -39,6 +39,7 @@
 #include <ext/stdio_filebuf.h>
 
 #include "jmg/preprocessor.h"
+#include "jmg/meta.h"
 
 namespace jmg
 {
@@ -51,10 +52,6 @@ namespace detail
 template<typename T>
 concept IoStreamT =
   std::same_as<T, std::ifstream> || std::same_as<T, std::ofstream>;
-
-// TODO move to metaprogramming utility header?
-template<typename T>
-concept StringT = std::convertible_to<T, std::string_view>;
 } // namespace detail
 
 /**
@@ -62,11 +59,16 @@ concept StringT = std::convertible_to<T, std::string_view>;
  *
  * @param filePath filesystem path to the file
  */
-template<detail::IoStreamT StreamT>
-auto openFile(const std::filesystem::path filePath) {
-  StreamT strm;
-  strm.exceptions(StreamT::badbit);
+template<detail::IoStreamT Strm>
+auto open_file(const std::filesystem::path filePath) {
+  Strm strm;
+  // throw exception on both badbit and failbit to force open() to
+  // throw on failure
+  strm.exceptions(Strm::badbit | Strm::failbit);
   strm.open(filePath);
+  // clear failbit from exception bits to avoid having an exception
+  // thrown when the stream hits EOF
+  strm.exceptions(Strm::badbit);
   return strm;
 }
 
@@ -76,9 +78,9 @@ auto openFile(const std::filesystem::path filePath) {
  * @param pathName filesystem path to the file, can be any type
  *        supported by the std::filesystem::path constructor
  */
-template<detail::IoStreamT StreamT, detail::StringT PathNameT>
-auto openFile(PathNameT pathName) {
-  return openFile<StreamT>(std::filesystem::path(pathName));
+template<detail::IoStreamT Strm, StringLikeT PathNameT>
+auto open_file(PathNameT pathName) {
+  return open_file<Strm>(std::filesystem::path(pathName));
 }
 
 /**
