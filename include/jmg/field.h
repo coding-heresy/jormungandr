@@ -33,16 +33,31 @@
 
 #include <concepts>
 
+#include "jmg/meta.h"
+
 namespace jmg
 {
 
+namespace detail
+{
 /**
  * tag type used to indicate that a type is a field definition
- *
- * Mostly obsolete due to c++20 concepts, but still useful for
- * self-documenting the code.
  */
-struct FieldDef {};
+struct FieldDefTag {};
+} // namespace detail
+
+/**
+ * declaration of a data field
+ * @tparam T type of data associated with the field
+ * @tparam kName string name of the field
+ * @tparam IsRequired indicates if the field is required or optional
+ */
+template<typename T, StrLiteral kName, TypeFlagT IsRequired>
+struct FieldDef : public detail::FieldDefTag {
+  static constexpr auto name = kName.value;
+  using type = T;
+  using required = IsRequired;
+};
 
 namespace detail
 {
@@ -73,8 +88,9 @@ concept HasRequiredSpec = requires { typename T::required; };
  * Concept for field definition
  */
 template<typename T>
-concept FieldDefT = std::derived_from<T, FieldDef> && detail::HasFieldName<T>
-                    && detail::HasFieldType<T> && detail::HasRequiredSpec<T>;
+concept FieldDefT =
+  std::derived_from<T, detail::FieldDefTag> && detail::HasFieldName<T>
+  && detail::HasFieldType<T> && detail::HasRequiredSpec<T>;
 
 /**
  * concept for required field, used by jmg::get
@@ -96,13 +112,3 @@ concept OptionalField =
 inline constexpr char kPlaceholder[] = "";
 
 } // namespace jmg
-
-/**
- * helper macro to simplify declaration of fields
- */
-#define JMG_FIELD_DEF(field_name, str_name, field_type, is_required) \
-  struct field_name : jmg::FieldDef {                                \
-    static constexpr char name[] = str_name;                         \
-    using type = field_type;                                         \
-    using required = std::is_required##_type;                        \
-  }

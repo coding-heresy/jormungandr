@@ -42,24 +42,10 @@
 using namespace jmg;
 using namespace std;
 
-namespace
-{
-// support code for testing the TypeList concept using specialization
-template<typename T>
-struct IsTypeList {
-  static constexpr bool value = false;
-};
-
-template<TypeList T>
-struct IsTypeList<T> {
-  static constexpr bool value = true;
-};
-} // namespace
-
 TEST(MetaprogrammingTests, TestTypeListConcept) {
   using TestList = meta::list<bool, float>;
-  EXPECT_TRUE(IsTypeList<TestList>::value);
-  EXPECT_FALSE(IsTypeList<int>::value);
+  EXPECT_TRUE(isTypeList<TestList>());
+  EXPECT_FALSE(isTypeList<int>());
 }
 
 TEST(MetaprogrammingTests, TestPolicyResolver) {

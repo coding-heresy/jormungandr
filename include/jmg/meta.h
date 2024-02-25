@@ -42,6 +42,14 @@ namespace jmg
 {
 
 ////////////////////////////////////////////////////////////////////////////////
+// concept for type flag (i.e. std::true_type or std::false_type
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept TypeFlagT =
+  std::same_as<T, std::true_type> || std::same_as<T, std::false_type>;
+
+////////////////////////////////////////////////////////////////////////////////
 // concept for meta::list
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -67,7 +75,7 @@ inline constexpr bool isTypeList() {
 }
 
 template<typename T>
-concept TypeList = isTypeList<T>();
+concept TypeListT = isTypeList<T>();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for numeric types
@@ -143,9 +151,9 @@ struct safe_back_<meta::list<First, Rest...>> {
   using type = meta::at_c<meta::list<First, Rest...>, sizeof...(Rest)>;
 };
 } // namespace detail
-template<TypeList T>
+template<TypeListT T>
 using safe_front = meta::_t<detail::safe_front_<T>>;
-template<TypeList T>
+template<TypeListT T>
 using safe_back = meta::_t<detail::safe_back_<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -158,10 +166,10 @@ using namespace meta::placeholders;
 template<typename T>
 using SameAsLambda =
   meta::lambda<_a, _b, meta::lazy::or_<_a, std::is_same<T, _b>>>;
-template<typename T, TypeList Lst>
+template<typename T, TypeListT Lst>
 using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
 } // namespace detail
-template<typename T, TypeList Lst>
+template<typename T, TypeListT Lst>
 inline constexpr bool isMemberOfList() {
   return detail::IsMemberOf<T, Lst>{}();
 }
@@ -177,26 +185,26 @@ using namespace meta::placeholders;
 template<typename T>
 using SubclassOfLambda =
   meta::lambda<_a, _b, meta::lazy::or_<_a, std::is_base_of<_b, T>>>;
-template<typename T, TypeList Lst>
+template<typename T, TypeListT Lst>
 using IsSubclassMemberOf =
   meta::fold<Lst, std::false_type, SubclassOfLambda<T>>;
-template<typename T, TypeList Lst>
+template<typename T, TypeListT Lst>
 using IsNotSubclassMemberOf = meta::not_<detail::IsSubclassMemberOf<T, Lst>>;
 
-template<TypeList AllTags, TypeList PolicyList>
+template<TypeListT AllTags, TypeListT PolicyList>
 struct PolicyCheckerImpl {
   using NotSubclassPred =
     meta::bind_back<meta::quote<IsNotSubclassMemberOf>, AllTags>;
   using SubclassCheckResult = meta::find_if<PolicyList, NotSubclassPred>;
   using type = meta::empty<SubclassCheckResult>;
 };
-template<TypeList AllTags, TypeList PolicyList>
+template<TypeListT AllTags, TypeListT PolicyList>
 using PolicyListValidT = meta::_t<PolicyCheckerImpl<AllTags, PolicyList>>;
 
 template<typename BasePolicy,
          typename DefaultPolicy,
-         TypeList AllTags,
-         TypeList PolicyList>
+         TypeListT AllTags,
+         TypeListT PolicyList>
   requires(std::is_base_of_v<BasePolicy, DefaultPolicy>
            && isMemberOfList<BasePolicy, AllTags>()
            && PolicyListValidT<AllTags, PolicyList>{}())
@@ -210,13 +218,14 @@ struct PolicyResolver {
 
 template<typename BasePolicy,
          typename DefaultPolicy,
-         TypeList AllTags,
-         TypeList PolicyList>
+         TypeListT AllTags,
+         TypeListT PolicyList>
 using PolicyResolverT =
   meta::_t<detail::PolicyResolver<BasePolicy, DefaultPolicy, AllTags, PolicyList>>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// helper macro for concept checking
+// helper macro that simplifies construction of metaprogramming types
+// for use in testing concepts
 ////////////////////////////////////////////////////////////////////////////////
 
 #define JMG_MAKE_CONCEPT_CHECKER(name, concept)  \
@@ -311,5 +320,21 @@ std::string current_exception_type_name() {
   if (!excType) { return "<no outstanding exceptions>"; }
   return demangle(excType);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// holder for compile time string literal template parameter
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * compile-time string literal
+ *
+ * shamelessly ripped from
+ * https://ctrpeach.io/posts/cpp20-string-literal-template-parameters/
+ */
+template<size_t N>
+struct StrLiteral {
+  constexpr StrLiteral(const char (&str)[N]) { std::copy_n(str, N, value); }
+  char value[N];
+};
 
 } // namespace jmg

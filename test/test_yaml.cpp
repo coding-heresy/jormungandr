@@ -43,20 +43,20 @@ using testing::ElementsAre;
 
 using Id32 = SafeId32<>;
 
-JMG_FIELD_DEF(InnerField, "inner", int, true);
+using InnerField = FieldDef<int, "inner", true_type>;
 using InnerObject = yaml::Object<InnerField>;
 using ComplexArrayProxy = yaml::ArrayT<InnerObject>;
 
-JMG_FIELD_DEF(StrField, "str", string, true);
-JMG_FIELD_DEF(IntField, "int", int, true);
-JMG_FIELD_DEF(OptField, "opt", double, false);
-JMG_FIELD_DEF(Id32Field, "id32", Id32, true);
+using StrField = FieldDef<string, "str", true_type>;
+using IntField = FieldDef<int, "int", true_type>;
+using OptField = FieldDef<double, "opt", false_type>;
+using Id32Field = FieldDef<Id32, "id32", true_type>;
 // PrimitiveArray is an array of primitive (i.e. non-object) elements
-JMG_FIELD_DEF(PrimitiveArray, "primitive", vector<int>, true);
+using PrimitiveArray = FieldDef<vector<int>, "primitive", true_type>;
 // ComplexArray is an array of non-primitive (i.e. object) elements
-JMG_FIELD_DEF(ComplexArray, "complex", ComplexArrayProxy, true);
+using ComplexArray = FieldDef<ComplexArrayProxy, "complex", true_type>;
 // OptComplexArray is an optional array of non-primitive elements
-JMG_FIELD_DEF(OptComplexArray, "opt_complex", ComplexArrayProxy, false);
+using OptComplexArray = FieldDef<ComplexArrayProxy, "opt_complex", false_type>;
 
 // clang-format off
 using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field,

@@ -110,7 +110,6 @@ TEST(ArrayProxyTests, TestOwningProxy) {
 
   // owning proxy that owns the span that is viewing the array
   using IntVecSpanProxy = OwningArrayProxy<SpanAsProxy>;
-  // @todo: OLD CODE IntVecSpanProxy proxy{span{raw}};
   IntVecSpanProxy proxy{std::move(spanAsProxy)};
   EXPECT_FALSE(proxy.empty());
 

@@ -86,20 +86,19 @@ template<FieldGroupDefT T>
 struct IsFieldOrGroupDefImpl<T> {
   using type = std::true_type;
 };
-}; // namespace detail
+
 template<typename T>
-using IsFieldOrGroupDefT = meta::_t<detail::IsFieldOrGroupDefImpl<T>>;
+inline constexpr bool isFieldOrGroup() {
+  return std::same_as<meta::_t<detail::IsFieldOrGroupDefImpl<T>>, std::true_type>;
+}
+}; // namespace detail
 
 template<typename T>
 concept FieldOrGroupT = FieldDefT<T> || FieldGroupDefT<T>;
 
-template<typename T>
-inline constexpr bool isFieldOrGroup() {
-  return std::same_as<IsFieldOrGroupDefT<T>, std::true_type>;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
-// concept that constrains an object to have valid fields
+// concept that constrains the Fields typelist associated with an
+// Object to contain only fields or field groupds
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace detail
@@ -141,7 +140,7 @@ struct FieldExpanderImpl<FieldGroupDef<Ts...>> {
 template<typename T>
 using FieldExpanderT = meta::_t<detail::FieldExpanderImpl<T>>;
 
-template<TypeList T>
+template<TypeListT T>
 using ExpandedFields =
   meta::join<meta::transform<T, meta::quote<FieldExpanderT>>>;
 

@@ -40,33 +40,16 @@
 using namespace jmg;
 using namespace std;
 
-/**
- * helper macro that simplifies construction of metaprogramming types
- * that can be used to test concepts
- */
-#define MAKE_CONCEPT_TESTER(concept)     \
-  template<typename T>                   \
-  struct Is##concept##Concept {          \
-    static constexpr bool value = false; \
-  };                                     \
-  template<concept T>                    \
-  struct Is##concept##Concept<T> {       \
-    static constexpr bool value = true;  \
-  }
-
-MAKE_CONCEPT_TESTER(FieldDefT);
-MAKE_CONCEPT_TESTER(FieldGroupDefT);
-MAKE_CONCEPT_TESTER(FieldOrGroupT);
-MAKE_CONCEPT_TESTER(ObjectDefT);
-
-#undef MAKE_CONCEPT_TESTER
-
-JMG_FIELD_DEF(TestField, "field", unsigned, true);
+JMG_MAKE_CONCEPT_CHECKER(FieldDef, FieldDefT);
+JMG_MAKE_CONCEPT_CHECKER(FieldGroupDef, FieldGroupDefT);
+JMG_MAKE_CONCEPT_CHECKER(FieldOrGroup, FieldOrGroupT);
+JMG_MAKE_CONCEPT_CHECKER(ObjectDef, ObjectDefT);
 
 // Some field names
-JMG_FIELD_DEF(GroupStringField, "group_string_field", string, true);
-JMG_FIELD_DEF(GroupDblField, "group_dbl_field", double, true);
-JMG_FIELD_DEF(GroupOptionalField, "group_optional_field", int, false);
+using TestField = FieldDef<unsigned, "field", true_type>;
+using GroupStringField = FieldDef<string, "group_string_field", true_type>;
+using GroupDblField = FieldDef<double, "group_dbl_field", true_type>;
+using GroupOptionalField = FieldDef<int, "group_optional_field", false_type>;
 
 using TestFieldGroup =
   FieldGroupDef<GroupStringField, GroupDblField, GroupOptionalField>;
@@ -74,28 +57,28 @@ using TestObject = ObjectDef<TestField, TestFieldGroup>;
 
 TEST(ObjectTests, TestConceptsAndCharacteristics) {
   // TestField is a field, not a field group or object
-  EXPECT_TRUE(IsFieldDefTConcept<TestField>::value);
-  EXPECT_FALSE(IsFieldGroupDefTConcept<TestField>::value);
-  EXPECT_TRUE(IsFieldOrGroupTConcept<TestField>::value);
-  EXPECT_FALSE(IsObjectDefTConcept<TestField>::value);
+  EXPECT_TRUE(isFieldDef<TestField>());
+  EXPECT_FALSE(isFieldGroupDef<TestField>());
+  EXPECT_TRUE(isFieldOrGroup<TestField>());
+  EXPECT_FALSE(isObjectDef<TestField>());
 
   // TestFieldGroup is a field group, not a field or object
-  EXPECT_FALSE(IsFieldDefTConcept<TestFieldGroup>::value);
-  EXPECT_TRUE(IsFieldGroupDefTConcept<TestFieldGroup>::value);
-  EXPECT_TRUE(IsFieldOrGroupTConcept<TestFieldGroup>::value);
-  EXPECT_FALSE(IsObjectDefTConcept<TestFieldGroup>::value);
+  EXPECT_FALSE(isFieldDef<TestFieldGroup>());
+  EXPECT_TRUE(isFieldGroupDef<TestFieldGroup>());
+  EXPECT_TRUE(isFieldOrGroup<TestFieldGroup>());
+  EXPECT_FALSE(isObjectDef<TestFieldGroup>());
 
   // TestObject is an object, not a field or field group
-  EXPECT_FALSE(IsFieldDefTConcept<TestObject>::value);
-  EXPECT_FALSE(IsFieldGroupDefTConcept<TestObject>::value);
-  EXPECT_FALSE(IsFieldOrGroupTConcept<TestObject>::value);
-  EXPECT_TRUE(IsObjectDefTConcept<TestObject>::value);
+  EXPECT_FALSE(isFieldDef<TestObject>());
+  EXPECT_FALSE(isFieldGroupDef<TestObject>());
+  EXPECT_FALSE(isFieldOrGroup<TestObject>());
+  EXPECT_TRUE(isObjectDef<TestObject>());
 
   // double is not a field, field group or object
-  EXPECT_FALSE(IsFieldDefTConcept<double>::value);
-  EXPECT_FALSE(IsFieldGroupDefTConcept<double>::value);
-  EXPECT_FALSE(IsFieldOrGroupTConcept<double>::value);
-  EXPECT_FALSE(IsObjectDefTConcept<double>::value);
+  EXPECT_FALSE(isFieldDef<double>());
+  EXPECT_FALSE(isFieldGroupDef<double>());
+  EXPECT_FALSE(isFieldOrGroup<double>());
+  EXPECT_FALSE(isObjectDef<double>());
 
   // TestField is associated with a value of type 'unsigned' and the
   // field is required to be present in the object
