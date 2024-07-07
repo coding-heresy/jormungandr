@@ -62,3 +62,25 @@ TEST(ConversionTests, TestFromStringOverloading) {
 TEST(ConversionTests, TestFailedIntFromString) {
   EXPECT_THROW([[maybe_unused]] int bad = from_string("a"), std::runtime_error);
 }
+
+TEST(ConversionTests, TestOptionalStreamOutput) {
+  optional<int> val;
+  {
+    ostringstream strm;
+    strm << val;
+    EXPECT_EQ("<empty>"s, strm.str());
+  }
+  val = 20010911;
+  {
+    ostringstream strm;
+    strm << val;
+    EXPECT_EQ("20010911"s, strm.str());
+  }
+}
+
+TEST(ConversionTests, TestTupleStreamOutput) {
+  auto tpl = make_tuple(42.0, 20010911);
+  ostringstream strm;
+  strm << tpl;
+  EXPECT_EQ("42,20010911"s, strm.str());
+}
