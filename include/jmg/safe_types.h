@@ -34,7 +34,7 @@
 #include <st/st.hpp>
 
 #define JMG_NEW_SAFE_PROTOTYPE(name, ...)                      \
-  template<::jmg::UnsafeT T, typename Tag = decltype([]() {})> \
+  template<::jmg::UnsafeT T, typename Tag = decltype([](){})>  \
   using name = ::st::type<T, Tag, __VA_ARGS__>
 
 #define JMG_NEW_SAFE_BASE_TYPE(name, unsafe_type, ...) \

@@ -120,13 +120,13 @@ using Optional = std::false_type;
 
 namespace detail
 {
-template<typename T, TypeFlagT Required>
+template<typename T, TypeFlagT>
 struct Optionalize {
   using type = std::remove_cvref_t<T>;
 };
 
 template<typename T>
-struct Optionalize<T, std::false_type> {
+struct Optionalize<T, Optional> {
   using type = std::optional<std::remove_cvref_t<T>>;
 };
 
