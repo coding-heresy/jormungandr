@@ -148,9 +148,9 @@ using ExpandedFields =
 // declaration of an object
 ////////////////////////////////////////////////////////////////////////////////
 
-template<FieldOrGroupT... FieldsT>
+template<FieldOrGroupT... Flds>
 struct ObjectDef {
-  using Fields = ExpandedFields<meta::list<FieldsT...>>;
+  using Fields = ExpandedFields<meta::list<Flds...>>;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -173,27 +173,27 @@ concept ObjectDefT = detail::HasFields<T> && detail::HasValidContent<T>;
 // a field that is not declared to be contained by an object
 ////////////////////////////////////////////////////////////////////////////////
 
-template<FieldDefT T, ObjectDefT ObjT>
+template<FieldDefT T, ObjectDefT Obj>
 inline constexpr bool isMemberOfObject() {
-  return isMemberOfList<T, typename ObjT::Fields>();
+  return isMemberOfList<T, typename Obj::Fields>();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // definitions of get() and try_get()
 ////////////////////////////////////////////////////////////////////////////////
 
-template<FieldDefT FieldT, ObjectDefT ObjectT>
-typename FieldT::type get(const ObjectT& obj)
-  requires(isMemberOfObject<FieldT, ObjectT>())
+template<FieldDefT Fld, ObjectDefT Obj>
+typename Fld::type get(const Obj& obj)
+  requires(isMemberOfObject<Fld, Obj>())
 {
-  return obj.template get<FieldT>();
+  return obj.template get<Fld>();
 }
 
-template<FieldDefT FieldT, ObjectDefT ObjectT>
-std::optional<typename FieldT::type> try_get(const ObjectT& obj)
-  requires(isMemberOfObject<FieldT, ObjectT>())
+template<FieldDefT Fld, ObjectDefT Obj>
+std::optional<typename Fld::type> try_get(const Obj& obj)
+  requires(isMemberOfObject<Fld, Obj>())
 {
-  return obj.template try_get<FieldT>();
+  return obj.template try_get<Fld>();
 }
 
 } // namespace jmg
