@@ -43,20 +43,20 @@ using testing::ElementsAre;
 
 using Id32 = SafeId32<>;
 
-using InnerField = FieldDef<int, "inner", true_type>;
+using InnerField = FieldDef<int, "inner", Required>;
 using InnerObject = yaml::Object<InnerField>;
 using ComplexArrayProxy = yaml::ArrayT<InnerObject>;
 
-using StrField = FieldDef<string, "str", true_type>;
-using IntField = FieldDef<int, "int", true_type>;
-using OptField = FieldDef<double, "opt", false_type>;
-using Id32Field = FieldDef<Id32, "id32", true_type>;
+using StrField = FieldDef<string, "str", Required>;
+using IntField = FieldDef<int, "int", Required>;
+using OptField = FieldDef<double, "opt", Optional>;
+using Id32Field = FieldDef<Id32, "id32", Required>;
 // PrimitiveArray is an array of primitive (i.e. non-object) elements
-using PrimitiveArray = FieldDef<vector<int>, "primitive", true_type>;
+using PrimitiveArray = FieldDef<vector<int>, "primitive", Required>;
 // ComplexArray is an array of non-primitive (i.e. object) elements
-using ComplexArray = FieldDef<ComplexArrayProxy, "complex", true_type>;
+using ComplexArray = FieldDef<ComplexArrayProxy, "complex", Required>;
 // OptComplexArray is an optional array of non-primitive elements
-using OptComplexArray = FieldDef<ComplexArrayProxy, "opt_complex", false_type>;
+using OptComplexArray = FieldDef<ComplexArrayProxy, "opt_complex", Optional>;
 
 // clang-format off
 using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field,
