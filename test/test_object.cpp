@@ -40,7 +40,6 @@
 using namespace jmg;
 using namespace std;
 
-
 // Some field names
 using TestField = FieldDef<unsigned, "field", Required>;
 using GroupStringField = FieldDef<string, "group_string_field", Required>;

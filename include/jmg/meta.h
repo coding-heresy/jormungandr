@@ -63,7 +63,8 @@ struct IsTypeList<meta::list<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept TypeListT = detail::IsTypeList<T>{}();
+concept TypeListT = detail::IsTypeList<T>
+{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for numeric types
@@ -88,7 +89,8 @@ struct IsStringLike<char*> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept StringLikeT = detail::IsStringLike<T>{}();
+concept StringLikeT = detail::IsStringLike<T>
+{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // always_false wrapper to defer evaluation of static_assert
