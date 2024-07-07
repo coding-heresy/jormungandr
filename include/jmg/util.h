@@ -48,17 +48,19 @@ auto& value_of(auto& rec) { return std::get<1>(rec); }
 /**
  * class template that automatically executes a cleanup action on
  * scope exit unless it is canceled
+ *
+ * shamelessly stolen from Google Abseil
  */
 template<typename Fcn>
-struct AutoCleanup {
-  AutoCleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
-  ~AutoCleanup() {
-    if (isActive_) { fcn_(); }
+struct Cleanup {
+  Cleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
+  ~Cleanup() {
+    if (!isCxl_) { fcn_(); }
   }
-  void cancel() { isActive_ = false; }
+  void cancel() { isCxl_ = true; }
 
 private:
-  bool isActive_ = true;
+  bool isCxl_ = false;
   Fcn fcn_;
 };
 
