@@ -32,6 +32,7 @@
 #pragma once
 
 #include <concepts>
+#include <optional>
 
 #include "jmg/meta.h"
 
@@ -105,6 +106,36 @@ concept RequiredField =
 template<typename T>
 concept OptionalField =
   FieldDefT<T> && std::same_as<typename T::required, std::false_type>;
+
+////////////////////////////////////////////////////////////////////////////////
+// self-documenting aliases to be used when indicating whether a field
+// is required
+////////////////////////////////////////////////////////////////////////////////
+using Required = std::true_type;
+using Optional = std::false_type;
+
+////////////////////////////////////////////////////////////////////////////////
+// helpers for computing the effective type associated with a field
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T, TypeFlagT Required>
+struct Optionalize {
+  using type = std::remove_cvref_t<T>;
+};
+
+template<typename T>
+struct Optionalize<T, std::false_type> {
+  using type = std::optional<std::remove_cvref_t<T>>;
+};
+
+template<FieldDefT Fld>
+using OptionalizedFldType =
+  Optionalize<typename Fld::type, typename Fld::required>;
+} // namespace detail
+
+using Optionalize = meta::quote_trait<detail::OptionalizedFldType>;
 
 /**
  * common field name constant for fields that have no string name
