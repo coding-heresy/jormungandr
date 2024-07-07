@@ -26,7 +26,6 @@ cc_library(
         "@ericniebler_meta//:meta",
         "@doom_strong_type//:strong_type",
         "@yaml-cpp//:yaml-cpp",
-        # TODO get boost build working under bzlmod
-        # "@com_github_nelhage_rules_boost//:property_tree",
+        "@boost//:property_tree",
     ],
 )

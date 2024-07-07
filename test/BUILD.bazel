@@ -44,16 +44,15 @@ cc_test(
     ],
 )
 
-# TODO get boost build working under bzlmod
-# cc_test(
-#     name = "test_ptree",
-#     srcs = ["test_ptree.cpp"],
-#     deps = [
-#         "@boost//:property_tree",
-#         "@com_google_googletest//:gtest_main",
-#         "//:jmg",
-#     ],
-# )
+cc_test(
+    name = "test_ptree",
+    srcs = ["test_ptree.cpp"],
+    deps = [
+        "@boost//:property_tree",
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
 
 cc_test(
     name = "test_safe_types",

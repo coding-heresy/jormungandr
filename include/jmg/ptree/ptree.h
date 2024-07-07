@@ -70,11 +70,7 @@ namespace xml
  * field definition for the XML element 'tag', which is effectively
  * the name of the element
  */
-struct ElementTag : FieldDef {
-  static constexpr char const* name = kPlaceholder;
-  using type = std::string;
-  using required = std::true_type;
-};
+struct ElementTag : jmg::FieldDef<std::string, kPlaceholder, std::true_type> {};
 
 /**
  * Tag type used to define Jormungandr fields associated with
@@ -97,29 +93,29 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField FldT>
+  template<RequiredField Fld>
   auto get() const {
-    if constexpr (std::same_as<ElementTag, FldT>) { return key_of(*elem_); }
-    else if constexpr (std::derived_from<FldT, ElementAttr>) {
-      return value_of(*elem_).get<typename FldT::type>(getAttrXPath(FldT::name));
+    if constexpr (std::same_as<ElementTag, Fld>) { return key_of(*elem_); }
+    else if constexpr (std::derived_from<Fld, ElementAttr>) {
+      return value_of(*elem_).get<typename Fld::type>(getAttrXPath(Fld::name));
     }
-    else if constexpr (IsUnionT<typename FldT::type>{}()
-                       || IsViewingArrayProxyT<typename FldT::type>{}()) {
-      return typename FldT::type(value_of(*elem_));
+    else if constexpr (UnionT<typename Fld::type>
+                       || ViewingArrayProxyT<typename Fld::type>) {
+      return typename Fld::type(value_of(*elem_));
     }
   }
 
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField FldT>
-  std::optional<typename FldT::type> try_get() const {
-    if constexpr (std::derived_from<FldT, ElementAttr>) {
-      auto rslt = value_of(*elem_).get_optional<typename FldT::type>(
-        getAttrXPath(FldT::name));
+  template<OptionalField Fld>
+  std::optional<typename Fld::type> try_get() const {
+    if constexpr (std::derived_from<Fld, ElementAttr>) {
+      auto rslt = value_of(*elem_).get_optional<typename Fld::type>(
+        getAttrXPath(Fld::name));
       return jmg::ptree::detail::convertOptional(std::move(rslt));
     }
-    else if constexpr (IsViewingArrayProxyT<typename FldT::type>{}()) {
+    else if constexpr (ViewingArrayProxyT<typename Fld::type>) {
       const auto& val = value_of(*elem_);
       if (val.empty()) { return std::nullopt; }
       if ((1 == val.size()) && (val.count("<xmlattr>"))) {
@@ -127,10 +123,10 @@ public:
         // of children is empty if it is the only one
         return std::nullopt;
       }
-      return typename FldT::type{val};
+      return typename Fld::type{val};
     }
-    else if constexpr (IsUnionT<typename FldT::type>{}()) {
-      return typename FldT::type(*elem_);
+    else if constexpr (UnionT<typename Fld::type>) {
+      return typename Fld::type(*elem_);
     }
   }
 
@@ -221,11 +217,7 @@ using ElementsArrayT = meta::_t<detail::ElementsArrayTypeFactory<Obj>>;
  * Field definition used to return the children of an XML element.
  */
 template<typename T, typename Required = std::false_type>
-struct Elements : FieldDef {
-  static constexpr char const* name = kPlaceholder;
-  using type = ElementsArrayT<T>;
-  using required = Required;
-};
+struct Elements : FieldDef<ElementsArrayT<T>, kPlaceholder, Required> {};
 
 /**
  * alias for std::true_type intended for use when specifying the
@@ -237,11 +229,8 @@ using ElementsRequired = std::true_type;
 } // namespace ptree
 } // namespace jmg
 
-#define JMG_XML_FIELD_DEF(field_name, str_name, field_type, is_required) \
-  struct field_name : jmg::FieldDef, ptree::xml::ElementAttr {           \
-    static constexpr char name[] = str_name;                             \
-    using type = field_type;                                             \
-    using required = is_required##_type;                                 \
-  }
+#define JMG_XML_FIELD_DEF(field_name, str_name, field_type, is_required)       \
+  struct field_name : jmg::FieldDef<field_type, str_name, is_required##_type>, \
+                      ptree::xml::ElementAttr {}
 
 // TODO add a separate macro for defining a field that wraps an array?

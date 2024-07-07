@@ -6,6 +6,33 @@ module(
 )
 
 ########################################
+# boost library
+########################################
+
+bazel_dep(
+    name = "rules_boost",
+    repo_name = "com_github_nelhage_rules_boost"
+)
+
+archive_override(
+    module_name = "rules_boost",
+    # TODO: pin to specific version?
+    urls = "https://github.com/nelhage/rules_boost/archive/refs/heads/master.tar.gz",
+    strip_prefix = "rules_boost-master",
+    # TODO: add integrity check
+)
+
+non_module_boost_repositories = use_extension(
+    "@com_github_nelhage_rules_boost//:boost/repositories.bzl",
+    "non_module_dependencies"
+)
+
+use_repo(
+    non_module_boost_repositories,
+    "boost",
+)
+
+########################################
 # google test
 ########################################
 
