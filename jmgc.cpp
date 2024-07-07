@@ -34,6 +34,7 @@
  * compiler for Jormungandr field and message definitions
  */
 
+#include <cstdlib>
 #include <iostream>
 #include <iterator>
 #include <optional>
@@ -132,11 +133,8 @@ using AnyFixDefinitionSection =
 
 // field referencing the previously defined union of FIX definition
 // sections
-struct FixDefinition : FieldDef {
-  static constexpr char const* name = kPlaceholder;
-  using type = AnyFixDefinitionSection;
-  using required = std::true_type;
-};
+struct FixDefinition
+  : FieldDef<AnyFixDefinitionSection, kPlaceholder, std::true_type> {};
 
 // object containing a FIX definition section
 using FixDefinitionSection = xml::Object<FixDefinition>;
@@ -498,8 +496,14 @@ void process(const string_view filePath) {
 } // namespace quickfix_spec
 
 int main(const int argc, const char** argv) {
+  if (argc != 1) {
+    std::cerr << "ERROR: must be exactly 1 command line argument specifying "
+                 "the name of the file to compile\n";
+    return EXIT_FAILURE;
+  }
   try {
     quickfix_spec::process(argv[1]);
+    return EXIT_SUCCESS;
   }
   catch (const exception& e) {
     cerr << "exception: " << e.what() << "\n";
@@ -507,4 +511,5 @@ int main(const int argc, const char** argv) {
   catch (...) {
     cerr << "unexpected exception type\n";
   }
+  return EXIT_FAILURE;
 }

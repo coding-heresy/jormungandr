@@ -55,30 +55,30 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField FldT>
-  typename FldT::type get() const {
-    return getImpl<FldT>();
+  template<RequiredField Fld>
+  typename Fld::type get() const {
+    return getImpl<Fld>();
   }
 
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField FldT>
-  std::optional<typename FldT::type> try_get() const {
-    if (!adapted_->isSetField(FldT::kFixTag)) { return std::nullopt; }
-    return getImpl<FldT>();
+  template<OptionalField Fld>
+  std::optional<typename Fld::type> try_get() const {
+    if (!adapted_->isSetField(Fld::kFixTag)) { return std::nullopt; }
+    return getImpl<Fld>();
   }
 
 private:
   /**
    * implementation for get/try_get
    */
-  template<typename FldT>
-  typename FldT::type getImpl() const
-    requires ConversionTgtT<typename FldT::type>
+  template<typename Fld>
+  typename Fld::type getImpl() const
+    requires ConversionTgtT<typename Fld::type>
   {
-    const std::string& fieldRef = adapted_->getField(FldT::kFixTag);
-    return static_cast<typename FldT::type>(from_string(fieldRef));
+    const std::string& fieldRef = adapted_->getField(Fld::kFixTag);
+    return static_cast<typename Fld::type>(from_string(fieldRef));
   }
   const adapted_type* adapted_;
 };
