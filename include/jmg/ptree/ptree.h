@@ -70,7 +70,7 @@ namespace xml
  * field definition for the XML element 'tag', which is effectively
  * the name of the element
  */
-struct ElementTag : jmg::FieldDef<std::string, kPlaceholder, std::true_type> {};
+struct ElementTag : jmg::FieldDef<std::string, kPlaceholder, Required> {};
 
 /**
  * Tag type used to define Jormungandr fields associated with
@@ -216,12 +216,12 @@ using ElementsArrayT = meta::_t<detail::ElementsArrayTypeFactory<Obj>>;
 /**
  * Field definition used to return the children of an XML element.
  */
-template<typename T, typename Required = std::false_type>
-struct Elements : FieldDef<ElementsArrayT<T>, kPlaceholder, Required> {};
+template<typename T, TypeFlagT IsRequired = Optional>
+struct Elements : FieldDef<ElementsArrayT<T>, kPlaceholder, IsRequired> {};
 
 /**
  * alias for std::true_type intended for use when specifying the
- * 'Required' type parameter of an 'Elements' field definition
+ * 'IsRequired' type parameter of an 'Elements' field definition
  */
 using ElementsRequired = std::true_type;
 

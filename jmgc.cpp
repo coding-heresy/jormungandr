@@ -134,7 +134,7 @@ using AnyFixDefinitionSection =
 // field referencing the previously defined union of FIX definition
 // sections
 struct FixDefinition
-  : FieldDef<AnyFixDefinitionSection, kPlaceholder, std::true_type> {};
+  : FieldDef<AnyFixDefinitionSection, kPlaceholder, Required> {};
 
 // object containing a FIX definition section
 using FixDefinitionSection = xml::Object<FixDefinition>;
@@ -356,7 +356,7 @@ public:
       // TODO not all fields should be required at all times but this
       // brings up the thorny question of fields being required in
       // some messages and not in others...
-      cout << "  using required = std::true_type;\n";
+      cout << "  using required = Required;\n";
       cout << "  static constexpr uint32_t kFixTag = " << spec.tag << ";\n";
       cout << "  using FixType = FIX::" << name << ";\n";
       cout << "};\n\n";
