@@ -51,47 +51,17 @@ struct FieldGroupDef {};
 namespace detail
 {
 template<typename T>
-struct IsFieldGroupDefImpl {
-  using type = std::false_type;
-};
-
+struct IsFieldGroupDef : std::false_type {};
 template<typename... Ts>
-struct IsFieldGroupDefImpl<FieldGroupDef<Ts...>> {
-  using type = std::true_type;
-};
+struct IsFieldGroupDef<FieldGroupDef<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-using IsFieldGroupDefT = meta::_t<detail::IsFieldGroupDefImpl<T>>;
-
-template<typename T>
-concept FieldGroupDefT = IsFieldGroupDefT<T>
-{}();
+concept FieldGroupDefT = detail::IsFieldGroupDef<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains a type to being a field or a field group
 ////////////////////////////////////////////////////////////////////////////////
-
-namespace detail
-{
-template<typename T>
-struct IsFieldOrGroupDefImpl {
-  using type = std::false_type;
-};
-template<FieldDefT T>
-struct IsFieldOrGroupDefImpl<T> {
-  using type = std::true_type;
-};
-template<FieldGroupDefT T>
-struct IsFieldOrGroupDefImpl<T> {
-  using type = std::true_type;
-};
-
-template<typename T>
-inline constexpr bool isFieldOrGroup() {
-  return std::same_as<meta::_t<detail::IsFieldOrGroupDefImpl<T>>, std::true_type>;
-}
-}; // namespace detail
 
 template<typename T>
 concept FieldOrGroupT = FieldDefT<T> || FieldGroupDefT<T>;
@@ -109,7 +79,7 @@ struct ValidObjectContentCheckUnwrap {
 };
 template<typename... Ts>
 struct ValidObjectContentCheckUnwrap<meta::list<Ts...>> {
-  static inline constexpr bool check() { return (isFieldOrGroup<Ts>() || ...); }
+  static inline constexpr bool check() { return (FieldOrGroupT<Ts> || ...); }
 };
 } // namespace detail
 
@@ -136,13 +106,13 @@ template<typename... Ts>
 struct FieldExpanderImpl<FieldGroupDef<Ts...>> {
   using type = meta::list<Ts...>;
 };
-} // namespace detail
 template<typename T>
-using FieldExpanderT = meta::_t<detail::FieldExpanderImpl<T>>;
+using FieldExpander = meta::_t<FieldExpanderImpl<T>>;
+} // namespace detail
 
 template<TypeListT T>
 using ExpandedFields =
-  meta::join<meta::transform<T, meta::quote<FieldExpanderT>>>;
+  meta::join<meta::transform<T, meta::quote<detail::FieldExpander>>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // declaration of an object

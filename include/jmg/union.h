@@ -67,19 +67,11 @@ private:
 namespace detail
 {
 template<typename T>
-struct IsUnionImpl {
-  using type = std::false_type;
-};
+struct IsUnion : std::false_type {};
 template<typename T, typename... Ts>
-struct IsUnionImpl<Union<T, Ts...>> {
-  using type = std::true_type;
-};
+struct IsUnion<Union<T, Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-using IsUnionT = meta::_t<detail::IsUnionImpl<T>>;
-
-template<typename T>
-concept UnionT = IsUnionT<T>
-{}();
+concept UnionT = detail::IsUnion<T>{}();
 } // namespace jmg

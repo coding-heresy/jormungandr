@@ -44,8 +44,8 @@ using namespace std;
 
 TEST(MetaprogrammingTests, TestTypeListConcept) {
   using TestList = meta::list<bool, float>;
-  EXPECT_TRUE(isTypeList<TestList>());
-  EXPECT_FALSE(isTypeList<int>());
+  EXPECT_TRUE(TypeListT<TestList>);
+  EXPECT_FALSE(TypeListT<int>);
 }
 
 TEST(MetaprogrammingTests, TestPolicyResolver) {

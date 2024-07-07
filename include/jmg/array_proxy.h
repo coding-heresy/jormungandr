@@ -258,20 +258,13 @@ private:
 namespace detail
 {
 template<typename T>
-struct IsViewingArrayProxyImpl {
-  using type = std::false_type;
-};
+struct IsViewingArrayProxy : std::false_type {};
 template<typename... Ts>
-struct IsViewingArrayProxyImpl<ViewingArrayProxy<Ts...>> {
-  using type = std::true_type;
-};
+struct IsViewingArrayProxy<ViewingArrayProxy<Ts...>> : std::true_type {};
 } // namespace detail
-template<typename T>
-using IsViewingArrayProxyT = meta::_t<detail::IsViewingArrayProxyImpl<T>>;
 
 template<typename T>
-concept ViewingArrayProxyT = IsViewingArrayProxyT<T>
-{}();
+concept ViewingArrayProxyT = detail::IsViewingArrayProxy<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // OwningArrayProxyT concept
@@ -280,19 +273,12 @@ concept ViewingArrayProxyT = IsViewingArrayProxyT<T>
 namespace detail
 {
 template<typename T>
-struct IsOwningArrayProxyImpl {
-  using type = std::false_type;
-};
+struct IsOwningArrayProxy : std::false_type {};
 template<typename... Ts>
-struct IsOwningArrayProxyImpl<OwningArrayProxy<Ts...>> {
-  using type = std::true_type;
-};
+struct IsOwningArrayProxy<OwningArrayProxy<Ts...>> : std::true_type {};
 } // namespace detail
-template<typename T>
-using IsOwningArrayProxyT = meta::_t<detail::IsOwningArrayProxyImpl<T>>;
 
 template<typename T>
-concept OwningArrayProxyT = IsOwningArrayProxyT<T>
-{}();
+concept OwningArrayProxyT = detail::IsOwningArrayProxy<T>{}();
 
 } // namespace jmg

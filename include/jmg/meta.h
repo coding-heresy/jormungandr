@@ -56,26 +56,14 @@ concept TypeFlagT =
 namespace detail
 {
 template<typename T>
-struct IsTypeListImpl {
-  using type = std::false_type;
-};
+struct IsTypeList : std::false_type {};
 
 template<typename... Ts>
-struct IsTypeListImpl<meta::list<Ts...>> {
-  using type = std::true_type;
-};
+struct IsTypeList<meta::list<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-using IsTypeListT = meta::_t<detail::IsTypeListImpl<T>>;
-
-template<typename T>
-inline constexpr bool isTypeList() {
-  return std::same_as<IsTypeListT<T>, std::true_type>;
-}
-
-template<typename T>
-concept TypeListT = isTypeList<T>();
+concept TypeListT = detail::IsTypeList<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for numeric types
@@ -90,33 +78,17 @@ concept NumericT = std::integral<T> || std::floating_point<T>;
 namespace detail
 {
 template<typename T>
-struct IsStringLikeImpl {
-  using type = std::false_type;
-};
-
+struct IsStringLike : std::false_type {};
 template<>
-struct IsStringLikeImpl<std::string> {
-  using type = std::true_type;
-};
-
+struct IsStringLike<std::string> : std::true_type {};
 template<>
-struct IsStringLikeImpl<std::string_view> {
-  using type = std::true_type;
-};
-
+struct IsStringLike<std::string_view> : std::true_type {};
 template<>
-struct IsStringLikeImpl<char*> {
-  using type = std::true_type;
-};
+struct IsStringLike<char*> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-using IsStringLikeT =
-  meta::_t<detail::IsStringLikeImpl<std::remove_cvref_t<T>>>;
-
-template<typename T>
-concept StringLikeT = IsStringLikeT<T>
-{}();
+concept StringLikeT = detail::IsStringLike<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // always_false wrapper to defer evaluation of static_assert
@@ -192,14 +164,14 @@ template<typename T, TypeListT Lst>
 using IsNotSubclassMemberOf = meta::not_<detail::IsSubclassMemberOf<T, Lst>>;
 
 template<TypeListT AllTags, TypeListT PolicyList>
-struct PolicyCheckerImpl {
+struct PolicyChecker {
   using NotSubclassPred =
     meta::bind_back<meta::quote<IsNotSubclassMemberOf>, AllTags>;
   using SubclassCheckResult = meta::find_if<PolicyList, NotSubclassPred>;
   using type = meta::empty<SubclassCheckResult>;
 };
 template<TypeListT AllTags, TypeListT PolicyList>
-using PolicyListValidT = meta::_t<PolicyCheckerImpl<AllTags, PolicyList>>;
+using PolicyListValidT = meta::_t<PolicyChecker<AllTags, PolicyList>>;
 
 template<typename BasePolicy,
          typename DefaultPolicy,
