@@ -40,16 +40,12 @@
 using namespace jmg;
 using namespace std;
 
-JMG_MAKE_CONCEPT_CHECKER(FieldDef, FieldDefT);
-JMG_MAKE_CONCEPT_CHECKER(FieldGroupDef, FieldGroupDefT);
-JMG_MAKE_CONCEPT_CHECKER(FieldOrGroup, FieldOrGroupT);
-JMG_MAKE_CONCEPT_CHECKER(ObjectDef, ObjectDefT);
 
 // Some field names
-using TestField = FieldDef<unsigned, "field", true_type>;
-using GroupStringField = FieldDef<string, "group_string_field", true_type>;
-using GroupDblField = FieldDef<double, "group_dbl_field", true_type>;
-using GroupOptionalField = FieldDef<int, "group_optional_field", false_type>;
+using TestField = FieldDef<unsigned, "field", Required>;
+using GroupStringField = FieldDef<string, "group_string_field", Required>;
+using GroupDblField = FieldDef<double, "group_dbl_field", Required>;
+using GroupOptionalField = FieldDef<int, "group_optional_field", Optional>;
 
 using TestFieldGroup =
   FieldGroupDef<GroupStringField, GroupDblField, GroupOptionalField>;
@@ -57,28 +53,28 @@ using TestObject = ObjectDef<TestField, TestFieldGroup>;
 
 TEST(ObjectTests, TestConceptsAndCharacteristics) {
   // TestField is a field, not a field group or object
-  EXPECT_TRUE(isFieldDef<TestField>());
-  EXPECT_FALSE(isFieldGroupDef<TestField>());
-  EXPECT_TRUE(isFieldOrGroup<TestField>());
-  EXPECT_FALSE(isObjectDef<TestField>());
+  EXPECT_TRUE(FieldDefT<TestField>);
+  EXPECT_FALSE(FieldGroupDefT<TestField>);
+  EXPECT_TRUE(FieldOrGroupT<TestField>);
+  EXPECT_FALSE(ObjectDefT<TestField>);
 
   // TestFieldGroup is a field group, not a field or object
-  EXPECT_FALSE(isFieldDef<TestFieldGroup>());
-  EXPECT_TRUE(isFieldGroupDef<TestFieldGroup>());
-  EXPECT_TRUE(isFieldOrGroup<TestFieldGroup>());
-  EXPECT_FALSE(isObjectDef<TestFieldGroup>());
+  EXPECT_FALSE(FieldDefT<TestFieldGroup>);
+  EXPECT_TRUE(FieldGroupDefT<TestFieldGroup>);
+  EXPECT_TRUE(FieldOrGroupT<TestFieldGroup>);
+  EXPECT_FALSE(ObjectDefT<TestFieldGroup>);
 
   // TestObject is an object, not a field or field group
-  EXPECT_FALSE(isFieldDef<TestObject>());
-  EXPECT_FALSE(isFieldGroupDef<TestObject>());
-  EXPECT_FALSE(isFieldOrGroup<TestObject>());
-  EXPECT_TRUE(isObjectDef<TestObject>());
+  EXPECT_FALSE(FieldDefT<TestObject>);
+  EXPECT_FALSE(FieldGroupDefT<TestObject>);
+  EXPECT_FALSE(FieldOrGroupT<TestObject>);
+  EXPECT_TRUE(ObjectDefT<TestObject>);
 
   // double is not a field, field group or object
-  EXPECT_FALSE(isFieldDef<double>());
-  EXPECT_FALSE(isFieldGroupDef<double>());
-  EXPECT_FALSE(isFieldOrGroup<double>());
-  EXPECT_FALSE(isObjectDef<double>());
+  EXPECT_FALSE(FieldDefT<double>);
+  EXPECT_FALSE(FieldGroupDefT<double>);
+  EXPECT_FALSE(FieldOrGroupT<double>);
+  EXPECT_FALSE(ObjectDefT<double>);
 
   // TestField is associated with a value of type 'unsigned' and the
   // field is required to be present in the object

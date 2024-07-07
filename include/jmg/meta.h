@@ -224,27 +224,6 @@ using PolicyResolverT =
   meta::_t<detail::PolicyResolver<BasePolicy, DefaultPolicy, AllTags, PolicyList>>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// helper macro that simplifies construction of metaprogramming types
-// for use in testing concepts
-////////////////////////////////////////////////////////////////////////////////
-
-#define JMG_MAKE_CONCEPT_CHECKER(name, concept)  \
-  namespace detail##__FILE__ {                   \
-    template<typename T>                         \
-    struct Is##name {                            \
-      static constexpr bool value = false;       \
-    };                                           \
-    template<concept T>                          \
-    struct Is##name<T> {                         \
-      static constexpr bool value = true;        \
-    };                                           \
-  } /* namespace detail##__FILE__ */             \
-  template<typename T>                           \
-  inline constexpr bool is##name() {             \
-    return detail##__FILE__::Is##name<T>::value; \
-  }
-
-////////////////////////////////////////////////////////////////////////////////
 // type name demangler functions
 ////////////////////////////////////////////////////////////////////////////////
 

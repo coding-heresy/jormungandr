@@ -41,9 +41,6 @@
 using namespace jmg;
 using namespace std;
 
-JMG_MAKE_CONCEPT_CHECKER(InputIterator, std::input_iterator)
-JMG_MAKE_CONCEPT_CHECKER(InputOrOutputIterator, std::input_or_output_iterator)
-
 namespace
 {
 using IntVec = vector<int>;
@@ -73,8 +70,8 @@ TEST(ArrayProxyTests, TestAdaptingViewProxy) {
   // adapted using IntOwningProxy
   using ItrProxy =
     AdaptingConstItrProxy<IntVec::const_iterator, IntOwningProxy>;
-  EXPECT_TRUE(isInputIterator<ItrProxy>());
-  EXPECT_TRUE(isInputOrOutputIterator<ItrProxy>());
+  EXPECT_TRUE(input_iterator<ItrProxy>);
+  EXPECT_TRUE(input_or_output_iterator<ItrProxy>);
   // policy declaring that a iteration over a vector of integers will
   // be accomplished via proxy
   using ItrPolicy = ProxiedItrPolicy<IntVec, ItrProxy>;
