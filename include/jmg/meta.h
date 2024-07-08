@@ -69,6 +69,7 @@ concept TypeListT = detail::IsTypeList<T>
 ////////////////////////////////////////////////////////////////////////////////
 // concept for numeric types
 ////////////////////////////////////////////////////////////////////////////////
+
 template<typename T>
 concept NumericT = std::integral<T> || std::floating_point<T>;
 
@@ -91,6 +92,14 @@ struct IsStringLike<char*> : std::true_type {};
 template<typename T>
 concept StringLikeT = detail::IsStringLike<T>
 {}();
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for non-bool types
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept NonBoolT = !
+std::same_as<T, bool>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // always_false wrapper to defer evaluation of static_assert
@@ -252,6 +261,8 @@ std::string demangle(const std::type_info* id) { return demangle(*id); }
  */
 template<typename T>
 std::string type_name_for() {
+  // the actual type of std::string is annoying
+  if constexpr (std::same_as<T, std::string>) { return "std::string"; }
   return demangle(typeid(T));
 }
 
@@ -289,5 +300,32 @@ struct StrLiteral {
   constexpr StrLiteral(const char (&str)[N]) { std::copy_n(str, N, value); }
   char value[N];
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// convert from type list to tuple
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename... Ts>
+struct Tuplize {};
+
+template<typename... Ts>
+struct Tuplize<meta::list<Ts...>> {
+  using type = std::tuple<Ts...>;
+};
+} // namespace detail
+
+template<typename... Ts>
+using Tuplize = typename detail::Tuplize<Ts...>::type;
+
+////////////////////////////////////////////////////////////////////////////////
+// helper macro for final 'else' case of 'if constexpr' case analysis
+// over a type
+////////////////////////////////////////////////////////////////////////////////
+#define JMG_NOT_EXHAUSTIVE(type)                                          \
+  do {                                                                    \
+    static_assert(always_false<type>, "case analysis is not exhaustive"); \
+  } while (0)
 
 } // namespace jmg

@@ -9,6 +9,15 @@ cc_test(
 )
 
 cc_test(
+    name = "test_cmdline",
+    srcs = ["test_cmdline.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
+
+cc_test(
     name = "test_conversion",
     srcs = ["test_conversion.cpp"],
     deps = [
