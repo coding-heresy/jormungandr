@@ -80,3 +80,26 @@ cc_test(
         "//:jmg",
     ],
 )
+
+genrule(
+    name = "fix_42_header",
+    visibility = ["//visibility:public"],
+    srcs = [
+        "//jmgc:jmgc",
+        "@quickfix//:fix_42_spec",
+    ],
+    outs = ["quickfix_42.h"],
+    cmd = "$(location //jmgc:jmgc) $(location @quickfix//:fix_42_spec) > $@",
+)
+
+cc_test(
+    name = "test_quickfix",
+    srcs = [
+        ":fix_42_header",
+        "test_quickfix.cpp"
+    ],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)

@@ -33,6 +33,7 @@
 #include <gtest/gtest.h>
 
 #include "jmg/array_proxy.h"
+#include "jmg/conversion.h"
 #include "jmg/meta.h"
 #include "jmg/object.h"
 #include "jmg/union.h"
@@ -88,4 +89,43 @@ TEST(ObjectTests, TestConceptsAndCharacteristics) {
   // TestObject contains 4 fields after TestFieldGroup is properly
   // expanded
   EXPECT_EQ(4, meta::size<TestObject::Fields>{});
+}
+
+#if 0
+void test(const size_t argc, const char* argv[]) {
+  // TODO: OLD CODE using Args = span<string_view, dynamic_extent>;
+  // TODO: OLD CODE const auto raw_args = Args(argv, argc);
+  // TODO: OLD CODE cout << "DBG: there are [" << raw_args.size() << "] arguments\n";
+  const auto args = span(argv, argc);
+}
+#endif
+
+TEST(ExperimentalTest, TestInvocations) {
+  using OptFields =
+    meta::list<GroupStringField, GroupDblField, GroupOptionalField>;
+  using OptFldVals = Tuplize<meta::transform<OptFields, Optionalize>>;
+  auto opt_vals = OptFldVals();
+  cout << "DBG: opt_vals types [" << type_name_for<>(opt_vals) << "]\n";
+
+  {
+    using Idx = meta::find_index<OptFields, GroupDblField>;
+    constexpr auto idx = Idx{}();
+    cout << "DBG: idx [(" << type_name_for(idx) << ") " << idx << "]\n";
+    std::get<idx>(opt_vals) = 42.0;
+    cout << "DBG: opt_vals [" << opt_vals << "]\n";
+  }
+  {
+    using Idx = meta::find_index<OptFields, GroupStringField>;
+    constexpr auto idx = Idx{}();
+    cout << "DBG: idx [(" << type_name_for(idx) << ") " << idx << "]\n";
+    std::get<idx>(opt_vals) = "foo"s;
+    cout << "DBG: opt_vals [" << opt_vals << "]\n";
+  }
+  {
+    using Idx = meta::find_index<OptFields, GroupOptionalField>;
+    constexpr auto idx = Idx{}();
+    cout << "DBG: idx [(" << type_name_for(idx) << ") " << idx << "]\n";
+    std::get<idx>(opt_vals) = 20010911;
+    cout << "DBG: opt_vals [" << opt_vals << "]\n";
+  }
 }

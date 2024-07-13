@@ -36,6 +36,7 @@
 #include <string>
 #include <typeinfo>
 
+#include <cxxabi.h>
 #include <meta/meta.hpp>
 
 namespace jmg
@@ -215,11 +216,44 @@ using PolicyResolverT =
  *
  * Intended for use in development and debugging.
  */
-std::string demangle(const std::type_info& id);
+inline std::string demangle(const std::type_info& id) {
+  // c.f.
+  // https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.3/a01696.html
+  // for documentation of __cxa_demangle
+
+  // note: -4 is not in the expected range of returned status values
+  int status = -4;
+  std::unique_ptr<char, void (*)(void*)> rslt{abi::__cxa_demangle(id.name(),
+                                                                  nullptr,
+                                                                  nullptr,
+                                                                  &status),
+    free};
+  if (!rslt) {
+    switch (status) {
+      case 0:
+        throw std::runtime_error(
+          "type name demangle returned success status but NULL result");
+      case -1:
+        throw std::runtime_error(
+          "unable to allocate memory for demangled type name");
+      case -2:
+        throw std::runtime_error("unexpected invalid type name when demangling");
+      case -3:
+        throw std::runtime_error("invalid argument to typename demangling function");
+      default:
+        throw std::runtime_error(
+          "unknown status result from failed typename demangle");
+    }
+  }
+  // NOTE: ignoring the possibility that status could be nonzero when
+  // __cxa_demangle() returns a non-NULL result
+  return rslt.get();
+}
+
 /**
  * convenience overload of demangle for pointer argument
  */
-std::string demangle(const std::type_info* id);
+inline std::string demangle(const std::type_info* id) { return demangle(*id); }
 
 /**
  * return the demangled name of a type
@@ -246,7 +280,11 @@ std::string type_name_for(const T& t) {
 /**
  * return the demangled name of the current exception
  */
-std::string current_exception_type_name();
+inline std::string current_exception_type_name() {
+  const auto* excType = abi::__cxa_current_exception_type();
+  if (!excType) { return "<no outstanding exceptions>"; }
+  return demangle(excType);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // holder for compile time string literal template parameter

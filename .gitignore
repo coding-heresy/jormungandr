@@ -1,6 +1,5 @@
 *~
 experiments
-jmgc
 bazel-*
 MODULE.bazel.lock
 test_array_proxy

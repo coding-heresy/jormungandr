@@ -58,8 +58,15 @@ using ComplexArray = FieldDef<ComplexArrayProxy, "complex", Required>;
 // OptComplexArray is an optional array of non-primitive elements
 using OptComplexArray = FieldDef<ComplexArrayProxy, "opt_complex", Optional>;
 
+using GroupStringField = FieldDef<string, "group_string_field", Required>;
+using GroupDblField = FieldDef<double, "group_dbl_field", Required>;
+using GroupOptionalField = FieldDef<int, "group_optional_field", Optional>;
+using TestFieldGroup =
+  FieldGroupDef<GroupStringField, GroupDblField, GroupOptionalField>;
+
 // clang-format off
 using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field,
+                             TestFieldGroup,
                              PrimitiveArray, ComplexArray, OptComplexArray>;
 // clang-format on
 
@@ -71,6 +78,8 @@ TEST(YamlTests, FieldRetrieval) {
   raw["str"] = "foo";
   raw["int"] = "42";
   raw["id32"] = "20010911";
+  raw["group_string_field"] = "group";
+  raw["group_dbl_field"] = "-1.0";
   raw["primitive"].push_back("42");
   raw["primitive"].push_back("20010911");
   {
@@ -89,6 +98,8 @@ TEST(YamlTests, FieldRetrieval) {
   EXPECT_EQ("foo"s, jmg::get<StrField>(obj));
   EXPECT_EQ(42, jmg::get<IntField>(obj));
   EXPECT_EQ(20010911U, unsafe(jmg::get<Id32Field>(obj)));
+  EXPECT_EQ("group"s, jmg::get<GroupStringField>(obj));
+  EXPECT_DOUBLE_EQ(-1.0, jmg::get<GroupDblField>(obj));
   {
     const auto& primitive = jmg::get<PrimitiveArray>(obj);
     EXPECT_EQ(2, primitive.size());
@@ -103,6 +114,16 @@ TEST(YamlTests, FieldRetrieval) {
     EXPECT_EQ(42, jmg::get<InnerField>(*itr));
     ++itr;
     EXPECT_EQ(itr, complex.end());
+  }
+
+  // test optional fields
+  EXPECT_FALSE(jmg::try_get<GroupOptionalField>(obj).has_value());
+  raw["group_optional_field"] = "5";
+  {
+    // populate and test GroupOptionalField
+    const auto engaged = jmg::try_get<GroupOptionalField>(obj);
+    EXPECT_TRUE(engaged.has_value());
+    EXPECT_EQ(5, *engaged);
   }
   {
     // OptField starts out empty

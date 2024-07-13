@@ -31,12 +31,18 @@
  */
 #pragma once
 
+#if defined(USE_NATIVE_QUICKFIX_MSG)
 #include <quickfix/Message.h>
+#else
+#include <ranges>
+#endif
 
 #include "jmg/conversion.h"
 #include "jmg/field.h"
 #include "jmg/object.h"
 #include "jmg/preprocessor.h"
+#include "jmg/types.h"
+#include "jmg/util.h"
 
 namespace jmg
 {
@@ -44,6 +50,7 @@ namespace jmg
 namespace quickfix
 {
 
+#if defined(USE_NATIVE_QUICKFIX_MSG)
 template<typename... Fields>
 class Object : public ObjectDef<Fields...> {
 public:
@@ -82,6 +89,125 @@ private:
   }
   const adapted_type* adapted_;
 };
+#else
+
+template<typename T>
+concept HasFixTag = requires(T) {
+  std::same_as<decltype(T::kFixTag), uint32_t>;
+};
+
+template<typename T>
+concept RequiredFixFieldT = RequiredField<T> && HasFixTag<T>;
+
+template<typename T>
+concept OptionalFixFieldT = OptionalField<T> && HasFixTag<T>;
+
+/**
+ * quick and dirty implementation of FIX message object used for
+ * testing until the quitckfix library is fully integrated
+ */
+template<typename... Fields>
+class Object : public ObjectDef<Fields...> {
+public:
+  Object() = delete;
+  Object(const std::string_view msg,
+         const Dict<unsigned, unsigned>& lengthFields) {
+    constexpr std::string_view kFieldDelim = "";
+    constexpr std::string_view kFieldSplitter = "=";
+
+    auto stop = msg.find(kFieldDelim);
+    decltype(stop) start = 0;
+    while (stop != std::string::npos) {
+      auto pos = msg.find(kFieldSplitter, start);
+      JMG_ENFORCE(pos < stop, "missing field splitter '=' in field");
+      unsigned tag = from_string(msg.substr(start, pos));
+      {
+        // check for special LENGTH field
+        const auto entry = lengthFields.find(tag);
+        if (entry != lengthFields.end()) {
+          const auto pairedTag = value_of(*entry);
+          const size_t nextSz = from_string(msg.substr(pos + 1, stop - pos - 1));
+          // jump to the next field
+          start = stop + 1;
+          auto pos = msg.find(kFieldSplitter, start);
+          JMG_ENFORCE(pos != std::string::npos, "length field with tag ["
+                      << tag << "] was followed by data with no splitter "
+                      "'='");
+          const unsigned checkTag = from_string(msg.substr(start, pos));
+          JMG_ENFORCE(checkTag == pairedTag, "unpaired tag [" << checkTag
+                      << "] followed length field with tag ["
+                      << tag << "] instead of expected paired tag ["
+                      << pairedTag << "]");
+          stop = pos + nextSz;
+          JMG_ENFORCE(stop < msg.size(), "raw data field with tag ["
+                      << pairedTag << "] had length [" << nextSz
+                      << "] that was too long for the message");
+          // overwrite the length tag so that only the raw data field
+          // is stored in the dictionary
+          tag = pairedTag;
+        }
+      }
+      // store the data in the dictionary
+      const auto [entry, inserted] =
+        fields_.try_emplace(tag, msg.substr(pos + 1, stop - pos - 1));
+      JMG_ENFORCE(inserted, "encountered duplicate tag [" << tag
+                  << "] in message");
+
+      if (msg.size() == stop) {
+        // last character of the message should be a field delimiter
+        break;
+      }
+      // find the next field
+      start = stop + 1;
+      stop = msg.find(kFieldDelim, start);
+    }
+  }
+
+  /**
+   * delegate for jmg::get()
+   */
+  template<RequiredFixFieldT Fld>
+  typename Fld::type get() const {
+    using Type = typename Fld::type;
+    const auto entry = fields_.find(Fld::kFixTag);
+    JMG_ENFORCE(fields_.end() != entry, "message had no value for required "
+                "FIX field [" << Fld::name << "] (" << Fld::kFixTag << ")");
+    const auto& str = value_of(*entry);
+    std::cout << "DBG tag [" << Fld::kFixTag << "] val [" << str
+              << "] size [" << str.size() << "]\n";
+    if constexpr(std::same_as<Type, std::string>) {
+      return std::string(str);
+    }
+    else {
+      Type val = from_string(str);
+      return val;
+    }
+  }
+
+  /**
+   * delegate for jmg::try_get()
+   */
+  template<OptionalFixFieldT Fld>
+  std::optional<typename Fld::type> try_get() const {
+    using Type = typename Fld::type;
+    const auto entry = fields_.find(Fld::kFixTag);
+    if (fields_.end() == entry) {
+      return std::nullopt;
+    }
+    const auto& str = value_of(*entry);
+    if constexpr(std::same_as<Type, std::string>) {
+      return str;
+    }
+    else {
+      Type val = from_string(str);
+      return val;
+    }
+  }
+
+private:
+  Dict<uint32_t, std::string> fields_;
+};
+#endif
 
 } // namespace quickfix
 } // namespace jmg

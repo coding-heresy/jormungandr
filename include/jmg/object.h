@@ -153,6 +153,8 @@ inline constexpr bool isMemberOfObject() {
 // definitions of get() and try_get()
 ////////////////////////////////////////////////////////////////////////////////
 
+// TODO figure out how to return string_view instead of string
+
 template<FieldDefT Fld, ObjectDefT Obj>
 typename Fld::type get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())

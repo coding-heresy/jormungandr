@@ -18,9 +18,9 @@ cc_library(
         "include/jmg/union.h",
         "include/jmg/util.h",
         "include/jmg/yaml/yaml.h",
-        "src/meta.cpp",
     ],
     includes = ["include"],
+    linkstatic = True,
     deps = [
         "@com_google_abseil//absl/container:btree",
         "@com_google_abseil//absl/container:flat_hash_map",
@@ -32,11 +32,3 @@ cc_library(
     ],
 )
 
-cc_binary(
-    name = "jmgc",
-    visibility = ["//visibility:public"],
-    srcs = ["jmgc.cpp"],
-    deps = [
-        ":jmg",
-    ],
-)

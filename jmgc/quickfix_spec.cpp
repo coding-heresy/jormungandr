@@ -30,16 +30,11 @@
  *
  */
 
-/**
- * compiler for Jormungandr field and message definitions
- */
-
 #include <cstdlib>
 #include <iostream>
 #include <iterator>
 #include <optional>
 #include <string_view>
-#include <unordered_set>
 
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -49,19 +44,22 @@
 #include "jmg/object.h"
 #include "jmg/preprocessor.h"
 #include "jmg/ptree/ptree.h"
+#include "jmg/types.h"
 #include "jmg/util.h"
 
 using namespace jmg;
 using namespace std;
+
 namespace xml = ptree::xml;
 
 namespace
 {
 constexpr string_view kEnumTypeSuffix = "Enum";
-}
+} // namespace
 
 namespace quickfix_spec
 {
+
 constexpr string_view kTopLevelTag = "fix";
 // element names within the top level 'fix' element
 constexpr string_view kFixHeader = "header";
@@ -75,6 +73,9 @@ constexpr string_view kFixField = "field";
 constexpr string_view kFixGroup = "group";
 constexpr string_view kFixMsg = "message";
 constexpr string_view kEnumValue = "value";
+// header and trailer field group definition names
+constexpr string_view kHeaderDef = "MsgHeader";
+constexpr string_view kTrailerDef = "MsgTrailer";
 
 ////////////////////////////////////////////////////////////////////////////////
 // Jormungandr field definitions at various levels
@@ -127,7 +128,7 @@ using FixFieldDefs = xml::ElementsArrayT<FixField>;
 // union that holds one of the following:
 //  1. an array of FIX message definitions
 //  2. an array of FIX field definitions
-// TODO add the following: header, trailer and components
+// TODO add components definitions section?
 using AnyFixDefinitionSection =
   Union<boost::property_tree::ptree, MsgFieldDefs, FixMsgDefs, FixFieldDefs>;
 
@@ -162,53 +163,22 @@ using AllXmlElements = xml::ElementsArrayT<TopLevelElement>;
  * used to emit output
  */
 class AllFixData {
-  auto processFieldDeclarations(const string_view name, const auto& fields) {
-    // TODO handle 'required' flag
-    vector<string> fieldNames;
-    for (const auto& field : fields) {
-      const auto& fieldTag = jmg::get<ptree::xml::ElementTag>(field);
-      if (kFixGroup == fieldTag) {
-        cerr << "WARNING: skipping 'group' element of message definition for ["
-             << name << "]\n";
-        continue;
-      }
-      JMG_ENFORCE(kFixField == fieldTag,
-                  "unexpected XML tag ["
-                    << fieldTag
-                    << "] on element of message or group fields declarations");
-      fieldNames.push_back(jmg::get<FixFieldName>(field));
-    }
-    return fieldNames;
-  }
-
-  void dumpStrVec(const vector<string>& vec) {
-    auto itr = std::begin(vec);
-    cout << *itr;
-    ++itr;
-    ranges::copy(ranges::subrange{itr, std::end(vec)}
-                   | views::transform([](const auto& fld) { return "," + fld; }),
-                 ostream_iterator<string>(cout));
-  }
-
 public:
   /**
    * process all entries in the 'header' element
    */
   void processHeader(const auto& headerElement) {
-    // TODO handle 'required' flag
-    auto fieldNames = processFieldDeclarations(
-      "header",
+    header_ = processFieldDeclarations(
+      kHeaderDef,
       jmg::get<FixDefinition>(headerElement).template as<MsgFieldDefs>());
-    headerFields_ = std::move(fieldNames);
   }
 
   /**
    * process all entries in the 'trailer' element
    */
   void processTrailer(const auto& trailerElement) {
-    // TODO handle 'required' flag
-    trailerFields_ = processFieldDeclarations(
-      "trailer",
+    trailer_ = processFieldDeclarations(
+      kTrailerDef,
       jmg::get<FixDefinition>(trailerElement).template as<MsgFieldDefs>());
   }
 
@@ -216,18 +186,19 @@ public:
    * process all entries in the 'messages' element
    */
   void processMsgs(const auto& msgsElement) {
+    Set<string> names;
     for (const auto& msg :
          jmg::get<FixDefinition>(msgsElement).template as<FixMsgDefs>()) {
       const auto& tag = jmg::get<ptree::xml::ElementTag>(msg);
       JMG_ENFORCE(kFixMsg == tag, "unexpected XML tag ["
                                     << tag
                                     << "] on element in [messages] section");
-      const auto& msgName = jmg::get<FixMsgName>(msg);
-      auto fieldNames =
-        processFieldDeclarations(msgName, jmg::get<MsgFields>(msg));
-      auto [_, inserted] = msgs_.try_emplace(msgName, std::move(fieldNames));
-      JMG_ENFORCE(inserted,
-                  "duplicate definitions for message [" << msgName << "]");
+      const auto& name = jmg::get<FixMsgName>(msg);
+      const auto [_, inserted] = names.insert(name);
+      JMG_ENFORCE(inserted, "encountered duplicate message name ["
+                  << name << "]");
+      msgs_.push_back(processFieldDeclarations(name,
+                                               jmg::get<MsgFields>(msg)));
     }
   }
 
@@ -314,9 +285,15 @@ public:
    * emit C++ text output
    */
   void emit() {
+    cout << "////////////////////////////////////////////////////////////////////////////////\n";
+    cout << "// WARNING: this file is generated automatically by jmgc and should not be\n";
+    cout << "// edited manually\n";
+    cout << "////////////////////////////////////////////////////////////////////////////////\n";
     cout << "#pragma once\n";
     cout << "#include \"jmg/quickfix/quickfix.h\"\n";
-    cout << "\nnamespace jmg\n{\n";
+    cout << "\nnamespace jmg::fix_spec\n{\n";
+
+    // emit all enumerations first
     cout << "\n// enumerations\n\n";
     for (const auto& [name, def] : enums_) {
       string prefix = "";
@@ -337,54 +314,47 @@ public:
       }
       cout << "};\n";
     }
-    cout << "\n// fields\n\n";
+
+    // emit all message definitions
+    emitMsg(header_);
+    emitMsg(trailer_);
+    for (const auto& msg : msgs_) {
+      emitMsg(msg);
+    }
+
+    // emit mappings for length fields that must be parsed separately
+    cout << "inline const Dict<unsigned, unsigned> kLengthFields{";
+    bool firstMatch = false;
     for (const auto& [name, spec] : fields_) {
-      cout << "struct " << name << " : jmg::FieldDef\n{\n";
-      cout << "  static constexpr char name[] = \"" << name << "\";\n";
-      cout << "  using type = ";
-      const auto enumEntry = enums_.find(name);
-      if (enums_.end() == enumEntry) {
-        // values for this field come from a standard type and not an
-        // enumeration
-        const auto entry = kTypeTranslation_.find(spec.type);
-        JMG_ENFORCE(kTypeTranslation_.end() != entry,
-                    "unknown FIX protocol type [" << spec.type << "]");
-        cout << value_of(*entry);
+      if ("LENGTH"s == spec.type) {
+        // find the data field that this LENGTH field corresponds to
+        const auto matchName = [&]() {
+          if (name.ends_with("Len")) {
+            return name.substr(0, name.size() - 3);
+          }
+          JMG_ENFORCE(name.ends_with("Length"), "encountered bad named ["
+                      << name << "] for LENGTH field, should have suffix "
+                      "'Len' or 'Length'");
+          return name.substr(0, name.size() - 6);
+        }();
+        const auto match = fields_.find(matchName);
+        JMG_ENFORCE(match != fields_.end(), "matching name ["
+                    << matchName << "] for length field ["
+                    << name << "] was not found in field definitions");
+        if (!firstMatch) { firstMatch = true; }
+        else { cout << ","; }
+        cout << "\n  {" << spec.tag << "," << value_of(*match).tag << "}";
       }
-      else { cout << key_of(*enumEntry) << kEnumTypeSuffix; }
-      cout << ";\n";
-      // TODO not all fields should be required at all times but this
-      // brings up the thorny question of fields being required in
-      // some messages and not in others...
-      cout << "  using required = Required;\n";
-      cout << "  static constexpr uint32_t kFixTag = " << spec.tag << ";\n";
-      cout << "  using FixType = FIX::" << name << ";\n";
-      cout << "};\n\n";
     }
-    cout << "\n// message header\n\n";
-    cout << "using MsgHeader = jmg::FieldGroupDef<";
-    dumpStrVec(headerFields_);
-    cout << ">;\n";
-
-    cout << "\n// message trailer\n\n";
-    cout << "using MsgTrailer = jmg::FieldGroupDef<";
-    dumpStrVec(trailerFields_);
-    cout << ">;\n";
-
-    cout << "\n// messages\n\n";
-    for (const auto& [name, fields] : msgs_) {
-      cout << "using " << name << " = jmg::quickfix::Object<MsgHeader,";
-      ranges::copy(fields, ostream_iterator<string>(cout, ","));
-      cout << "MsgTrailer>;\n";
-    }
-    cout << "\n} // namespace jmg\n";
+    cout << "\n};\n\n";
+    cout << "} // namespace jmg::\n";
   }
 
 private:
   /**
    * field declarations for header/messages/trailer sections
    */
-  struct MsgField {
+  struct FieldInMsg {
     string name;
     bool required;
   };
@@ -393,9 +363,9 @@ private:
    */
   struct Msg {
     string name;
-    unsigned typeNumber;
+    optional<string> msgType;
     // TODO add message category from msgcat?
-    vector<MsgField> fields;
+    vector<FieldInMsg> fields;
   };
   /**
    * field definitions for 'fields' section
@@ -414,21 +384,133 @@ private:
   enum class EnumType : uint8_t { kChar, kString, kInt };
   using EnumSpec = tuple<EnumType, vector<FieldEnumeration>>;
 
+  auto processFieldDeclarations(const string_view name, const auto& fields) {
+    Msg msg;
+    msg.name = name;
+    for (const auto& field : fields) {
+      const auto& fieldTag = jmg::get<ptree::xml::ElementTag>(field);
+      if (kFixGroup == fieldTag) {
+        // TODO handle repeating groups correctly
+        cerr << "WARNING: skipping 'group' element of message definition for ["
+             << name << "]\n";
+        continue;
+      }
+      JMG_ENFORCE(kFixField == fieldTag,
+                  "unexpected XML tag ["
+                    << fieldTag
+                    << "] on element of message or group fields declarations");
+      msg.fields.emplace_back(jmg::get<FixFieldName>(field),
+                              isRequired(jmg::get<RequiredFlag>(field)));
+    }
+    return msg;
+  }
+
+  void emitField(const FieldInMsg& fld) {
+      cout << "struct " << fld.name << " : FieldDef<";
+
+      // look up field spec using name
+      const auto spec_entry = fields_.find(fld.name);
+      JMG_ENFORCE(fields_.end() != spec_entry, "unknown message field name ["
+                  << fld.name << "]");
+      const auto& spec = value_of(*spec_entry);
+
+      // emit the field type
+      const auto enumEntry = enums_.find(fld.name);
+      if (enums_.end() == enumEntry) {
+        // values for this field come from a standard type and not an
+        // enumeration
+        const auto entry = kTypeTranslation_.find(spec.type);
+        JMG_ENFORCE(kTypeTranslation_.end() != entry,
+                    "unknown FIX protocol type [" << spec.type << "]");
+        cout << value_of(*entry);
+      }
+      else { cout << key_of(*enumEntry) << kEnumTypeSuffix; }
+
+      // emit the field name
+      cout << ", \"" << fld.name << "\", ";
+
+      // emit the 'required' attribute
+      if (fld.required) {
+        cout << "Required";
+      }
+      else {
+        cout << "Optional";
+      }
+      cout << "> {\n";
+
+      // emit the tag
+      cout << "  static constexpr uint32_t kFixTag = " << spec.tag << ";\n";
+      cout << "};\n";
+  }
+
+  string makeNamespaceFor(const Msg& msg) {
+    string rslt;
+    rslt.reserve(2 * msg.name.size());
+    auto entry = msg.name.begin();
+    JMG_ENFORCE(isupper(*entry), "message name [" << msg.name
+                << "] does not start with an uppercase letter");
+    rslt.push_back(tolower(*entry));
+    ++entry;
+    for (;entry != msg.name.end(); ++entry) {
+      if (isupper(*entry)) {
+        rslt.push_back('_');
+        rslt.push_back(tolower(*entry));
+      }
+      else {
+        rslt.push_back(*entry);
+      }
+    }
+    return rslt;
+  }
+
+  void emitMsg(const Msg& msg) {
+    const auto ns = makeNamespaceFor(msg);
+    cout << "namespace " << ns << "\n{\n";
+
+    // emit relevant fields in the correct namespace
+    for (const auto& fld : msg.fields) {
+      emitField(fld);
+    }
+    cout << "} // namespace " << ns << "\n\n";
+
+    // emit the message definition outside the namespace
+    const auto [objTypeName, isGroup] = [&]() {
+      if ((kHeaderDef == msg.name) || (kTrailerDef == msg.name)) {
+        return tuple("jmg::FieldGroupDef"s, true);
+      }
+      return tuple("jmg::quickfix::Object"s, false);
+    }();
+    cout << "using " << msg.name << " = " << objTypeName << "<\n";
+    if (!isGroup) {
+      cout << "  " << kHeaderDef << ",\n";
+    }
+    auto itr = msg.fields.begin();
+    cout << "  " << ns << "::" << itr->name;
+    ++itr;
+    for (;itr != msg.fields.end(); ++itr) {
+      cout << ",\n  " << ns << "::" << itr->name;
+    }
+    if (!isGroup) {
+      cout << ",\n  " << kTrailerDef << "\n";
+    }
+    cout << "\n>;\n\n";
+  }
+
   // translation from type string in the XML declaration to the
   // appropriate C++ type
-  static const unordered_map<string, string> kTypeTranslation_;
+  static const Dict<string, string> kTypeTranslation_;
   // set of types for that are represented by strings or single
   // characters
-  static const unordered_set<string> kCharFieldTypes_;
+  static const Set<string> kCharFieldTypes_;
 
-  vector<string> headerFields_;
-  vector<string> trailerFields_;
-  unordered_map<string, FieldSpec> fields_;
-  unordered_map<string, EnumSpec> enums_;
-  unordered_map<string, vector<string>> msgs_;
+  Msg header_;
+  Msg trailer_;
+  Dict<string, FieldSpec> fields_;
+  Dict<string, EnumSpec> enums_;
+  vector<Msg> msgs_;
 };
 
-const unordered_map<string, string> AllFixData::kTypeTranslation_ = {
+const Dict<string, string> AllFixData::kTypeTranslation_ = {
   {"STRING", "std::string"},
   {"CHAR", "char"},
   {"BOOLEAN", "bool"},
@@ -456,10 +538,13 @@ const unordered_map<string, string> AllFixData::kTypeTranslation_ = {
   // TODO use some sort of raw byte buffer type for this
   {"DATA", "std::string"}};
 
-const unordered_set<string> AllFixData::kCharFieldTypes_ = {
+const Set<string> AllFixData::kCharFieldTypes_ = {
   "CHAR", "STRING", "BOOLEAN", "MULTIPLEVALUESTRING"};
 
 void process(const string_view filePath) {
+  JMG_ENFORCE(filePath.ends_with(".xml"), "encountered non-XML file ["
+              << filePath << "] when attempting to process a quickfix "
+              "specification");
   auto strm = open_file<ifstream>(filePath);
   boost::property_tree::ptree data;
   read_xml(strm, data);
@@ -482,7 +567,7 @@ void process(const string_view filePath) {
     else if (tag == kFixMsgs) { fixData.processMsgs(elem); }
     else if (tag == kFixTrailer) { fixData.processTrailer(elem); }
     else if (tag == kFixComponents) {
-      // TODO
+      // TODO components appears to be empty for FIX4.2
     }
     else if (tag == kFixFields) { fixData.processFields(elem); }
     else {
@@ -494,22 +579,3 @@ void process(const string_view filePath) {
 }
 
 } // namespace quickfix_spec
-
-int main(const int argc, const char** argv) {
-  if (argc != 1) {
-    std::cerr << "ERROR: must be exactly 1 command line argument specifying "
-                 "the name of the file to compile\n";
-    return EXIT_FAILURE;
-  }
-  try {
-    quickfix_spec::process(argv[1]);
-    return EXIT_SUCCESS;
-  }
-  catch (const exception& e) {
-    cerr << "exception: " << e.what() << "\n";
-  }
-  catch (...) {
-    cerr << "unexpected exception type\n";
-  }
-  return EXIT_FAILURE;
-}
