@@ -1,8 +1,4 @@
 
-# TODO get boost build working under bzlmod
-# load("@com_github_nelhage_rules_boost//:boost/boost.bzl", "boost_deps")
-# boost_deps()
-
 cc_library(
     name = "jmg",
     visibility = ["//visibility:public"],
@@ -22,6 +18,7 @@ cc_library(
         "include/jmg/union.h",
         "include/jmg/util.h",
         "include/jmg/yaml/yaml.h",
+        "src/meta.cpp",
     ],
     includes = ["include"],
     deps = [
