@@ -7,11 +7,13 @@ build --action_env=BAZEL_CXXOPTS="-std=c++20"
 build --action_env=CC=/usr/bin/gcc-12
 build --action_env=CXX=/usr/bin/g++-12
 
+build --features=external_include_paths
+
 # be safe...
 build --cxxopt='-Wall'
 build --cxxopt='-Wextra'
 build --cxxopt='-Werror'
-build --cxxopt='-pedantic'
+build --cxxopt='-Wpedantic'
 build --cxxopt='-pedantic-errors'
 
 # need to be able to diagnose severe errors in concepts
