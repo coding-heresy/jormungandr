@@ -195,10 +195,9 @@ public:
                                     << "] on element in [messages] section");
       const auto& name = jmg::get<FixMsgName>(msg);
       const auto [_, inserted] = names.insert(name);
-      JMG_ENFORCE(inserted, "encountered duplicate message name ["
-                  << name << "]");
-      msgs_.push_back(processFieldDeclarations(name,
-                                               jmg::get<MsgFields>(msg)));
+      JMG_ENFORCE(inserted,
+                  "encountered duplicate message name [" << name << "]");
+      msgs_.push_back(processFieldDeclarations(name, jmg::get<MsgFields>(msg)));
     }
   }
 
@@ -285,10 +284,13 @@ public:
    * emit C++ text output
    */
   void emit() {
-    cout << "////////////////////////////////////////////////////////////////////////////////\n";
-    cout << "// WARNING: this file is generated automatically by jmgc and should not be\n";
+    cout << "//////////////////////////////////////////////////////////////////"
+            "//////////////\n";
+    cout << "// WARNING: this file is generated automatically by jmgc and "
+            "should not be\n";
     cout << "// edited manually\n";
-    cout << "////////////////////////////////////////////////////////////////////////////////\n";
+    cout << "//////////////////////////////////////////////////////////////////"
+            "//////////////\n";
     cout << "#pragma once\n";
     cout << "#include \"jmg/quickfix/quickfix.h\"\n";
     cout << "\nnamespace jmg::fix_spec\n{\n";
@@ -318,9 +320,7 @@ public:
     // emit all message definitions
     emitMsg(header_);
     emitMsg(trailer_);
-    for (const auto& msg : msgs_) {
-      emitMsg(msg);
-    }
+    for (const auto& msg : msgs_) { emitMsg(msg); }
 
     // emit mappings for length fields that must be parsed separately
     cout << "inline const Dict<unsigned, unsigned> kLengthFields{";
@@ -329,18 +329,19 @@ public:
       if ("LENGTH"s == spec.type) {
         // find the data field that this LENGTH field corresponds to
         const auto matchName = [&]() {
-          if (name.ends_with("Len")) {
-            return name.substr(0, name.size() - 3);
-          }
-          JMG_ENFORCE(name.ends_with("Length"), "encountered bad named ["
-                      << name << "] for LENGTH field, should have suffix "
-                      "'Len' or 'Length'");
+          if (name.ends_with("Len")) { return name.substr(0, name.size() - 3); }
+          JMG_ENFORCE(name.ends_with("Length"),
+                      "encountered bad named ["
+                        << name
+                        << "] for LENGTH field, should have suffix "
+                           "'Len' or 'Length'");
           return name.substr(0, name.size() - 6);
         }();
         const auto match = fields_.find(matchName);
-        JMG_ENFORCE(match != fields_.end(), "matching name ["
-                    << matchName << "] for length field ["
-                    << name << "] was not found in field definitions");
+        JMG_ENFORCE(match != fields_.end(),
+                    "matching name ["
+                      << matchName << "] for length field [" << name
+                      << "] was not found in field definitions");
         if (!firstMatch) { firstMatch = true; }
         else { cout << ","; }
         cout << "\n  {" << spec.tag << "," << value_of(*match).tag << "}";
@@ -406,59 +407,54 @@ private:
   }
 
   void emitField(const FieldInMsg& fld) {
-      cout << "struct " << fld.name << " : FieldDef<";
+    cout << "struct " << fld.name << " : FieldDef<";
 
-      // look up field spec using name
-      const auto spec_entry = fields_.find(fld.name);
-      JMG_ENFORCE(fields_.end() != spec_entry, "unknown message field name ["
-                  << fld.name << "]");
-      const auto& spec = value_of(*spec_entry);
+    // look up field spec using name
+    const auto spec_entry = fields_.find(fld.name);
+    JMG_ENFORCE(fields_.end() != spec_entry,
+                "unknown message field name [" << fld.name << "]");
+    const auto& spec = value_of(*spec_entry);
 
-      // emit the field type
-      const auto enumEntry = enums_.find(fld.name);
-      if (enums_.end() == enumEntry) {
-        // values for this field come from a standard type and not an
-        // enumeration
-        const auto entry = kTypeTranslation_.find(spec.type);
-        JMG_ENFORCE(kTypeTranslation_.end() != entry,
-                    "unknown FIX protocol type [" << spec.type << "]");
-        cout << value_of(*entry);
-      }
-      else { cout << key_of(*enumEntry) << kEnumTypeSuffix; }
+    // emit the field type
+    const auto enumEntry = enums_.find(fld.name);
+    if (enums_.end() == enumEntry) {
+      // values for this field come from a standard type and not an
+      // enumeration
+      const auto entry = kTypeTranslation_.find(spec.type);
+      JMG_ENFORCE(kTypeTranslation_.end() != entry,
+                  "unknown FIX protocol type [" << spec.type << "]");
+      cout << value_of(*entry);
+    }
+    else { cout << key_of(*enumEntry) << kEnumTypeSuffix; }
 
-      // emit the field name
-      cout << ", \"" << fld.name << "\", ";
+    // emit the field name
+    cout << ", \"" << fld.name << "\", ";
 
-      // emit the 'required' attribute
-      if (fld.required) {
-        cout << "Required";
-      }
-      else {
-        cout << "Optional";
-      }
-      cout << "> {\n";
+    // emit the 'required' attribute
+    if (fld.required) { cout << "Required"; }
+    else { cout << "Optional"; }
+    cout << "> {\n";
 
-      // emit the tag
-      cout << "  static constexpr uint32_t kFixTag = " << spec.tag << ";\n";
-      cout << "};\n";
+    // emit the tag
+    cout << "  static constexpr uint32_t kFixTag = " << spec.tag << ";\n";
+    cout << "};\n";
   }
 
   string makeNamespaceFor(const Msg& msg) {
     string rslt;
     rslt.reserve(2 * msg.name.size());
     auto entry = msg.name.begin();
-    JMG_ENFORCE(isupper(*entry), "message name [" << msg.name
-                << "] does not start with an uppercase letter");
+    JMG_ENFORCE(isupper(*entry),
+                "message name ["
+                  << msg.name << "] does not start with an uppercase letter");
     rslt.push_back(tolower(*entry));
     ++entry;
-    for (;entry != msg.name.end(); ++entry) {
+    for (; entry != msg.name.end(); ++entry) {
       if (isupper(*entry)) {
         rslt.push_back('_');
         rslt.push_back(tolower(*entry));
       }
-      else {
-        rslt.push_back(*entry);
-      }
+      else { rslt.push_back(*entry); }
     }
     return rslt;
   }
@@ -468,9 +464,7 @@ private:
     cout << "namespace " << ns << "\n{\n";
 
     // emit relevant fields in the correct namespace
-    for (const auto& fld : msg.fields) {
-      emitField(fld);
-    }
+    for (const auto& fld : msg.fields) { emitField(fld); }
     cout << "} // namespace " << ns << "\n\n";
 
     // emit the message definition outside the namespace
@@ -481,18 +475,14 @@ private:
       return tuple("jmg::quickfix::Object"s, false);
     }();
     cout << "using " << msg.name << " = " << objTypeName << "<\n";
-    if (!isGroup) {
-      cout << "  " << kHeaderDef << ",\n";
-    }
+    if (!isGroup) { cout << "  " << kHeaderDef << ",\n"; }
     auto itr = msg.fields.begin();
     cout << "  " << ns << "::" << itr->name;
     ++itr;
-    for (;itr != msg.fields.end(); ++itr) {
+    for (; itr != msg.fields.end(); ++itr) {
       cout << ",\n  " << ns << "::" << itr->name;
     }
-    if (!isGroup) {
-      cout << ",\n  " << kTrailerDef << "\n";
-    }
+    if (!isGroup) { cout << ",\n  " << kTrailerDef << "\n"; }
     cout << "\n>;\n\n";
   }
 
@@ -538,13 +528,15 @@ const Dict<string, string> AllFixData::kTypeTranslation_ = {
   // TODO use some sort of raw byte buffer type for this
   {"DATA", "std::string"}};
 
-const Set<string> AllFixData::kCharFieldTypes_ = {
-  "CHAR", "STRING", "BOOLEAN", "MULTIPLEVALUESTRING"};
+const Set<string> AllFixData::kCharFieldTypes_ = {"CHAR", "STRING", "BOOLEAN",
+                                                  "MULTIPLEVALUESTRING"};
 
 void process(const string_view filePath) {
-  JMG_ENFORCE(filePath.ends_with(".xml"), "encountered non-XML file ["
-              << filePath << "] when attempting to process a quickfix "
-              "specification");
+  JMG_ENFORCE(filePath.ends_with(".xml"),
+              "encountered non-XML file ["
+                << filePath
+                << "] when attempting to process a quickfix "
+                   "specification");
   auto strm = open_file<ifstream>(filePath);
   boost::property_tree::ptree data;
   read_xml(strm, data);

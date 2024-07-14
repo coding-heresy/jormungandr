@@ -92,9 +92,8 @@ private:
 #else
 
 template<typename T>
-concept HasFixTag = requires(T) {
-  std::same_as<decltype(T::kFixTag), uint32_t>;
-};
+concept HasFixTag =
+  requires(T) { std::same_as<decltype(T::kFixTag), uint32_t>; };
 
 template<typename T>
 concept RequiredFixFieldT = RequiredField<T> && HasFixTag<T>;
@@ -126,22 +125,27 @@ public:
         const auto entry = lengthFields.find(tag);
         if (entry != lengthFields.end()) {
           const auto pairedTag = value_of(*entry);
-          const size_t nextSz = from_string(msg.substr(pos + 1, stop - pos - 1));
+          const size_t nextSz =
+            from_string(msg.substr(pos + 1, stop - pos - 1));
           // jump to the next field
           start = stop + 1;
           auto pos = msg.find(kFieldSplitter, start);
-          JMG_ENFORCE(pos != std::string::npos, "length field with tag ["
-                      << tag << "] was followed by data with no splitter "
-                      "'='");
+          JMG_ENFORCE(pos != std::string::npos,
+                      "length field with tag ["
+                        << tag
+                        << "] was followed by data with no splitter "
+                           "'='");
           const unsigned checkTag = from_string(msg.substr(start, pos));
-          JMG_ENFORCE(checkTag == pairedTag, "unpaired tag [" << checkTag
-                      << "] followed length field with tag ["
-                      << tag << "] instead of expected paired tag ["
-                      << pairedTag << "]");
+          JMG_ENFORCE(checkTag == pairedTag,
+                      "unpaired tag ["
+                        << checkTag << "] followed length field with tag ["
+                        << tag << "] instead of expected paired tag ["
+                        << pairedTag << "]");
           stop = pos + nextSz;
-          JMG_ENFORCE(stop < msg.size(), "raw data field with tag ["
-                      << pairedTag << "] had length [" << nextSz
-                      << "] that was too long for the message");
+          JMG_ENFORCE(stop < msg.size(),
+                      "raw data field with tag ["
+                        << pairedTag << "] had length [" << nextSz
+                        << "] that was too long for the message");
           // overwrite the length tag so that only the raw data field
           // is stored in the dictionary
           tag = pairedTag;
@@ -150,8 +154,8 @@ public:
       // store the data in the dictionary
       const auto [entry, inserted] =
         fields_.try_emplace(tag, msg.substr(pos + 1, stop - pos - 1));
-      JMG_ENFORCE(inserted, "encountered duplicate tag [" << tag
-                  << "] in message");
+      JMG_ENFORCE(inserted,
+                  "encountered duplicate tag [" << tag << "] in message");
 
       if (msg.size() == stop) {
         // last character of the message should be a field delimiter
@@ -171,13 +175,13 @@ public:
     using Type = typename Fld::type;
     const auto entry = fields_.find(Fld::kFixTag);
     JMG_ENFORCE(fields_.end() != entry, "message had no value for required "
-                "FIX field [" << Fld::name << "] (" << Fld::kFixTag << ")");
+                                        "FIX field ["
+                                          << Fld::name << "] (" << Fld::kFixTag
+                                          << ")");
     const auto& str = value_of(*entry);
-    std::cout << "DBG tag [" << Fld::kFixTag << "] val [" << str
-              << "] size [" << str.size() << "]\n";
-    if constexpr(std::same_as<Type, std::string>) {
-      return std::string(str);
-    }
+    std::cout << "DBG tag [" << Fld::kFixTag << "] val [" << str << "] size ["
+              << str.size() << "]\n";
+    if constexpr (std::same_as<Type, std::string>) { return std::string(str); }
     else {
       Type val = from_string(str);
       return val;
@@ -191,13 +195,9 @@ public:
   std::optional<typename Fld::type> try_get() const {
     using Type = typename Fld::type;
     const auto entry = fields_.find(Fld::kFixTag);
-    if (fields_.end() == entry) {
-      return std::nullopt;
-    }
+    if (fields_.end() == entry) { return std::nullopt; }
     const auto& str = value_of(*entry);
-    if constexpr(std::same_as<Type, std::string>) {
-      return str;
-    }
+    if constexpr (std::same_as<Type, std::string>) { return str; }
     else {
       Type val = from_string(str);
       return val;

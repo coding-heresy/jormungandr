@@ -223,11 +223,8 @@ inline std::string demangle(const std::type_info& id) {
 
   // note: -4 is not in the expected range of returned status values
   int status = -4;
-  std::unique_ptr<char, void (*)(void*)> rslt{abi::__cxa_demangle(id.name(),
-                                                                  nullptr,
-                                                                  nullptr,
-                                                                  &status),
-    free};
+  std::unique_ptr<char, void (*)(void*)> rslt{
+    abi::__cxa_demangle(id.name(), nullptr, nullptr, &status), free};
   if (!rslt) {
     switch (status) {
       case 0:
@@ -237,9 +234,11 @@ inline std::string demangle(const std::type_info& id) {
         throw std::runtime_error(
           "unable to allocate memory for demangled type name");
       case -2:
-        throw std::runtime_error("unexpected invalid type name when demangling");
+        throw std::runtime_error(
+          "unexpected invalid type name when demangling");
       case -3:
-        throw std::runtime_error("invalid argument to typename demangling function");
+        throw std::runtime_error(
+          "invalid argument to typename demangling function");
       default:
         throw std::runtime_error(
           "unknown status result from failed typename demangle");

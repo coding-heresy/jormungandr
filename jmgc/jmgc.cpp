@@ -43,8 +43,8 @@
 using namespace jmg;
 using namespace std;
 
-using SrcFileParam = PosnParam<string, "src_file",
-                               "the file to read source definitions from">;
+using SrcFileParam =
+  PosnParam<string, "src_file", "the file to read source definitions from">;
 
 int main(const int argc, const char** argv) {
   try {

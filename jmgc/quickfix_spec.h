@@ -38,5 +38,4 @@ namespace quickfix_spec
 
 void process(const std::string_view filePath);
 
-
 } // namespace quickfix_spec
