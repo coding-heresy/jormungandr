@@ -16,10 +16,9 @@ bazel_dep(
 
 archive_override(
     module_name = "rules_boost",
-    # TODO: pin to specific version?
-    urls = "https://github.com/nelhage/rules_boost/archive/refs/heads/master.tar.gz",
-    strip_prefix = "rules_boost-master",
-    # TODO: add integrity check
+    integrity = "sha256-VPUdhabBIpScZa20o7C9qCGOAxSOixkD5EWvZxciCZA=",
+    strip_prefix = "rules_boost-8fa193c4e21daaa2d46ff6b9c2b5a2de70b6caa1",
+    urls = "https://github.com/nelhage/rules_boost/archive/8fa193c4e21daaa2d46ff6b9c2b5a2de70b6caa1.tar.gz",
 )
 
 non_module_boost_repositories = use_extension(

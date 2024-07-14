@@ -47,20 +47,22 @@ namespace jmg
 ////////////////////////////////////////////////////////////////////////////////
 // useful concepts
 ////////////////////////////////////////////////////////////////////////////////
-namespace detail
-{
+
 template<typename T>
 concept IoStreamT =
   std::same_as<T, std::ifstream> || std::same_as<T, std::ofstream>;
-} // namespace detail
+
+////////////////////////////////////////////////////////////////////////////////
+// helpers for opening files
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * open an input or output stream for a file
  *
  * @param filePath filesystem path to the file
  */
-template<detail::IoStreamT Strm>
-auto open_file(const std::filesystem::path filePath) {
+template<IoStreamT Strm>
+auto open_file(const std::filesystem::path& filePath) {
   Strm strm;
   // throw exception on both badbit and failbit to force open() to
   // throw on failure
@@ -78,10 +80,14 @@ auto open_file(const std::filesystem::path filePath) {
  * @param pathName filesystem path to the file, can be any type
  *        supported by the std::filesystem::path constructor
  */
-template<detail::IoStreamT Strm, StringLikeT PathNameT>
-auto open_file(PathNameT pathName) {
-  return open_file<Strm>(std::filesystem::path(pathName));
+template<IoStreamT Strm, StringLikeT PathStr>
+auto open_file(PathStr pathStr) {
+  return open_file<Strm>(std::filesystem::path(pathStr));
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// temporary file
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * class manages a temporary file, opening and writing data to it on
