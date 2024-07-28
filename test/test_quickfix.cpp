@@ -34,10 +34,10 @@
 
 #include "test/quickfix_42.h"
 
+using namespace fix_spec;
+using namespace fix_spec::msg_header;
+using namespace fix_spec::msg_trailer;
 using namespace jmg;
-using namespace jmg::fix_spec;
-using namespace jmg::fix_spec::msg_header;
-using namespace jmg::fix_spec::msg_trailer;
 using namespace std;
 
 // test messages shamelessly stolen from
@@ -64,7 +64,7 @@ std::string_view kTestLogout =
   "56=TESTBUY310=092";
 
 TEST(QuickFixTest, TestNewOrderSingle) {
-  using namespace jmg::fix_spec::new_order_single;
+  using namespace new_order_single;
   const auto nos = NewOrderSingle(kTestNewOrderSingle, kLengthFields);
 
   // header fields

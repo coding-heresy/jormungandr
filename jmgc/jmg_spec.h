@@ -29,54 +29,13 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
+#pragma once
 
-/**
- * compiler for Jormungandr field and message definitions
- */
+#include <string_view>
 
-#include <iostream>
+namespace jmg_spec
+{
 
-#include "jmg/cmdline.h"
+void process(const std::string_view filePath);
 
-#include "jmg_spec.h"
-#include "quickfix_spec.h"
-
-using namespace jmg;
-using namespace std;
-
-using FixFlag =
-  NamedParam<bool, "FIX", "file format is FIX protocol, file type is XML", Required>;
-using JmgFlag =
-  NamedParam<bool, "JMG", "file format is JMG, file type is YAML", Required>;
-using SrcFile =
-  PosnParam<string, "src_file", "the file to read source definitions from">;
-
-int main(const int argc, const char** argv) {
-  try {
-    using CmdLine = CmdLineArgs<FixFlag, JmgFlag, SrcFile>;
-    const auto cmdline = CmdLine(argc, argv);
-
-    if (get<FixFlag>(cmdline)) {
-      // generate header file for FIX specification
-      JMG_ENFORCE_USING(CmdLineError, !get<JmgFlag>(cmdline),
-                        "at most one of [-JMG, -FIX] may be specified");
-      quickfix_spec::process(get<SrcFile>(cmdline));
-    }
-    else {
-      JMG_ENFORCE_USING(CmdLineError, get<JmgFlag>(cmdline),
-                        "at least one of [-JMG, -FIX] must be specified");
-      jmg_spec::process(get<SrcFile>(cmdline));
-    }
-    return EXIT_SUCCESS;
-  }
-  catch (const CmdLineError& e) {
-    cerr << "ERROR: " << e.what() << "\n";
-  }
-  catch (const exception& e) {
-    cerr << "exception: " << e.what() << "\n";
-  }
-  catch (...) {
-    cerr << "unexpected exception type\n";
-  }
-  return EXIT_FAILURE;
-}
+} // namespace jmg_spec

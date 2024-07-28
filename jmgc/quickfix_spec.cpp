@@ -38,10 +38,8 @@
 
 #include <boost/property_tree/xml_parser.hpp>
 
-#include "jmg/field.h"
 #include "jmg/file_util.h"
 #include "jmg/meta.h"
-#include "jmg/object.h"
 #include "jmg/preprocessor.h"
 #include "jmg/ptree/ptree.h"
 #include "jmg/types.h"
@@ -162,7 +160,7 @@ using AllXmlElements = xml::ElementsArrayT<TopLevelElement>;
  * singleton object where all data is stored during parsing, later
  * used to emit output
  */
-class AllFixData {
+class AllFixDefs {
 public:
   /**
    * process all entries in the 'header' element
@@ -291,9 +289,9 @@ public:
     cout << "// edited manually\n";
     cout << "//////////////////////////////////////////////////////////////////"
             "//////////////\n";
-    cout << "#pragma once\n";
+    cout << "#pragma once\n\n";
     cout << "#include \"jmg/quickfix/quickfix.h\"\n";
-    cout << "\nnamespace jmg::fix_spec\n{\n";
+    cout << "\nnamespace fix_spec\n{\n";
 
     // emit all enumerations first
     cout << "\n// enumerations\n\n";
@@ -323,7 +321,7 @@ public:
     for (const auto& msg : msgs_) { emitMsg(msg); }
 
     // emit mappings for length fields that must be parsed separately
-    cout << "inline const Dict<unsigned, unsigned> kLengthFields{";
+    cout << "inline const jmg::Dict<unsigned, unsigned> kLengthFields{";
     bool firstMatch = false;
     for (const auto& [name, spec] : fields_) {
       if ("LENGTH"s == spec.type) {
@@ -407,7 +405,7 @@ private:
   }
 
   void emitField(const FieldInMsg& fld) {
-    cout << "struct " << fld.name << " : FieldDef<";
+    cout << "struct " << fld.name << " : jmg::FieldDef<";
 
     // look up field spec using name
     const auto spec_entry = fields_.find(fld.name);
@@ -431,8 +429,8 @@ private:
     cout << ", \"" << fld.name << "\", ";
 
     // emit the 'required' attribute
-    if (fld.required) { cout << "Required"; }
-    else { cout << "Optional"; }
+    if (fld.required) { cout << "jmg::Required"; }
+    else { cout << "jmg::Optional"; }
     cout << "> {\n";
 
     // emit the tag
@@ -500,7 +498,7 @@ private:
   vector<Msg> msgs_;
 };
 
-const Dict<string, string> AllFixData::kTypeTranslation_ = {
+const Dict<string, string> AllFixDefs::kTypeTranslation_ = {
   {"STRING", "std::string"},
   {"CHAR", "char"},
   {"BOOLEAN", "bool"},
@@ -528,7 +526,7 @@ const Dict<string, string> AllFixData::kTypeTranslation_ = {
   // TODO use some sort of raw byte buffer type for this
   {"DATA", "std::string"}};
 
-const Set<string> AllFixData::kCharFieldTypes_ = {"CHAR", "STRING", "BOOLEAN",
+const Set<string> AllFixDefs::kCharFieldTypes_ = {"CHAR", "STRING", "BOOLEAN",
                                                   "MULTIPLEVALUESTRING"};
 
 void process(const string_view filePath) {
@@ -552,22 +550,22 @@ void process(const string_view filePath) {
               "actually has ["
                 << jmg::get<ptree::xml::ElementTag>(allFixDefs) << "]");
 
-  AllFixData fixData;
+  AllFixDefs fixDefs;
   for (const auto& elem : jmg::get<FixDefinitions>(allFixDefs)) {
     const auto& tag = jmg::get<ptree::xml::ElementTag>(elem);
-    if (tag == kFixHeader) { fixData.processHeader(elem); }
-    else if (tag == kFixMsgs) { fixData.processMsgs(elem); }
-    else if (tag == kFixTrailer) { fixData.processTrailer(elem); }
+    if (tag == kFixHeader) { fixDefs.processHeader(elem); }
+    else if (tag == kFixMsgs) { fixDefs.processMsgs(elem); }
+    else if (tag == kFixTrailer) { fixDefs.processTrailer(elem); }
     else if (tag == kFixComponents) {
       // TODO components appears to be empty for FIX4.2
     }
-    else if (tag == kFixFields) { fixData.processFields(elem); }
+    else if (tag == kFixFields) { fixDefs.processFields(elem); }
     else {
       cerr << "ERROR: ignoring XML element with tag [" << tag
            << "] in main FIX definitions\n";
     }
   }
-  fixData.emit();
+  fixDefs.emit();
 }
 
 } // namespace quickfix_spec
