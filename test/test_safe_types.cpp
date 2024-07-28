@@ -107,16 +107,8 @@ TEST(SafeTypesTests, IdsAreComparable) {
 TEST(SafeTypesTests, IdsAreHashable) {
   CONFIRM_DICT_HANDLING(unordered_map, TestId32, string, 20010911, "foo"s);
   CONFIRM_DICT_HANDLING(unordered_map, TestIdStr, int, "foo"s, 20010911);
-}
-
-using TestOrderedId32 = SafeOrderedId32<>;
-using TestOtherOrderedId32 = SafeOrderedId32<>;
-using TestOrderedIdStr = SafeOrderedIdStr<>;
-using OtherOrderedIdStr = SafeOrderedId<string>;
-
-TEST(SafeTypesTests, OrderedIdsAreOrderable) {
-  CONFIRM_DICT_HANDLING(map, TestOrderedId32, string, 20010911, "foo"s);
-  CONFIRM_DICT_HANDLING(map, TestOrderedIdStr, int, "foo"s, 20010911);
+  CONFIRM_DICT_HANDLING(map, TestId32, string, 20010911, "foo"s);
+  CONFIRM_DICT_HANDLING(map, TestIdStr, int, "foo"s, 20010911);
 }
 
 #undef CONFIRM_DICT_HANDLING

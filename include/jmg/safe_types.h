@@ -62,8 +62,8 @@ template<UnsafeT T, typename... Policies>
 using SafeType = st::type<T, decltype([]() {}), Policies...>;
 
 /**
- * prototype for an ID type, which must be equality_comparable and
- * hashable
+ * prototype for an ID type, which must be equality_comparable, hashable
+ * and orderable
  *
  * NOTE: ordering is not supported, so such IDs may be used as keys in
  * unordered data structures (e.g. std::unordered_map) but not ordered
@@ -89,33 +89,6 @@ JMG_NEW_SAFE_BASE_TYPE(SafeIdStr,
                        std::string,
                        st::equality_comparable,
                        st::hashable,
-                       st::orderable);
-
-/**
- * prototype for an orderable ID type, which must be equality_comparable and
- * orderable
- *
- * NOTE: hashing is not supported, so such IDs may be used as keys in
- * ordered data structures (e.g. std::map) but not unordered data
- * structures (e.g. std::unordered_map)
- */
-JMG_NEW_SAFE_PROTOTYPE(SafeOrderedId, st::equality_comparable, st::orderable);
-
-/**
- * base types for common cases of IDs: uint32_t, uint64_t and
- * std::string
- */
-JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId32,
-                       uint32_t,
-                       st::equality_comparable,
-                       st::orderable);
-JMG_NEW_SAFE_BASE_TYPE(SafeOrderedId64,
-                       uint64_t,
-                       st::equality_comparable,
-                       st::orderable);
-JMG_NEW_SAFE_BASE_TYPE(SafeOrderedIdStr,
-                       std::string,
-                       st::equality_comparable,
                        st::orderable);
 
 ////////////////////////////////////////////////////////////////////////////////
