@@ -125,8 +125,7 @@ public:
         const auto entry = lengthFields.find(tag);
         if (entry != lengthFields.end()) {
           const auto pairedTag = value_of(*entry);
-          const size_t nextSz =
-            from(msg.substr(pos + 1, stop - pos - 1));
+          const size_t nextSz = from(msg.substr(pos + 1, stop - pos - 1));
           // jump to the next field
           start = stop + 1;
           auto pos = msg.find(kFieldSplitter, start);

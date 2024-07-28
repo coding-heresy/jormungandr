@@ -42,8 +42,9 @@
 #include "jmg/preprocessor.h"
 #include "jmg/types.h"
 
-#define DETAIL_ENFORCE_EMPTY_EXTRAS(extras, src_type, tgt_type)         \
-  static_assert(0 == sizeof...(extras), "extra arguments are not supported " \
+#define DETAIL_ENFORCE_EMPTY_EXTRAS(extras, src_type, tgt_type) \
+  static_assert(0 == sizeof...(extras),                         \
+                "extra arguments are not supported "            \
                 "for conversion from " #src_type " to " #tgt_type)
 
 namespace jmg
@@ -68,8 +69,8 @@ struct ConvertImpl<Tgt, Src, Extras...> {
     }
     // convert string-like type to std::string or std:;string_view
     // (but not itself, which was handled in the previous case)
-    else if constexpr(std::same_as<Tgt, std::string> ||
-                      std::same_as<Tgt, std::string_view>) {
+    else if constexpr (std::same_as<Tgt, std::string>
+                       || std::same_as<Tgt, std::string_view>) {
       DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, string);
       return Tgt(str);
     }
@@ -79,15 +80,17 @@ struct ConvertImpl<Tgt, Src, Extras...> {
       auto rslt = Tgt();
       const auto [_, err] =
         std::from_chars(str.data(), str.data() + str.size(), rslt);
-      JMG_ENFORCE(std::errc() == err, "unable to convert string value ["
-                  << str << "] to integral value of type ["
-                  << type_name_for<Tgt>() << "]: "
-                  << std::make_error_code(err).message());
+      JMG_ENFORCE(std::errc() == err,
+                  "unable to convert string value ["
+                    << str << "] to integral value of type ["
+                    << type_name_for<Tgt>()
+                    << "]: " << std::make_error_code(err).message());
       return rslt;
     }
     // convert string-like type to time point
     else if constexpr (std::same_as<Tgt, TimePoint>) {
-      static_assert(1 <= sizeof...(extras), "conversion from string to time "
+      static_assert(1 <= sizeof...(extras),
+                    "conversion from string to time "
                     "point must have at least one extra argument for the "
                     "format");
       std::optional<std::string_view> fmt;
@@ -95,33 +98,32 @@ struct ConvertImpl<Tgt, Src, Extras...> {
       auto processArg = [&]<typename T>(const T& arg) {
         if constexpr (std::same_as<TimePointFmt, std::remove_cvref_t<T>>) {
           JMG_ENFORCE(!fmt.has_value(), "more than one format specified when "
-                      "converting from string to time point");
+                                        "converting from string to time point");
           fmt = unsafe(arg);
         }
         else if constexpr (std::same_as<TimeZone, std::remove_cvref_t<T>>) {
-          JMG_ENFORCE(!zone.has_value(), "more than one time zone specified "
+          JMG_ENFORCE(!zone.has_value(),
+                      "more than one time zone specified "
                       "when converting from string to time point");
           zone = arg;
         }
-        else {
-          JMG_NOT_EXHAUSTIVE(T);
-        }
+        else { JMG_NOT_EXHAUSTIVE(T); }
       };
       (processArg(extras), ...);
       JMG_ENFORCE(fmt.has_value(), "no format specification provided for "
-                  "converting string to time point");
+                                   "converting string to time point");
       // time zone defaults to UTC if not provided
       if (!zone.has_value()) { zone = utcTimeZone(); }
       std::string errMsg;
       TimePoint rslt;
       JMG_ENFORCE(absl::ParseTime(*fmt, str, *zone, &rslt, &errMsg),
-                  "unable to parse string value [" << str << "] as time point "
-                  "using format [" << *fmt << "]: " << errMsg);
+                  "unable to parse string value [" << str
+                                                   << "] as time point "
+                                                      "using format ["
+                                                   << *fmt << "]: " << errMsg);
       return rslt;
     }
-    else {
-      JMG_NOT_EXHAUSTIVE(Tgt);
-    }
+    else { JMG_NOT_EXHAUSTIVE(Tgt); }
   }
 };
 
@@ -132,8 +134,9 @@ struct ConvertImpl<Tgt, Src, Extras...> {
  * implementation is added
  */
 template<typename T>
-concept StrConvTgtT = NumericT<T> || std::same_as<T, std::string> ||
-  std::same_as<T, std::string_view> || std::same_as<T, TimePoint>;
+concept StrConvTgtT =
+  NumericT<T> || std::same_as<T, std::string>
+  || std::same_as<T, std::string_view> || std::same_as<T, TimePoint>;
 
 /**
  * converter class for conversions from strings to other types
@@ -148,7 +151,7 @@ public:
     : str_(str), extras_(std::forward<Extras>(extras)...) {}
 
   template<StrConvTgtT Tgt>
-  operator Tgt() const && {
+  operator Tgt() const&& {
     const auto args = std::tuple_cat(std::tuple(str_), extras_);
     auto redirect = [](auto... args) {
       return ConvertImpl<Tgt, std::string_view, Extras...>::convert(args...);

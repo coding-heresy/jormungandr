@@ -81,7 +81,8 @@ inline TimeZone utcTimeZone() {
 inline TimeZone getTimeZone(const TimeZoneName tz_name) {
   TimeZone rslt;
   JMG_ENFORCE(absl::LoadTimeZone(unsafe(tz_name), &rslt), "unable to load "
-              "time zone [" << tz_name << "]");
+                                                          "time zone ["
+                                                            << tz_name << "]");
   return rslt;
 }
 
