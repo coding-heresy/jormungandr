@@ -102,12 +102,20 @@ TEST(CmdLineParamTests, TestTrivialCommandLine) {
   const auto cmdline = CmdLine(1, argv);
 }
 
-TEST(CmdLineParamTests, TestNamedFlag) {
+TEST(CmdLineParamTests, TestNamedFlagSet) {
   const char* argv[] = {"test_program", "-flag"};
   using CmdLine = CmdLineArgs<NamedParam2>;
   const auto cmdline = CmdLine(2, argv);
   const auto flag_value = get<NamedParam2>(cmdline);
   EXPECT_TRUE(flag_value);
+}
+
+TEST(CmdLineParamTests, TestNamedFlagNotSet) {
+  const char* argv[] = {"test_program"};
+  using CmdLine = CmdLineArgs<NamedParam2>;
+  const auto cmdline = CmdLine(1, argv);
+  const auto flag_value = get<NamedParam2>(cmdline);
+  EXPECT_FALSE(flag_value);
 }
 
 TEST(CmdLineParamTests, TestRequiredNamedValue) {

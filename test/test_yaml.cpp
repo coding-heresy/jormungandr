@@ -51,6 +51,7 @@ using StrField = FieldDef<string, "str", Required>;
 using IntField = FieldDef<int, "int", Required>;
 using OptField = FieldDef<double, "opt", Optional>;
 using Id32Field = FieldDef<Id32, "id32", Required>;
+
 // PrimitiveArray is an array of primitive (i.e. non-object) elements
 using PrimitiveArray = FieldDef<vector<int>, "primitive", Required>;
 // ComplexArray is an array of non-primitive (i.e. object) elements

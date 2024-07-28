@@ -33,17 +33,35 @@
 
 #include <tuple>
 
+#include "meta.h"
+#include "preprocessor.h"
+
 namespace jmg
 {
 
 ////////////////////////////////////////////////////////////////////////////////
-// helper functions for accessing key and value fields of a map entry
+// helper functions for dictionaries
 ////////////////////////////////////////////////////////////////////////////////
+
 const auto& key_of(const auto& rec) { return std::get<0>(rec); }
 
 const auto& value_of(const auto& rec) { return std::get<1>(rec); }
 
 auto& value_of(auto& rec) { return std::get<1>(rec); }
+
+template<typename DictContainer, typename Key, typename... Vals>
+void always_emplace(std::string_view description,
+                    DictContainer& dict,
+                    Key key,
+                    Vals... vals) {
+  const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
+  JMG_ENFORCE(inserted,
+              "unsupported duplicate key [" << key << "] for " << description);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// cleanup class
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * class template that automatically executes a cleanup action on

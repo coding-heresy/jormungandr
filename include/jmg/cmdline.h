@@ -136,6 +136,13 @@ concept NamedParamT = detail::IsNamedParam<std::remove_cvref_t<T>>
 {}();
 
 ////////////////////////////////////////////////////////////////////////////////
+// specific exception for command line processing errors that should
+// result in usage output
+////////////////////////////////////////////////////////////////////////////////
+
+JMG_DEFINE_RUNTIME_EXCEPTION(CmdLineError);
+
+////////////////////////////////////////////////////////////////////////////////
 // parsing/handling implementation
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -153,6 +160,11 @@ public:
     try {
       program_ = argv[0];
       processParams<Params...>(std::span(argv + 1, argc - 1));
+    }
+    // append the usage information to the error message of all
+    // exceptions
+    catch (const CmdLineError& exc) {
+      throw CmdLineError(usage(exc.what()));
     }
     catch (const std::logic_error& exc) {
       throw std::logic_error(usage(exc.what()));
@@ -271,14 +283,20 @@ private:
           return (('-' == str[0]) && (T::name == str.substr(1)));
         });
       if (entry == args.end()) {
-        JMG_ENFORCE(!is_required, "unable to find required named argument ["
-                                    << T::name << "]");
-        // parameter is not required, no further action
+        // parameter was not found
+        if constexpr (!std::same_as<typename T::type, bool>) {
+          JMG_ENFORCE_USING(CmdLineError, !is_required,
+                            "unable to find required named argument ["
+                              << T::name << "]");
+        }
+        // parameter is not required or parameter type was boolean, no
+        // further action
         return;
       }
       const auto arg_idx = std::distance(args.begin(), entry);
-      JMG_ENFORCE(!matches[arg_idx],
-                  "multiple matches for named argument [" << T::name << "]");
+      JMG_ENFORCE_USING(CmdLineError, !matches[arg_idx],
+                        "multiple matches for named argument [" << T::name
+                                                                << "]");
       matches[arg_idx] = true;
 
       if constexpr (std::same_as<ValueType, bool>) {
@@ -289,16 +307,16 @@ private:
       else {
         // other other types of named parameters will consume the next
         // entry in the argument span
-        JMG_ENFORCE(
-          arg_idx < args.size(),
+        JMG_ENFORCE_USING(
+          CmdLineError, arg_idx < args.size(),
           "named parameter ["
             << T::name
             << "] is the last argument and is missing its required value");
-        JMG_ENFORCE(!matches[arg_idx + 1],
-                    "value for named argument ["
-                      << T::name
-                      << "] was previously consumed for some other "
-                         "parameter");
+        JMG_ENFORCE_USING(CmdLineError, !matches[arg_idx + 1],
+                          "value for named argument ["
+                            << T::name
+                            << "] was previously consumed for some other "
+                               "parameter");
         matches[arg_idx + 1] = true;
 
         if constexpr (std::same_as<ValueType, std::string>) {
@@ -317,9 +335,9 @@ private:
       const auto entry =
         std::ranges::find_if(matches, [](const bool val) { return !val; });
       if (entry == matches.end()) {
-        JMG_ENFORCE(!is_required,
-                    "unable to find required positional argument [" << T::name
-                                                                    << "]");
+        JMG_ENFORCE_USING(CmdLineError, !is_required,
+                          "unable to find required positional argument ["
+                            << T::name << "]");
         // parameter is not required, no further action
         return;
       }
