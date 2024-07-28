@@ -323,7 +323,7 @@ private:
           std::get<param_idx>(values_) = args[arg_idx + 1];
         }
         else {
-          ValueType val = from_string(std::string_view(args[arg_idx + 1]));
+          ValueType val = from(std::string_view(args[arg_idx + 1]));
           std::get<param_idx>(values_) = val;
         }
       }
@@ -350,7 +350,7 @@ private:
         std::get<param_idx>(values_) = args[arg_idx];
       }
       else {
-        ValueType val = from_string(std::string_view(args[arg_idx]));
+        ValueType val = from(std::string_view(args[arg_idx]));
         std::get<param_idx>(values_) = val;
       }
     }

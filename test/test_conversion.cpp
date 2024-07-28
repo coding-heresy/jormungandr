@@ -38,29 +38,39 @@ using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
 
+TEST(ConversionTests, TestStringFromStringView) {
+  const auto src = "foo"sv;
+  EXPECT_EQ("foo"s, static_cast<string>(from(src)));
+}
+
 TEST(ConversionTests, TestStringFromString) {
-  const string_view src = "foo";
-  EXPECT_EQ("foo"s, static_cast<string>(from_string(src)));
+  const auto src = "foo"s;
+  EXPECT_EQ("foo"s, static_cast<string>(from(src)));
+}
+
+TEST(ConversionTests, TestStringFromCStyleString) {
+  constexpr char src[] = "foo";
+  EXPECT_EQ("foo"s, static_cast<string>(from(src)));
 }
 
 TEST(ConversionTests, TestIntFromString) {
-  EXPECT_EQ(42, static_cast<int>(from_string("42")));
+  EXPECT_EQ(42, static_cast<int>(from("42")));
 }
 
 TEST(ConversionTests, TestDoubleFromString) {
-  EXPECT_DOUBLE_EQ(0.5, static_cast<double>(from_string("0.5")));
+  EXPECT_DOUBLE_EQ(0.5, static_cast<double>(from("0.5")));
 }
 
 TEST(ConversionTests, TestFromStringOverloading) {
   const string_view str = "42";
-  const int intVal = from_string(str);
+  const int intVal = from(str);
   EXPECT_EQ(42, intVal);
-  const double dblVal = from_string(str);
+  const double dblVal = from(str);
   EXPECT_DOUBLE_EQ(42.0, dblVal);
 }
 
 TEST(ConversionTests, TestFailedIntFromString) {
-  EXPECT_THROW([[maybe_unused]] int bad = from_string("a"), std::runtime_error);
+  EXPECT_THROW([[maybe_unused]] int bad = from("a"), std::runtime_error);
 }
 
 TEST(ConversionTests, TestOptionalStreamOutput) {
@@ -84,3 +94,43 @@ TEST(ConversionTests, TestTupleStreamOutput) {
   strm << tpl;
   EXPECT_EQ("42,20010911"s, strm.str());
 }
+
+TEST(ConversionTests, TestTimestampFromString) {
+  const string_view src = "2001-09-11 09:00:00";
+  const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
+  const auto tz = getTimeZone(TimeZoneName("America/New_York"));
+  TimePoint us_eastern = from(src, fmt, tz);
+  TimePoint utc = from(src, fmt);
+  // for time points generated using the same "local clock" time,
+  // the UTC time point will be earlier than the US/Eastern time
+  // point
+  EXPECT_LT(utc, us_eastern);
+}
+
+#if defined(DBG_REVERT_TO_OLD_FROM)
+
+TEST(ExperimentalTest, TestGetFrom) {
+  {
+    const string_view src = "foo";
+    const string_view tgt = get_from(src);
+    EXPECT_EQ(tgt, src);
+  }
+  {
+    const string_view src = "42";
+    const int tgt = get_from(src);
+    EXPECT_EQ(42, tgt);
+  }
+  {
+    const string_view src = "2001-09-11 09:00:00";
+    const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
+    const auto tz = getTimeZone(TimeZoneName("America/New_York"));
+    TimePoint us_eastern = get_from(src, fmt, tz);
+    TimePoint utc = get_from(src, fmt);
+    // for time points generated using the same "local clock" time,
+    // the UTC time point will be earlier than the US/Eastern time
+    // point
+    EXPECT_LT(utc, us_eastern);
+  }
+}
+
+#endif

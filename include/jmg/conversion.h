@@ -40,9 +40,135 @@
 
 #include "jmg/meta.h"
 #include "jmg/preprocessor.h"
+#include "jmg/types.h"
+
+#define DETAIL_ENFORCE_EMPTY_EXTRAS(extras, src_type, tgt_type)         \
+  static_assert(0 == sizeof...(extras), "extra arguments are not supported " \
+                "for conversion from " #src_type " to " #tgt_type)
 
 namespace jmg
 {
+
+template<typename Tgt, typename Src, typename... Extras>
+struct ConvertImpl {
+  static_assert(always_false<Tgt>, "conversion not supported");
+};
+
+/**
+ * implementation of conversions from string-like types to other types
+ * (including other string-like types)
+ */
+template<typename Tgt, StringLikeT Src, typename... Extras>
+struct ConvertImpl<Tgt, Src, Extras...> {
+  static Tgt convert(const Src str, Extras... extras) {
+    // convert string-like type to itself
+    if constexpr (std::same_as<Tgt, std::remove_cvref_t<Src>>) {
+      DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
+      return str;
+    }
+    // convert string-like type to std::string or std:;string_view
+    // (but not itself, which was handled in the previous case)
+    else if constexpr(std::same_as<Tgt, std::string> ||
+                      std::same_as<Tgt, std::string_view>) {
+      DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, string);
+      return Tgt(str);
+    }
+    // convert string-like type to numeric type
+    else if constexpr (NumericT<Tgt>) {
+      DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
+      auto rslt = Tgt();
+      const auto [_, err] =
+        std::from_chars(str.data(), str.data() + str.size(), rslt);
+      JMG_ENFORCE(std::errc() == err, "unable to convert string value ["
+                  << str << "] to integral value of type ["
+                  << type_name_for<Tgt>() << "]: "
+                  << std::make_error_code(err).message());
+      return rslt;
+    }
+    // convert string-like type to time point
+    else if constexpr (std::same_as<Tgt, TimePoint>) {
+      static_assert(1 <= sizeof...(extras), "conversion from string to time "
+                    "point must have at least one extra argument for the "
+                    "format");
+      std::optional<std::string_view> fmt;
+      std::optional<TimeZone> zone;
+      auto processArg = [&]<typename T>(const T& arg) {
+        if constexpr (std::same_as<TimePointFmt, std::remove_cvref_t<T>>) {
+          JMG_ENFORCE(!fmt.has_value(), "more than one format specified when "
+                      "converting from string to time point");
+          fmt = unsafe(arg);
+        }
+        else if constexpr (std::same_as<TimeZone, std::remove_cvref_t<T>>) {
+          JMG_ENFORCE(!zone.has_value(), "more than one time zone specified "
+                      "when converting from string to time point");
+          zone = arg;
+        }
+        else {
+          JMG_NOT_EXHAUSTIVE(T);
+        }
+      };
+      (processArg(extras), ...);
+      JMG_ENFORCE(fmt.has_value(), "no format specification provided for "
+                  "converting string to time point");
+      // time zone defaults to UTC if not provided
+      if (!zone.has_value()) { zone = utcTimeZone(); }
+      std::string errMsg;
+      TimePoint rslt;
+      JMG_ENFORCE(absl::ParseTime(*fmt, str, *zone, &rslt, &errMsg),
+                  "unable to parse string value [" << str << "] as time point "
+                  "using format [" << *fmt << "]: " << errMsg);
+      return rslt;
+    }
+    else {
+      JMG_NOT_EXHAUSTIVE(Tgt);
+    }
+  }
+};
+
+/**
+ * concept for valid string conversion target types
+ *
+ * @warning this concept must be updated whenever a new conversion
+ * implementation is added
+ */
+template<typename T>
+concept StrConvTgtT = NumericT<T> || std::same_as<T, std::string> ||
+  std::same_as<T, std::string_view> || std::same_as<T, TimePoint>;
+
+/**
+ * converter class for conversions from strings to other types
+ *
+ * @note this is the return type for several overrides of the 'from'
+ * conversion function
+ */
+template<typename... Extras>
+class StrConverter {
+public:
+  StrConverter(const std::string_view str, Extras&&... extras)
+    : str_(str), extras_(std::forward<Extras>(extras)...) {}
+
+  template<StrConvTgtT Tgt>
+  operator Tgt() const && {
+    const auto args = std::tuple_cat(std::tuple(str_), extras_);
+    auto redirect = [](auto... args) {
+      return ConvertImpl<Tgt, std::string_view, Extras...>::convert(args...);
+    };
+    return std::apply(redirect, args);
+  }
+
+private:
+  std::string_view str_;
+  std::tuple<Extras...> extras_;
+};
+
+template<StringLikeT Src, typename... Extras>
+StrConverter<Extras...> from(const Src& str, Extras&&... extras) {
+  return StrConverter<Extras...>(str, std::forward<Extras>(extras)...);
+}
+
+#undef DETAIL_ENFORCE_EMPTY_EXTRAS
+
+#if defined(DBG_REVERT_TO_OLD_FROM)
 
 ////////////////////////////////////////////////////////////////////////////////
 // return-type overload conversions from strings to other types
@@ -51,14 +177,17 @@ namespace jmg
 // https://artificial-mind.net/blog/2020/10/10/return-type-overloading
 ////////////////////////////////////////////////////////////////////////////////
 
-template<typename T>
+template<typename T, typename... Ts>
 struct StringConvertImpl {
   static_assert(always_false<T>, "conversion not supported");
 };
 
+/**
+ * conversion from string_view to numeric type
+ */
 template<NumericT T>
 struct StringConvertImpl<T> {
-  static T from_string(const std::string_view str) {
+  static T from(const std::string_view str) {
     auto rslt = T();
     const auto [_, err] =
       std::from_chars(str.data(), str.data() + str.size(), rslt);
@@ -70,9 +199,12 @@ struct StringConvertImpl<T> {
   }
 };
 
+/**
+ * conversion from string_view to string
+ */
 template<>
 struct StringConvertImpl<std::string> {
-  static std::string from_string(const std::string_view str) {
+  static std::string from(const std::string_view str) {
     return std::string(str);
   }
 };
@@ -95,21 +227,33 @@ struct StringConvertT {
 
   template<ConversionTgtT T>
   operator T() const&& {
-    return StringConvertImpl<T>::from_string(str);
+    return StringConvertImpl<T>::from(str);
   }
 };
 
-StringConvertT from_string(const std::string_view str) {
+/**
+ * conversion from string_view to string
+ */
+StringConvertT from(const std::string_view str) {
   return StringConvertT(str);
 }
 
-StringConvertT from_string(const std::string& str) {
-  return from_string(std::string_view(str));
+/**
+ * conversion from string to string
+ */
+StringConvertT from(const std::string& str) {
+  return from(std::string_view(str));
 }
 
-StringConvertT from_string(const char* str) {
-  return from_string(std::string_view(str));
+/**
+ * conversion from null-terminated character array (AKA C-style
+ * string) to string
+ */
+StringConvertT from(const char* str) {
+  return from(std::string_view(str));
 }
+
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // string output helpers

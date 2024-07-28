@@ -85,7 +85,7 @@ private:
     requires ConversionTgtT<typename Fld::type>
   {
     const std::string& fieldRef = adapted_->getField(Fld::kFixTag);
-    return static_cast<typename Fld::type>(from_string(fieldRef));
+    return static_cast<typename Fld::type>(from(fieldRef));
   }
   const adapted_type* adapted_;
 };
@@ -119,14 +119,14 @@ public:
     while (stop != std::string::npos) {
       auto pos = msg.find(kFieldSplitter, start);
       JMG_ENFORCE(pos < stop, "missing field splitter '=' in field");
-      unsigned tag = from_string(msg.substr(start, pos));
+      unsigned tag = from(msg.substr(start, pos));
       {
         // check for special LENGTH field
         const auto entry = lengthFields.find(tag);
         if (entry != lengthFields.end()) {
           const auto pairedTag = value_of(*entry);
           const size_t nextSz =
-            from_string(msg.substr(pos + 1, stop - pos - 1));
+            from(msg.substr(pos + 1, stop - pos - 1));
           // jump to the next field
           start = stop + 1;
           auto pos = msg.find(kFieldSplitter, start);
@@ -135,7 +135,7 @@ public:
                         << tag
                         << "] was followed by data with no splitter "
                            "'='");
-          const unsigned checkTag = from_string(msg.substr(start, pos));
+          const unsigned checkTag = from(msg.substr(start, pos));
           JMG_ENFORCE(checkTag == pairedTag,
                       "unpaired tag ["
                         << checkTag << "] followed length field with tag ["
@@ -183,7 +183,7 @@ public:
               << str.size() << "]\n";
     if constexpr (std::same_as<Type, std::string>) { return std::string(str); }
     else {
-      Type val = from_string(str);
+      Type val = from(str);
       return val;
     }
   }
@@ -199,7 +199,7 @@ public:
     const auto& str = value_of(*entry);
     if constexpr (std::same_as<Type, std::string>) { return str; }
     else {
-      Type val = from_string(str);
+      Type val = from(str);
       return val;
     }
   }
