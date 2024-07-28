@@ -179,8 +179,6 @@ public:
                                           << Fld::name << "] (" << Fld::kFixTag
                                           << ")");
     const auto& str = value_of(*entry);
-    std::cout << "DBG tag [" << Fld::kFixTag << "] val [" << str << "] size ["
-              << str.size() << "]\n";
     if constexpr (std::same_as<Type, std::string>) { return std::string(str); }
     else {
       Type val = from(str);

@@ -106,31 +106,3 @@ TEST(ConversionTests, TestTimestampFromString) {
   // point
   EXPECT_LT(utc, us_eastern);
 }
-
-#if defined(DBG_REVERT_TO_OLD_FROM)
-
-TEST(ExperimentalTest, TestGetFrom) {
-  {
-    const string_view src = "foo";
-    const string_view tgt = get_from(src);
-    EXPECT_EQ(tgt, src);
-  }
-  {
-    const string_view src = "42";
-    const int tgt = get_from(src);
-    EXPECT_EQ(42, tgt);
-  }
-  {
-    const string_view src = "2001-09-11 09:00:00";
-    const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
-    const auto tz = getTimeZone(TimeZoneName("America/New_York"));
-    TimePoint us_eastern = get_from(src, fmt, tz);
-    TimePoint utc = get_from(src, fmt);
-    // for time points generated using the same "local clock" time,
-    // the UTC time point will be earlier than the US/Eastern time
-    // point
-    EXPECT_LT(utc, us_eastern);
-  }
-}
-
-#endif
