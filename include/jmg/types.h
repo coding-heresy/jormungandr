@@ -35,6 +35,7 @@
 #include <absl/container/btree_set.h>
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>
+#include <absl/time/time.h>
 
 // standard type aliases
 
@@ -56,5 +57,13 @@ using Set = absl::flat_hash_set<Ts...>;
 
 template<typename... Ts>
 using OrderedSet = absl::btree_set<Ts...>;
+
+////////////////////////////////////////////////////////////////////////////////
+// time point/duration/zone
+////////////////////////////////////////////////////////////////////////////////
+
+using TimePoint = absl::Time;
+using TimeZone = absl::TimeZone;
+using Duration = absl::Duration;
 
 } // namespace jmg
