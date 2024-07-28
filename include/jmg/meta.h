@@ -88,6 +88,12 @@ template<>
 struct IsStringLike<std::string_view> : std::true_type {};
 template<>
 struct IsStringLike<char*> : std::true_type {};
+template<>
+struct IsStringLike<const char*> : std::true_type {};
+template<int kSz>
+struct IsStringLike<char[kSz]> : std::true_type {};
+template<int kSz>
+struct IsStringLike<const char[kSz]> : std::true_type {};
 } // namespace detail
 
 template<typename T>

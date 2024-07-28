@@ -48,6 +48,16 @@ TEST(MetaprogrammingTests, TestTypeListConcept) {
   EXPECT_FALSE(TypeListT<int>);
 }
 
+TEST(MetaprogrammingTests, TestStringLikeConcept) {
+  EXPECT_TRUE(StringLikeT<string>);
+  EXPECT_TRUE(StringLikeT<string_view>);
+  EXPECT_TRUE(StringLikeT<const char*>);
+  auto* literal = "foo";
+  EXPECT_TRUE(StringLikeT<decltype(literal)>);
+  constexpr char compile_time[] = "bar";
+  EXPECT_TRUE(StringLikeT<decltype(compile_time)>);
+}
+
 TEST(MetaprogrammingTests, TestPolicyResolver) {
   struct Policy1Tag {};
   struct DefaultPolicy1 : Policy1Tag {};
