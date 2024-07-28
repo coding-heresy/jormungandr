@@ -37,6 +37,9 @@
 #include <absl/container/flat_hash_set.h>
 #include <absl/time/time.h>
 
+#include "jmg/preprocessor.h"
+#include "jmg/safe_types.h"
+
 // standard type aliases
 
 namespace jmg
@@ -64,6 +67,22 @@ using OrderedSet = absl::btree_set<Ts...>;
 
 using TimePoint = absl::Time;
 using TimeZone = absl::TimeZone;
+// TODO use std::chrono duration instead of absl::Duration?
 using Duration = absl::Duration;
+
+using TimePointFmt = SafeType<std::string_view>;
+using TimeZoneName = SafeType<std::string_view>;
+
+inline TimeZone utcTimeZone() {
+  static TimeZone utc = absl::UTCTimeZone();
+  return utc;
+}
+
+inline TimeZone getTimeZone(const TimeZoneName tz_name) {
+  TimeZone rslt;
+  JMG_ENFORCE(absl::LoadTimeZone(unsafe(tz_name), &rslt), "unable to load "
+              "time zone [" << tz_name << "]");
+  return rslt;
+}
 
 } // namespace jmg
