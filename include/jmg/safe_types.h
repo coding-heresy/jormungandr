@@ -78,15 +78,18 @@ JMG_NEW_SAFE_PROTOTYPE(SafeId, st::equality_comparable, st::hashable);
 JMG_NEW_SAFE_BASE_TYPE(SafeId32,
                        uint32_t,
                        st::equality_comparable,
-                       st::hashable);
+                       st::hashable,
+                       st::orderable);
 JMG_NEW_SAFE_BASE_TYPE(SafeId64,
                        uint64_t,
                        st::equality_comparable,
-                       st::hashable);
+                       st::hashable,
+                       st::orderable);
 JMG_NEW_SAFE_BASE_TYPE(SafeIdStr,
                        std::string,
                        st::equality_comparable,
-                       st::hashable);
+                       st::hashable,
+                       st::orderable);
 
 /**
  * prototype for an orderable ID type, which must be equality_comparable and
