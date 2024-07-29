@@ -50,123 +50,217 @@
 namespace jmg
 {
 
-template<typename Tgt, typename Src, typename... Extras>
-struct ConvertImpl {
-  static_assert(always_false<Tgt>, "conversion not supported");
-};
+namespace detail
+{
 
 /**
- * implementation of conversions from string-like types to other types
- * (including other string-like types)
+ * implementation class that holds the logic for converting one type
+ * to another
+ *
+ * New conversions should be added to the static 'convert' function.
+ *
+ * TODO try to come up with a way to use customization point objects
+ * to avoid having all of the conversions residing here
  */
-template<typename Tgt, StringLikeT Src, typename... Extras>
-struct ConvertImpl<Tgt, Src, Extras...> {
-  static Tgt convert(const Src str, Extras... extras) {
-    // convert string-like type to itself
-    if constexpr (std::same_as<Tgt, std::remove_cvref_t<Src>>) {
-      DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
-      return str;
+template<typename Tgt, typename Src, typename... Extras>
+struct ConvertImpl {
+  static Tgt convert(const Src src, Extras&&... extras) {
+    if constexpr (StringLikeT<std::remove_cvref_t<Src>>) {
+      // conversions of strings to other types
+
+      // convert string-like type to itself
+      if constexpr (std::same_as<Tgt, std::remove_cvref_t<Src>>) {
+        DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
+        return src;
+      }
+      // convert string-like type to std::string or std:;string_view
+      // (but not itself, which was handled in the previous case)
+      else if constexpr (std::same_as<Tgt, std::string>
+                         || std::same_as<Tgt, std::string_view>) {
+        DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, string);
+        return Tgt(src);
+      }
+      // convert string-like type to numeric type
+      else if constexpr (NumericT<Tgt>) {
+        DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
+        auto rslt = Tgt();
+        const auto [_, err] =
+          std::from_chars(src.data(), src.data() + src.size(), rslt);
+        JMG_ENFORCE(std::errc() == err,
+                    "unable to convert string value ["
+                      << src << "] to integral value of type ["
+                      << type_name_for<Tgt>()
+                      << "]: " << std::make_error_code(err).message());
+        return rslt;
+      }
+      // convert string-like type to time point
+      else if constexpr (std::same_as<Tgt, TimePoint>) {
+        return str2TimePoint(src, std::forward<Extras>(extras)...);
+      }
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
-    // convert string-like type to std::string or std:;string_view
-    // (but not itself, which was handled in the previous case)
-    else if constexpr (std::same_as<Tgt, std::string>
-                       || std::same_as<Tgt, std::string_view>) {
-      DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, string);
-      return Tgt(str);
+    else if constexpr (std::same_as<TimePoint, std::remove_cvref_t<Src>>) {
+      // conversion of TimePoint to other types or representations
+
+      // convert TimePoint to string
+      if constexpr (std::same_as<std::string, Tgt>) {
+        return timePoint2Str(src, std::forward<Extras>(extras)...);
+      }
+      // convert TimePoint to timeval
+      else if constexpr (std::same_as<timeval, Tgt>) {
+        return absl::ToTimeval(src);
+      }
+      // convert TimePoint to timespec
+      else if constexpr (std::same_as<timespec, Tgt>) {
+        return absl::ToTimespec(src);
+      }
+      // TODO convert TimePoint to boost::posix_time::ptime
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
-    // convert string-like type to numeric type
-    else if constexpr (NumericT<Tgt>) {
-      DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
-      auto rslt = Tgt();
-      const auto [_, err] =
-        std::from_chars(str.data(), str.data() + str.size(), rslt);
-      JMG_ENFORCE(std::errc() == err,
-                  "unable to convert string value ["
-                    << str << "] to integral value of type ["
-                    << type_name_for<Tgt>()
-                    << "]: " << std::make_error_code(err).message());
-      return rslt;
-    }
-    // convert string-like type to time point
-    else if constexpr (std::same_as<Tgt, TimePoint>) {
+
+    // TODO convert from timeval to TimePoint
+
+    // TODO convert from timespec to TimePoint
+
+    // TODO convert from safe type for time_t (AKA seconds since
+    // epoch) to TimePoint
+
+    // TODO convert from std::chrono::duration to Duration
+
+    // TODO convert from Duration to std::chrono::duration
+
+    else { JMG_NOT_EXHAUSTIVE(Src); }
+  }
+
+private:
+  /**
+   * helper class for conversions between string and time point
+   *
+   * Handles time zone and string format specifications provided as
+   * variadic arguments to the general conversion function.
+   */
+  struct TimePointConversionSpec {
+    explicit TimePointConversionSpec(Extras&&... extras) {
       static_assert(1 <= sizeof...(extras),
-                    "conversion from string to time "
-                    "point must have at least one extra argument for the "
-                    "format");
-      std::optional<std::string_view> fmt;
-      std::optional<TimeZone> zone;
+                    "conversion between string and time point must have at "
+                    "least one extra argument for the format");
+      std::optional<std::string_view> opt_fmt;
+      std::optional<TimeZone> opt_zone;
       auto processArg = [&]<typename T>(const T& arg) {
         if constexpr (std::same_as<TimePointFmt, std::remove_cvref_t<T>>) {
-          JMG_ENFORCE(!fmt.has_value(), "more than one format specified when "
-                                        "converting from string to time point");
-          fmt = unsafe(arg);
+          JMG_ENFORCE(!opt_fmt.has_value(),
+                      "more than one format specified "
+                      "when converting between string and time point");
+          opt_fmt = unsafe(arg);
         }
         else if constexpr (std::same_as<TimeZone, std::remove_cvref_t<T>>) {
-          JMG_ENFORCE(!zone.has_value(),
-                      "more than one time zone specified "
-                      "when converting from string to time point");
-          zone = arg;
+          JMG_ENFORCE(!opt_zone.has_value(),
+                      "more than one time zone specified when converting "
+                      "between string and time point");
+          opt_zone = arg;
         }
         else { JMG_NOT_EXHAUSTIVE(T); }
       };
       (processArg(extras), ...);
-      JMG_ENFORCE(fmt.has_value(), "no format specification provided for "
-                                   "converting string to time point");
+      JMG_ENFORCE(opt_fmt.has_value(),
+                  "no format specification provided for "
+                  "converting between string and time point");
+      fmt = *opt_fmt;
       // time zone defaults to UTC if not provided
-      if (!zone.has_value()) { zone = utcTimeZone(); }
-      std::string errMsg;
-      TimePoint rslt;
-      JMG_ENFORCE(absl::ParseTime(*fmt, str, *zone, &rslt, &errMsg),
-                  "unable to parse string value [" << str
-                                                   << "] as time point "
-                                                      "using format ["
-                                                   << *fmt << "]: " << errMsg);
-      return rslt;
+      if (!opt_zone.has_value()) { zone = utcTimeZone(); }
+      else { zone = *opt_zone; }
     }
-    else { JMG_NOT_EXHAUSTIVE(Tgt); }
+
+    std::string_view fmt;
+    TimeZone zone;
+  };
+
+  /**
+   * convert a string-like object to a time point
+   */
+  static TimePoint str2TimePoint(Src str, Extras&&... extras) {
+    const auto spec = TimePointConversionSpec(std::forward<Extras>(extras)...);
+    // difficult to understand why the Abseil designers chose this
+    // brain-dead signature that returns a bool with an error message
+    // in an old-school result parameter for ParseTime and a perfectly
+    // reasonable signature for FormatTime
+    std::string errMsg;
+    TimePoint rslt;
+    JMG_ENFORCE(absl::ParseTime(spec.fmt, str, spec.zone, &rslt, &errMsg),
+                "unable to parse string value [" << str
+                                                 << "] as time point "
+                                                    "using format ["
+                                                 << spec.fmt
+                                                 << "]: " << errMsg);
+    return rslt;
+  }
+
+  static std::string timePoint2Str(Src tp, Extras&&... extras) {
+    const auto spec = TimePointConversionSpec(std::forward<Extras>(extras)...);
+    const auto rslt = absl::FormatTime(spec.fmt, tp, spec.zone);
+    // quick sanity check since Abseil can't be trusted to do the
+    // right thing and throw an exception...
+    JMG_ENFORCE(!rslt.empty(), "unable to generate string value for time "
+                               "point using format ["
+                                 << spec.fmt << "]");
+    return rslt;
   }
 };
 
 /**
- * concept for valid string conversion target types
+ * helper class that is the return value of the 'from' function which
+ * will bind to the receiving type to select the correct conversion
  *
- * @warning this concept must be updated whenever a new conversion
- * implementation is added
- */
-template<typename T>
-concept StrConvTgtT =
-  NumericT<T> || std::same_as<T, std::string>
-  || std::same_as<T, std::string_view> || std::same_as<T, TimePoint>;
-
-/**
- * converter class for conversions from strings to other types
+ * Think of this class as a conduit that routes the arguments of the
+ * 'from' function to the conversion code in ConvertImpl
  *
- * @note this is the return type for several overrides of the 'from'
- * conversion function
+ * @warning don't try this at home ladies and gentlemen, we are
+ *          trained professionals
  */
-template<typename... Extras>
-class StrConverter {
+template<typename Src, typename... Extras>
+class Converter {
 public:
-  StrConverter(const std::string_view str, Extras&&... extras)
-    : str_(str), extras_(std::forward<Extras>(extras)...) {}
+  /**
+   * construct that stores the arguments of 'from' for later use in
+   * the conversion operator
+   */
+  Converter(Src&& src, Extras&&... extras)
+    : src_(std::forward<Src>(src)), extras_(std::forward<Extras>(extras)...) {}
 
-  template<StrConvTgtT Tgt>
+  template<typename Tgt>
   operator Tgt() const&& {
-    const auto args = std::tuple_cat(std::tuple(str_), extras_);
+    // do some fancy tuple footwork to collect the parts together in a
+    // form that can be used to instantiate the correct specialization
+    // of ConvertImpl
+    auto args = std::tuple_cat(std::tuple(src_), extras_);
     auto redirect = [](auto... args) {
-      return ConvertImpl<Tgt, std::string_view, Extras...>::convert(args...);
+      return ConvertImpl<Tgt, Src, Extras...>::convert(args...);
     };
     return std::apply(redirect, args);
   }
 
 private:
-  std::string_view str_;
+  Src src_;
   std::tuple<Extras...> extras_;
 };
 
-template<StringLikeT Src, typename... Extras>
-StrConverter<Extras...> from(const Src& str, Extras&&... extras) {
-  return StrConverter<Extras...>(str, std::forward<Extras>(extras)...);
+} // namespace detail
+
+/**
+ * convert from one type to another through the magic of return value
+ * overloading
+ */
+template<typename Src, typename... Extras>
+auto from(Src&& src, Extras&&... extras) {
+  if constexpr (CStyleStringT<Src>) {
+    // convert C-style strings to string_view to keep things simple
+    return detail::Converter<std::string_view, Extras...>(
+      std::string_view(src), std::forward<Extras>(extras)...);
+  }
+  else {
+    return detail::Converter<Src, Extras...>(std::forward<Src>(src),
+                                             std::forward<Extras>(extras)...);
+  }
 }
 
 #undef DETAIL_ENFORCE_EMPTY_EXTRAS

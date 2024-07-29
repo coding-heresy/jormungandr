@@ -38,6 +38,10 @@ using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
 
+////////////////////////////////////////////////////////////////////////////////
+// tests of 'from' function
+////////////////////////////////////////////////////////////////////////////////
+
 TEST(ConversionTests, TestStringFromStringView) {
   const auto src = "foo"sv;
   EXPECT_EQ("foo"s, static_cast<string>(from(src)));
@@ -49,6 +53,11 @@ TEST(ConversionTests, TestStringFromString) {
 }
 
 TEST(ConversionTests, TestStringFromCStyleString) {
+  const char* src = "foo";
+  EXPECT_EQ("foo"s, static_cast<string>(from(src)));
+}
+
+TEST(ConversionTests, TestStringFromCompileTimeCStyleString) {
   constexpr char src[] = "foo";
   EXPECT_EQ("foo"s, static_cast<string>(from(src)));
 }
@@ -61,17 +70,47 @@ TEST(ConversionTests, TestDoubleFromString) {
   EXPECT_DOUBLE_EQ(0.5, static_cast<double>(from("0.5")));
 }
 
-TEST(ConversionTests, TestFromStringOverloading) {
-  const string_view str = "42";
-  const int intVal = from(str);
+TEST(ConversionTests, TestNumericDeclarations) {
+  const auto src = "42"sv;
+  const int intVal = from(src);
   EXPECT_EQ(42, intVal);
-  const double dblVal = from(str);
+  const double dblVal = from(src);
   EXPECT_DOUBLE_EQ(42.0, dblVal);
 }
 
 TEST(ConversionTests, TestFailedIntFromString) {
-  EXPECT_THROW([[maybe_unused]] int bad = from("a"), std::runtime_error);
+  const auto src = "a"sv;
+  EXPECT_THROW([[maybe_unused]] int bad = from(src), std::runtime_error);
 }
+
+TEST(ConversionTests, TestTimePointFromString) {
+  const auto src = "2001-09-11 09:00:00"sv;
+  const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
+  const auto tz = getTimeZone(TimeZoneName("America/New_York"));
+  TimePoint us_eastern = from(src, fmt, tz);
+  // conversion defaults to UTC timezone
+  TimePoint utc = from(src, fmt);
+  // for time points generated using the same "local clock" time,
+  // the UTC time point will be earlier than the US/Eastern time
+  // point
+  EXPECT_LT(utc, us_eastern);
+}
+
+TEST(ConversionTests, TestStringFromTimePoint) {
+  const auto tz = getTimeZone(TimeZoneName("America/New_York"));
+  const auto tp = [&]() {
+    TimePoint rslt = from("2007-06-25T09:00:00", kIso8601Fmt, tz);
+    return rslt;
+  }();
+  const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
+  const std::string actual = from(tp, fmt, tz);
+  const auto expected = "2007-06-25 09:00:00"s;
+  EXPECT_EQ(expected, actual);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// tests of streaming functions
+////////////////////////////////////////////////////////////////////////////////
 
 TEST(ConversionTests, TestOptionalStreamOutput) {
   optional<int> val;
@@ -93,16 +132,4 @@ TEST(ConversionTests, TestTupleStreamOutput) {
   ostringstream strm;
   strm << tpl;
   EXPECT_EQ("42,20010911"s, strm.str());
-}
-
-TEST(ConversionTests, TestTimestampFromString) {
-  const string_view src = "2001-09-11 09:00:00";
-  const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
-  const auto tz = getTimeZone(TimeZoneName("America/New_York"));
-  TimePoint us_eastern = from(src, fmt, tz);
-  TimePoint utc = from(src, fmt);
-  // for time points generated using the same "local clock" time,
-  // the UTC time point will be earlier than the US/Eastern time
-  // point
-  EXPECT_LT(utc, us_eastern);
 }

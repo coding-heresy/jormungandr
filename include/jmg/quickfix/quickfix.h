@@ -50,6 +50,10 @@ namespace jmg
 namespace quickfix
 {
 
+constexpr auto kTimeStampFmt = TimePointFmt("%E4Y%m%d-%H:%M:%S");
+constexpr auto kTimeStampMillisecFmt = TimePointFmt("%E4Y%m%d-%H:%M:%S.#E3f");
+constexpr auto kDateOnlyFmt = TimePointFmt("%E4Y%m%d");
+
 #if defined(USE_NATIVE_QUICKFIX_MSG)
 template<typename... Fields>
 class Object : public ObjectDef<Fields...> {

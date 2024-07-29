@@ -48,6 +48,16 @@ TEST(MetaprogrammingTests, TestTypeListConcept) {
   EXPECT_FALSE(TypeListT<int>);
 }
 
+TEST(MetaprogrammingTests, TestCStyleStringConcept) {
+  EXPECT_FALSE(CStyleStringT<string>);
+  EXPECT_FALSE(CStyleStringT<string_view>);
+  EXPECT_TRUE(CStyleStringT<const char*>);
+  auto* literal = "foo";
+  EXPECT_TRUE(CStyleStringT<decltype(literal)>);
+  constexpr char compile_time[] = "bar";
+  EXPECT_TRUE(CStyleStringT<decltype(compile_time)>);
+}
+
 TEST(MetaprogrammingTests, TestStringLikeConcept) {
   EXPECT_TRUE(StringLikeT<string>);
   EXPECT_TRUE(StringLikeT<string_view>);
@@ -56,6 +66,20 @@ TEST(MetaprogrammingTests, TestStringLikeConcept) {
   EXPECT_TRUE(StringLikeT<decltype(literal)>);
   constexpr char compile_time[] = "bar";
   EXPECT_TRUE(StringLikeT<decltype(compile_time)>);
+  EXPECT_FALSE(StringLikeT<int>);
+}
+
+TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {
+  EXPECT_TRUE(ClassT<string>);
+  EXPECT_FALSE(NonClassT<string>);
+  EXPECT_FALSE(ClassT<double>);
+  EXPECT_TRUE(NonClassT<double>);
+
+  EXPECT_TRUE(NonClassT<const char*>);
+  auto* literal = "foo";
+  EXPECT_TRUE(NonClassT<decltype(literal)>);
+  constexpr char compile_time[] = "bar";
+  EXPECT_TRUE(NonClassT<decltype(compile_time)>);
 }
 
 TEST(MetaprogrammingTests, TestPolicyResolver) {

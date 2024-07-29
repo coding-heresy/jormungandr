@@ -72,14 +72,26 @@ concept TypeListT = detail::IsTypeList<T>
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept NumericT = std::integral<T> || std::floating_point<T>;
+concept NumericT = std::integral<std::remove_cvref_t<T>>
+                   || std::floating_point<std::remove_cvref_t<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// concept for string-like types
+// concepts for string-like types
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace detail
 {
+template<typename T>
+struct IsCStyleString : std::false_type {};
+template<>
+struct IsCStyleString<char*> : std::true_type {};
+template<>
+struct IsCStyleString<const char*> : std::true_type {};
+template<int kSz>
+struct IsCStyleString<char[kSz]> : std::true_type {};
+template<int kSz>
+struct IsCStyleString<const char[kSz]> : std::true_type {};
+
 template<typename T>
 struct IsStringLike : std::false_type {};
 template<>
@@ -97,7 +109,11 @@ struct IsStringLike<const char[kSz]> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept StringLikeT = detail::IsStringLike<T>
+concept CStyleStringT = detail::IsCStyleString<std::remove_cvref_t<T>>
+{}();
+
+template<typename T>
+concept StringLikeT = detail::IsStringLike<std::remove_cvref_t<T>>
 {}();
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -107,6 +123,17 @@ concept StringLikeT = detail::IsStringLike<T>
 template<typename T>
 concept NonBoolT = !
 std::same_as<T, bool>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concepts for class and non-class types
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept ClassT = std::is_class_v<std::remove_cvref_t<T>>;
+
+template<typename T>
+concept NonClassT = !
+ClassT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // always_false wrapper to defer evaluation of static_assert

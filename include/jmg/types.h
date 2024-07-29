@@ -73,6 +73,11 @@ using Duration = absl::Duration;
 using TimePointFmt = SafeType<std::string_view>;
 using TimeZoneName = SafeType<std::string_view>;
 
+// Two formats for ISO 8601: with and without embedded time zone
+// specifier
+constexpr auto kIso8601Fmt = TimePointFmt("%E4Y-%m-%dT%H:%M:%S");
+constexpr auto kIso8601WithZoneFmt = TimePointFmt("%E4Y-%m-%dT%H:%M:%S %z");
+
 inline TimeZone utcTimeZone() {
   static TimeZone utc = absl::UTCTimeZone();
   return utc;
