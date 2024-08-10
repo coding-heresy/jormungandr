@@ -51,6 +51,25 @@ building the facade for FIX protocol as the first implementation,
 although it hasn't yet been used to wrap the QuickFIX interface
 (commonly used in the financial industry)
 
+#### Interface Definition Language
+
+It can be difficult to express interfaces in the raw building blocks
+of the _standard interface_ style, and some of the potential encodings
+also use IDL compilers to generate code (e.g. protobuf), which is a
+very effective technique. I envision creating and interface definition
+language in YAML (no need to build a separate parser for this) that
+will have a compiler to generate _standard interface_ definitions (and
+possibly even definitions in other IDLs so that the JMG definition can
+be the source of ground truth). This will be **jmgc**, and there has
+been initial work already to parse the QuickFIX XML definitions and
+generate standard interface code from those. The next step here will
+be to design the YAML language for JMG and implement that, although I
+might also take a detour into the SBE specification since I already
+have XML parsing working well in the _standard interface_ and that
+might help fill in some gaps in functionality before I sit down to
+design the YAML language, best to have all of it in place in my head
+before I start so that nothing important gets left out.
+
 ### High performance event processing
 
 Not much work here yet, but the idea is to mix the _standard
