@@ -76,13 +76,14 @@ TEST(CmdLineParamTests, TestConcepts) {
 }
 
 TEST(CmdLineParamTests, TestUsage) {
-  const char* argv[] = {"test_program"};
+  std::array argv{"test_program"};
   // NOTE: the declaration of CmdLine is very tightly coupled with the
   // string used for comparison inside the catch statement
   using CmdLine =
     CmdLineArgs<NamedParam1, NamedParam2, PosnParam1, PosnParam2, OptPosnParam>;
   try {
-    const auto cmdline = CmdLine(1, argv);
+    const auto cmdline = CmdLine(argv.size(), argv.data());
+    JMG_TEST_UNREACHED;
   }
   catch (const exception& exc) {
     const auto posn = std::string_view(exc.what())
@@ -92,107 +93,174 @@ TEST(CmdLineParamTests, TestUsage) {
     EXPECT_NE(string::npos, posn);
     return;
   }
-  // should never reach here
-  EXPECT_TRUE(false);
+  JMG_TEST_UNREACHED;
 }
 
 TEST(CmdLineParamTests, TestTrivialCommandLine) {
-  const char* argv[] = {"test_program"};
+  std::array argv{"test_program"};
   using CmdLine = CmdLineArgs<>;
-  const auto cmdline = CmdLine(1, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Handling of command lines that match the specified parameters
+////////////////////////////////////////////////////////////////////////////////
+
 TEST(CmdLineParamTests, TestNamedFlagSet) {
-  const char* argv[] = {"test_program", "-flag"};
+  std::array argv{"test_program", "-flag"};
   using CmdLine = CmdLineArgs<NamedParam2>;
-  const auto cmdline = CmdLine(2, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto flag_value = get<NamedParam2>(cmdline);
   EXPECT_TRUE(flag_value);
 }
 
 TEST(CmdLineParamTests, TestNamedFlagNotSet) {
-  const char* argv[] = {"test_program"};
+  std::array argv{"test_program"};
   using CmdLine = CmdLineArgs<NamedParam2>;
-  const auto cmdline = CmdLine(1, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto flag_value = get<NamedParam2>(cmdline);
   EXPECT_FALSE(flag_value);
 }
 
 TEST(CmdLineParamTests, TestRequiredNamedValue) {
-  const char* argv[] = {"test_program", "-dbl", "42"};
+  std::array argv{"test_program", "-dbl", "42"};
   using CmdLine = CmdLineArgs<NamedParam1>;
-  const auto cmdline = CmdLine(3, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto dbl = get<NamedParam1>(cmdline);
   EXPECT_DOUBLE_EQ(42.0, dbl);
 }
 
-TEST(CmdLineParamTests, TestRequiredNamedParameterWithMissingValue) {
-  const char* argv[] = {"test_program", "-dbl"};
-  using CmdLine = CmdLineArgs<NamedParam1>;
-  auto cmdline = std::unique_ptr<CmdLine>();
-  EXPECT_ANY_THROW((cmdline = std::make_unique<CmdLine>(2, argv)));
-}
-
-TEST(CmdLineParamTests, TestMissingRequiredNamedValue) {
-  const char* argv[] = {"test_program"};
-  using CmdLine = CmdLineArgs<NamedParam1>;
-  auto cmdline = unique_ptr<CmdLine>();
-  EXPECT_ANY_THROW((cmdline = std::make_unique<CmdLine>(1, argv)));
-}
-
 TEST(CmdLineParamTests, TestOptionalNamedValue) {
-  const char* argv[] = {"test_program", "-opt_int", "20010911"};
+  std::array argv{"test_program", "-opt_int", "20010911"};
   using CmdLine = CmdLineArgs<NamedParam3>;
-  const auto cmdline = CmdLine(3, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto opt_int = try_get<NamedParam3>(cmdline);
   EXPECT_TRUE(opt_int.has_value());
   EXPECT_EQ(20010911, *opt_int);
 }
 
 TEST(CmdLineParamTests, TestMissingOptionalNamedValue) {
-  const char* argv[] = {"test_program"};
+  std::array argv{"test_program"};
   using CmdLine = CmdLineArgs<NamedParam3>;
-  const auto cmdline = CmdLine(1, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto opt_int = try_get<NamedParam3>(cmdline);
   EXPECT_FALSE(opt_int.has_value());
 }
 
 TEST(CmdLineParamTests, TestRequiredIntPositionalValue) {
-  const char* argv[] = {"test_program", "-1"};
+  std::array argv{"test_program", "-1"};
   using CmdLine = CmdLineArgs<PosnParam1>;
-  const auto cmdline = CmdLine(2, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto posn_int = get<PosnParam1>(cmdline);
   EXPECT_EQ(-1, posn_int);
 }
 
 TEST(CmdLineParamTests, TestRequiredStrPositionalValue) {
-  const char* argv[] = {"test_program", "foo"};
+  std::array argv{"test_program", "foo"};
   using CmdLine = CmdLineArgs<PosnParam2>;
-  const auto cmdline = CmdLine(2, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto str = get<PosnParam2>(cmdline);
   EXPECT_EQ("foo"s, str);
 }
 
 TEST(CmdLineParamTests, TestOptionalStrPositionalValue) {
-  const char* argv[] = {"test_program", "foo"};
+  std::array argv{"test_program", "foo"};
   using CmdLine = CmdLineArgs<OptPosnParam>;
-  const auto cmdline = CmdLine(2, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto str = try_get<OptPosnParam>(cmdline);
   EXPECT_TRUE(str.has_value());
   EXPECT_EQ("foo"s, *str);
 }
 
 TEST(CmdLineParamTests, TestMissingOptionalStrPositionalValue) {
-  const char* argv[] = {"test_program"};
+  std::array argv{"test_program"};
   using CmdLine = CmdLineArgs<OptPosnParam>;
-  const auto cmdline = CmdLine(1, argv);
+  const auto cmdline = CmdLine(argv.size(), argv.data());
   const auto str = try_get<OptPosnParam>(cmdline);
   EXPECT_FALSE(str.has_value());
 }
 
-TEST(CmdLineParamTests, TestMissingRequiredPositionalValue) {
-  const char* argv[] = {"test_program"};
-  using CmdLine = CmdLineArgs<PosnParam1>;
-  auto cmdline = unique_ptr<CmdLine>();
-  EXPECT_ANY_THROW((cmdline = std::make_unique<CmdLine>(1, argv)));
+////////////////////////////////////////////////////////////////////////////////
+// Handling of command lines that do not match the specified parameters
+////////////////////////////////////////////////////////////////////////////////
+
+TEST(CmdLineParamTests, TestFailedConversionOfRequiredNamedParameterValue) {
+  std::array argv{"test_program", "-dbl", "foo"};
+  using CmdLine = CmdLineArgs<NamedParam1>;
+  EXPECT_THROW((CmdLine(argv.size(), argv.data())), runtime_error);
 }
+
+TEST(CmdLineParamTests, TestFailedConversionOfOptionalNamedParameterValue) {
+  std::array argv{"test_program", "-opt_int", "bar"};
+  using CmdLine = CmdLineArgs<NamedParam1>;
+  EXPECT_THROW((CmdLine(argv.size(), argv.data())), runtime_error);
+}
+
+// NOTE: it would normally not be appropriate to include the contents
+// of the error message associated with an exception in a test but in
+// this case the messages are important because they guide the user of
+// a command line program to the correct arguments
+
+#define EXPECT_CMDLINE_ERROR(cmd, errMsgMatch)                       \
+  do {                                                               \
+    try {                                                            \
+      const auto cmdline = (cmd);                                    \
+      JMG_TEST_UNREACHED;                                            \
+    }                                                                \
+    catch (const CmdLineError& exc) {                                \
+      EXPECT_NE(string::npos, string(exc.what()).find(errMsgMatch)); \
+      return;                                                        \
+    }                                                                \
+    catch (...) {                                                    \
+      JMG_TEST_UNREACHED;                                            \
+    }                                                                \
+    JMG_TEST_UNREACHED;                                              \
+  } while (0)
+
+TEST(CmdLineParamTests, TestMissingRequiredNamedValue) {
+  std::array argv{"test_program"};
+  using CmdLine = CmdLineArgs<NamedParam1>;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())),
+                       "unable to find required named argument [dbl]");
+}
+
+TEST(CmdLineParamTests, TestRequiredNamedParameterWithMissingValue) {
+  std::array argv{"test_program", "-dbl"};
+  using CmdLine = CmdLineArgs<NamedParam1>;
+  const auto errFragment = "named argument [dbl] is the last argument and is "
+                           "missing its required value"s;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())), errFragment);
+}
+
+TEST(CmdLineParamTests, TestMissingRequiredPositionalValue) {
+  std::array argv{"test_program"};
+  using CmdLine = CmdLineArgs<PosnParam1>;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())),
+                       "unable to find required positional argument [int]");
+}
+
+TEST(CmdLineParamTests,
+     TestMissingRequiredPositionalValueAfterRequiredNamedValue) {
+  std::array argv{"test_program", "-dbl", "42"};
+  using CmdLine = CmdLineArgs<NamedParam1, PosnParam1>;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())),
+                       "unable to find required positional argument [int]");
+}
+
+TEST(CmdLineParamTests,
+     TestMissingRequiredPositionalValueAfterOptionalNamedValue) {
+  std::array argv{"test_program", "-opt_int", "20010911"};
+  using CmdLine = CmdLineArgs<NamedParam3, PosnParam1>;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())),
+                       "unable to find required positional argument [int]");
+}
+
+TEST(CmdLineParamTests, TestExtraneousArgument) {
+  std::array argv{"test_program", "foo", "bar"};
+  using CmdLine = CmdLineArgs<PosnParam2>;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())),
+                       "command line argument [bar] did not match any declared "
+                       "parameter");
+}
+
+#undef EXPECT_CMDLINE_ERROR
