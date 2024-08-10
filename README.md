@@ -1,1 +1,64 @@
-Very experimental code for handling interaction with any remote service using a common interface.
+# Summary
+
+Experimental library that seeks to express some new ideas.
+* Use metaprogramming and other techniques to leverage the compiler for greater code safety.
+  * The goal here is to build confidence that, if the code compiles, then it will run correctly.
+  * While this goal is not attainable in general, the closer we can get, the better.
+* Users should be heavily rewarded for becoming familiar with the code base.
+  * Common idioms
+  * Common abbreviations
+  * This is the opposite of the philosophy that code should be 'simple' so that any user can quickly start using it
+
+## Some longer-term goals
+
+### _Standard Interface_ for _Objects_
+
+In this case, _objects_ can be thought of as hierarchical collections
+of key/value bindings. Many concepts can be viewed in this way:
+* Command line parameters (flat collection, not hierarchical).
+* Configuration settings read from files using formats such as XML or YAML.
+* Messages used to communicate between separate processes, either
+  locally or as part of a distributed system.
+
+The first of these (command line paramters) has already been
+completely converted to the _standard interface_ style, mostly because I
+was deeply dissatisfied by the available options for solving these
+problems.
+
+There is also support for accessing data from XML and YAML files using
+the _standard interface_ style, although it has not yet been used
+specifically for configuration files.
+
+The third target, messages used for communication, is the most
+important. One of the most painful parts of writing code to
+communicate between processes is the proliferation of message
+encodings, each generally with its own interface. To be frank, most or
+all of these interfaces are of poor quality and there are numerous
+styles of interaction, which produces severe impediments to the
+ability to switch between them. The goal of the _standard interface_
+is to present a facade on top of these interfaces to unify them into a
+single style of interaction with maximal (compile time) safety
+features and minimal runtime overhead. Whether data is encoded as
+protobuf or json, FIX protocol or rows from a database or any of the
+numerous other encodings out there, the _standard interface_ coding
+style should be the same, and the code should look exactly (or almost
+exactly) the same in situations where the data has fields with the
+same semantics.
+
+The basic groundwork has been laid for read-only messages in the
+_standard interface_ style, and substantial work has been done on
+building the facade for FIX protocol as the first implementation,
+although it hasn't yet been used to wrap the QuickFIX interface
+(commonly used in the financial industry)
+
+### High performance event processing
+
+Not much work here yet, but the idea is to mix the _standard
+interface_ style of messaging with a high performance event loop based
+on fibers and io_uring on Linux. This is a big lift, and the only work
+done so far is a bit of exploration and prototyping to try to find a
+clean interface that is consistent with a specific internal vision of
+how it should look from the user perspective. I may try to create
+something using existing boost tools that will produce the desired
+user-facing style and then work to steadily swap out the internals for
+improved performance.
