@@ -176,10 +176,13 @@ public:
         constexpr auto param_idx = meta::find_index<ParamList, T>{}();
         const auto is_required = RequiredField<T>;
         if constexpr (NamedParamT<T>) {
-          const auto entry =
-            std::ranges::find_if(args, [](const std::string_view str) {
-              return (('-' == str[0]) && (T::name == str.substr(1)));
-            });
+          // function that will return true if its argument matches
+          // the named parameter
+          auto matchNamedParam = [](const std::string_view str) {
+            return (('-' == str[0]) && (T::name == str.substr(1)));
+          };
+
+          const auto entry = std::ranges::find_if(args, matchNamedParam);
           if (entry == args.end()) {
             // parameter was not found
             if constexpr (!std::same_as<typename T::type, bool>) {
@@ -187,19 +190,33 @@ public:
                                   "unable to find required named argument ["
                                     << T::name << "]");
             }
-            // parameter is not required or parameter type was boolean, no
-            // further action
+            // parameter is not required or parameter type was
+            // boolean, no further action (because boolean/flag
+            // parameter types are defaulted to 'false')
             return;
           }
           const auto arg_idx = std::distance(args.begin(), entry);
           JMG_ENFORCE_CMDLINE(!matches[arg_idx],
-                              "multiple matches for named argument [" << T::name
-                                                                      << "]");
+                              "multiple matches for value [" << T::name << "]");
           matches[arg_idx] = true;
+
+          {
+            // ensure that only one instance of this named parameter
+            // is present
+            const auto next = std::next(entry);
+            if (next != args.end()) {
+              const auto check_dups =
+                std::find_if(next, args.end(), matchNamedParam);
+              JMG_ENFORCE_CMDLINE(check_dups == args.end(),
+                                  "multiple matches for named argument ["
+                                    << T::name << "]");
+            }
+          }
 
           if constexpr (std::same_as<ValueType, bool>) {
             // boolean named parameters don't have an associated value
             std::get<param_idx>(values_) = true;
+
             return;
           }
           else {
@@ -252,6 +269,8 @@ public:
           }
         }
       };
+      // TODO: find some way to get rid of the annoying .template
+      // syntax here if possible
       (processParam.template operator()<Params>(), ...);
 
       const auto unmatched = std::ranges::find(matches, false);

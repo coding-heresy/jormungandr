@@ -232,6 +232,35 @@ TEST(CmdLineParamTests, TestRequiredNamedParameterWithMissingValue) {
   EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())), errFragment);
 }
 
+TEST(CmdLineParamTests, TestMultipleMatchesForRequiredNamedParameter) {
+  std::array argv{"test_program", "-dbl", "42", "-dbl", "24"};
+  using CmdLine = CmdLineArgs<NamedParam1>;
+  const auto errFragment = "multiple matches for named argument [dbl]"s;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())), errFragment);
+}
+
+TEST(CmdLineParamTests, TestUnusualMultipleMatchesForRequiredNamedParameter) {
+  std::array argv{"test_program", "-dbl", "-dbl", "24"};
+  using CmdLine = CmdLineArgs<NamedParam1>;
+  const auto errFragment = "multiple matches for named argument [dbl]"s;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())), errFragment);
+}
+
+TEST(CmdLineParamTests, TestMultipleMatchesForOptionalNamedParameter) {
+  std::array argv{"test_program", "-opt_int", "20010911", "-opt_int",
+                  "20010911"};
+  using CmdLine = CmdLineArgs<NamedParam3>;
+  const auto errFragment = "multiple matches for named argument [opt_int]"s;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())), errFragment);
+}
+
+TEST(CmdLineParamTests, TestUnusualMultipleMatchesForOptionalNamedParameter) {
+  std::array argv{"test_program", "-opt_int", "-opt_int", "20010911"};
+  using CmdLine = CmdLineArgs<NamedParam3>;
+  const auto errFragment = "multiple matches for named argument [opt_int]"s;
+  EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())), errFragment);
+}
+
 TEST(CmdLineParamTests, TestMissingRequiredPositionalValue) {
   std::array argv{"test_program"};
   using CmdLine = CmdLineArgs<PosnParam1>;
