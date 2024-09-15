@@ -1,13 +1,30 @@
 # Summary
 
 Experimental library that seeks to express some new ideas.
-* Use metaprogramming and other techniques to leverage the compiler for greater code safety.
-  * The goal here is to build confidence that, if the code compiles, then it will run correctly.
-  * While this goal is not attainable in general, the closer we can get, the better.
+
+* Use metaprogramming and other techniques to leverage the compiler
+  for greater code safety.
+  * The goal here is to build confidence that, if the code compiles,
+    then it will run correctly.
+  * While this goal is not attainable in general, the closer we can
+    get, the better.
 * Users should be heavily rewarded for becoming familiar with the code base.
-  * Common idioms
-  * Common abbreviations
-  * This is the opposite of the philosophy that code should be 'simple' so that any user can quickly start using it
+  * Common/standard idioms are defined and used consistently
+  * Standard abbreviations are defined and used consistently
+* This is the opposite of the philosophy that code should be 'simple'
+  so that any user can quickly start using it
+
+## Documentation placeholders
+### _Safe_ Types Framework
+TODO
+### Return Value Overloading
+TODO
+### Simple Server Framework
+TODO
+### Standard Interface for Objects
+TODO
+### Command Line Parameter Handling
+TODO
 
 ## Some longer-term goals
 
@@ -81,3 +98,73 @@ how it should look from the user perspective. I may try to create
 something using existing boost tools that will produce the desired
 user-facing style and then work to steadily swap out the internals for
 improved performance.
+
+## Coding standards
+
+A corollary to the philosophy of expecting that users will be familiar
+with the code base is the requirement to make the familiarization
+process as easy as possible through documentation. This section
+contains a documentation of some of the standards associated with the
+project, especially those that may differ from expected practice.
+
+In general, code should follow the C++ core guidelines, with a few
+exceptions and additions as outlined here
+
+### General principles
+
+These may or may not be controversial but they have served me well.
+
+#### If it can be **const** then it should be **const**
+
+#### Impute semantic meaning to types using the _safe_ types framework
+
+#### Use metaprogramming to make interfaces more robust
+
+### Standard abbreviations
+
+Naming is well known to be one of the hard problems in software
+engineering. To facilitate the appropriate naming of things while
+keeping the code compact, a series of standard abbreviations is
+catalogued here. If you see an abbreviation whose meaning is not
+obvious, look in this section for a defintion. When contributing code,
+please use these abbreviations where appropriate.
+
+* cncy - currency
+* def  - definition
+* fld  - field
+* msg  - message
+* px   - price
+* req  - request
+* rslt - result, typically used to name an automatic variable that
+  will return a value from a function so as to take advantage of named
+  return value optimization
+* rsp  - response
+* str  - string
+* strm - stream
+* svc  - service
+* sz   - size/length
+
+### Some other naming standards
+
+#### Common prefixes
+
+These prefixes are intended to allow intent/function to be easily
+discerned when reading code
+
+* try - function name prefix indicating that the function will
+  attempt to perform some action that results in a value being
+  returned where it is not a failure if no value can be returned. The
+  return value of such a function will be a specialization of
+  `std::optional` or may be `bool` to indicate the success of the
+  attempted action. Note that, in the case of a `bool` return type, a
+  return value of `false` indicates _non-success_, and is considered
+  to be distinct from _failure_, which is communicated by exception in
+  all cases.
+
+* maybe - function name prefix indicating that the function will
+  attempt to perform an action but that whether or not the action has
+  actually been performed is irrelevant to subsequent program
+  logic. The most common example of this is `maybeInitialize()`, whose
+  name expresses the intent that the function will perform some
+  initialization action the first time it is called and will otherwise
+  do nothing.
