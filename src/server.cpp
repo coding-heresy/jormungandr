@@ -29,61 +29,41 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
-#pragma once
 
-/**
- * general purpose utilities
- */
-
-#include <tuple>
-
-#include "meta.h"
-#include "preprocessor.h"
+#include "jmg/server.h"
+#include "jmg/preprocessor.h"
+#include "jmg/system.h"
 
 namespace jmg
 {
 
-////////////////////////////////////////////////////////////////////////////////
-// helper functions for dictionaries
-////////////////////////////////////////////////////////////////////////////////
-
-const auto& key_of(const auto& rec) { return std::get<0>(rec); }
-
-const auto& value_of(const auto& rec) { return std::get<1>(rec); }
-
-auto& value_of(auto& rec) { return std::get<1>(rec); }
-
-template<typename DictContainer, typename Key, typename... Vals>
-void always_emplace(std::string_view description,
-                    DictContainer& dict,
-                    Key key,
-                    Vals... vals) {
-  const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
-  JMG_ENFORCE(inserted,
-              "unsupported duplicate key [" << key << "] for " << description);
+Server::~Server() {
+  if (!is_shutdown_initiated_.test_and_set() && is_started_.test()) {
+    // attempting to destroy the server after it has started but
+    // before it has been shut down is not supported, ensure that the
+    // server process will shut down
+    send_shutdown_signal();
+  }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// cleanup class
-////////////////////////////////////////////////////////////////////////////////
+void Server::start(const int argc, const char** argv) {
+  JMG_ENFORCE(!is_started_.test_and_set(),
+              "attempted to start the server more than once");
 
-/**
- * class template that automatically executes a cleanup action on
- * scope exit unless it is canceled
- *
- * shamelessly stolen from Google Abseil
- */
-template<typename Fcn>
-struct Cleanup {
-  Cleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
-  ~Cleanup() {
-    if (!isCxl_) { fcn_(); }
+  // delegate the startup to the implementation
+  this->startImpl(argc, argv);
+
+  // TODO should there be a check for shutdown initiation here?
+}
+
+void Server::shutdown() {
+  if (is_shutdown_initiated_.test_and_set()) {
+    // ignore all attempts to shutdown the server after the first one
+    return;
   }
-  void cancel() { isCxl_ = true; }
 
-private:
-  bool isCxl_ = false;
-  Fcn fcn_;
-};
+  // delegate shutdown to the implementation
+  this->shutdownImpl();
+}
 
 } // namespace jmg

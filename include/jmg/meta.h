@@ -31,6 +31,7 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <exception>
 #include <memory>
 #include <string>

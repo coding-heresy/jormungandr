@@ -14,10 +14,15 @@ cc_library(
         "include/jmg/ptree/ptree.h",
         "include/jmg/quickfix/quickfix.h",
         "include/jmg/safe_types.h",
+        "include/jmg/server.h",
+        "include/jmg/system.h",
         "include/jmg/types.h",
         "include/jmg/union.h",
         "include/jmg/util.h",
         "include/jmg/yaml/yaml.h",
+    ],
+    srcs = [
+        "src/server.cpp",
     ],
     includes = ["include"],
     linkstatic = True,
@@ -30,5 +35,17 @@ cc_library(
         "@doom_strong_type//:strong_type",
         "@yaml-cpp//:yaml-cpp",
         "@boost//:property_tree",
+    ],
+)
+
+cc_library(
+    name = "jmg_server_main",
+    visibility = ["//visibility:public"],
+    srcs = [
+        "src/server_main.cpp",
+    ],
+    linkstatic = True,
+    deps = [
+        ":jmg",
     ],
 )

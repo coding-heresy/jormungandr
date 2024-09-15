@@ -32,58 +32,26 @@
 #pragma once
 
 /**
- * general purpose utilities
+ * system utilities
  */
 
-#include <tuple>
+#include <sys/types.h>
+#include <unistd.h>
 
-#include "meta.h"
-#include "preprocessor.h"
+#include <csignal>
+
+#include "jmg/preprocessor.h"
 
 namespace jmg
 {
 
-////////////////////////////////////////////////////////////////////////////////
-// helper functions for dictionaries
-////////////////////////////////////////////////////////////////////////////////
-
-const auto& key_of(const auto& rec) { return std::get<0>(rec); }
-
-const auto& value_of(const auto& rec) { return std::get<1>(rec); }
-
-auto& value_of(auto& rec) { return std::get<1>(rec); }
-
-template<typename DictContainer, typename Key, typename... Vals>
-void always_emplace(std::string_view description,
-                    DictContainer& dict,
-                    Key key,
-                    Vals... vals) {
-  const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
-  JMG_ENFORCE(inserted,
-              "unsupported duplicate key [" << key << "] for " << description);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// cleanup class
-////////////////////////////////////////////////////////////////////////////////
-
 /**
- * class template that automatically executes a cleanup action on
- * scope exit unless it is canceled
+ * deliver a SIGTERM signal to the current process
  *
- * shamelessly stolen from Google Abseil
+ * NOTE: used to initiate a clean shutdown in abnormal circumstances
  */
-template<typename Fcn>
-struct Cleanup {
-  Cleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
-  ~Cleanup() {
-    if (!isCxl_) { fcn_(); }
-  }
-  void cancel() { isCxl_ = true; }
-
-private:
-  bool isCxl_ = false;
-  Fcn fcn_;
-};
+inline void send_shutdown_signal() {
+  JMG_SYSTEM(kill(getpid(), SIGTERM), "failed to send shutdown signal");
+}
 
 } // namespace jmg

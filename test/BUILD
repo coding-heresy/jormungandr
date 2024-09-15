@@ -114,3 +114,16 @@ cc_test(
     ],
     tags = ["manual"],
 )
+
+cc_binary(
+    name = "test_server_main",
+    visibility = ["//visibility:public"],
+    srcs = [
+        "test_server_main.cpp",
+    ],
+    linkstatic = True,
+    deps = [
+        "//:jmg_server_main",
+    ],
+)
+

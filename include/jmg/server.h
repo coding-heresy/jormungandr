@@ -32,58 +32,37 @@
 #pragma once
 
 /**
- * general purpose utilities
+ * standard base class for all services
  */
 
-#include <tuple>
+#include <memory>
 
-#include "meta.h"
-#include "preprocessor.h"
+#include "jmg/preprocessor.h"
 
 namespace jmg
 {
 
-////////////////////////////////////////////////////////////////////////////////
-// helper functions for dictionaries
-////////////////////////////////////////////////////////////////////////////////
+class Server {
+public:
+  JMG_NON_COPYABLE(Server);
+  JMG_NON_MOVEABLE(Server);
+  Server() = default;
+  virtual ~Server();
 
-const auto& key_of(const auto& rec) { return std::get<0>(rec); }
+  void start(const int argc, const char** argv);
 
-const auto& value_of(const auto& rec) { return std::get<1>(rec); }
+  void shutdown();
 
-auto& value_of(auto& rec) { return std::get<1>(rec); }
+  virtual void shutdownImpl() = 0;
 
-template<typename DictContainer, typename Key, typename... Vals>
-void always_emplace(std::string_view description,
-                    DictContainer& dict,
-                    Key key,
-                    Vals... vals) {
-  const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
-  JMG_ENFORCE(inserted,
-              "unsupported duplicate key [" << key << "] for " << description);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// cleanup class
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * class template that automatically executes a cleanup action on
- * scope exit unless it is canceled
- *
- * shamelessly stolen from Google Abseil
- */
-template<typename Fcn>
-struct Cleanup {
-  Cleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
-  ~Cleanup() {
-    if (!isCxl_) { fcn_(); }
-  }
-  void cancel() { isCxl_ = true; }
+  virtual void startImpl(const int argc, const char** argv) = 0;
 
 private:
-  bool isCxl_ = false;
-  Fcn fcn_;
+  std::atomic_flag is_started_;
+  std::atomic_flag is_shutdown_initiated_;
 };
 
 } // namespace jmg
+
+#define JMG_REGISTER_SERVER(type) \
+  std::unique_ptr<jmg::Server> makeServer() { return std::make_unique<type>(); }
