@@ -91,6 +91,16 @@ cc_test(
 )
 
 cc_test(
+    name = "test_util",
+    srcs = ["test_util.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+    size = "small",
+)
+
+cc_test(
     name = "test_yaml",
     srcs = ["test_yaml.cpp"],
     deps = [
@@ -136,4 +146,3 @@ cc_binary(
         "//:jmg_server_main",
     ],
 )
-
