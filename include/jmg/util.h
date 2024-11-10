@@ -35,6 +35,7 @@
  * general purpose utilities
  */
 
+#include <optional>
 #include <tuple>
 
 #include "meta.h"
@@ -63,8 +64,47 @@ void always_emplace(std::string_view description,
               "unsupported duplicate key [" << key << "] for " << description);
 }
 
+template<typename T>
+bool pred(const T& val) { return static_cast<bool>(val); }
+
 ////////////////////////////////////////////////////////////////////////////////
-// cleanup class
+// retrieve a specific type from a parameter pack
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * function template that retrieves a value of a specific type from a
+ * parameter pack
+ */
+template<typename Tgt, typename... Args>
+Tgt getFromArgs(Args&&... args) {
+  Tgt rslt;
+  auto processArg = [&]<typename T>(T&& arg) {
+    if constexpr (decayedSameAs<T, Tgt>()) {
+      rslt = std::forward<T>(arg);
+    }
+  };
+  (processArg(args), ...);
+  return rslt;
+}
+
+template<typename Tgt, typename... Args>
+std::optional<Tgt> tryGetFromArgs(Args&&... args) {
+  if constexpr (!isMemberOfList<Tgt, meta::list<Args...>>()) {
+    return std::nullopt;
+  }
+
+  Tgt rslt;
+  auto processArg = [&]<typename T>(T&& arg) {
+    if constexpr (decayedSameAs<T, Tgt>()) {
+      rslt = std::forward<T>(arg);
+    }
+  };
+  (processArg(args), ...);
+  return rslt;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// cleanup class using RAII idiom
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
