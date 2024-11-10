@@ -139,6 +139,18 @@ TEST(MetaprogrammingTests, TestPolicyResolver) {
   }
 }
 
+TEST(MetaprogrammingTests, TestEnumConcepts) {
+  enum Enum { kFoo, kBar };
+  enum class ScopedEnum { kFoo, kBar };
+
+  const auto enumFoo = Enum::kFoo;
+  const auto scopedEnumFoo = ScopedEnum::kFoo;
+  EXPECT_TRUE(EnumT<decltype(enumFoo)>);
+  EXPECT_FALSE(ScopedEnumT<decltype(enumFoo)>);
+  EXPECT_FALSE(EnumT<decltype(scopedEnumFoo)>);
+  EXPECT_TRUE(ScopedEnumT<decltype(scopedEnumFoo)>);
+}
+
 using namespace std::literals::string_literals;
 
 TEST(MetaprogrammingTests, TestTypeNameDemangler) {
