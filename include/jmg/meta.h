@@ -240,7 +240,7 @@ using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
 } // namespace detail
 template<typename T, TypeListT Lst>
 inline constexpr bool isMemberOfList() {
-  return detail::IsMemberOf<T, Lst>{}();
+  return detail::IsMemberOf<std::remove_cvref_t<T>, DecayAll<Lst>>{}();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
