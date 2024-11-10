@@ -91,6 +91,54 @@ TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {
   EXPECT_TRUE(NonClassT<decltype(compile_time)>);
 }
 
+using namespace meta::placeholders;
+template<typename T1, typename T2>
+struct Matched : std::integral_constant<uint8_t, 0> {};
+template<typename T>
+struct Matched<T, T> : std::integral_constant<uint8_t, 1> {};
+template<typename T>
+using CountMatchesLambda =
+  meta::lambda<_a, _b, meta::lazy::plus<_a, Matched<T, _b>>>;
+template<typename T, TypeListT Lst>
+using CountMatches = meta::fold<Lst, std::integral_constant<uint8_t, 0>, CountMatchesLambda<T>>;
+
+TEST(MetaprogrammingTests, TestIsMemberOfList) {
+  using List = meta::list<int, double, string>;
+  EXPECT_TRUE((isMemberOfList<int, List>()));
+  EXPECT_FALSE((isMemberOfList<char, List>()));
+
+  // isMemberOfList should work when the list is constructed directly
+  // from a parameter pack
+  auto dbl_checker = []<typename... Args>(Args&&...) {
+    return isMemberOfList<double, meta::list<Args...>>();
+  };
+  EXPECT_TRUE(dbl_checker(20010911, 42.0, "foo"s));
+
+  // list type arguments should be decayed before checking
+  const auto dbl_val = 42.0;
+  const auto& dbl_ref = dbl_val;
+  EXPECT_TRUE(dbl_checker(20010911, dbl_ref, "foo"s));
+
+  // confirm that unique membership test works
+  EXPECT_TRUE((isUniqueMemberOfList<int, List>()));
+  EXPECT_FALSE((isUniqueMemberOfList<float, List>()));
+
+  using DuplicateList = meta::list<int, double, string, int>;
+  EXPECT_TRUE((isUniqueMemberOfList<double, DuplicateList>()));
+  EXPECT_FALSE((isUniqueMemberOfList<int, DuplicateList>()));
+
+  // confirm that scoped enums work correctly
+  enum class Enum { kFoo, kBar };
+  using ListWithEnum = meta::list<int, double, Enum, string>;
+  EXPECT_TRUE((isMemberOfList<Enum, ListWithEnum>()));
+  EXPECT_TRUE((isUniqueMemberOfList<Enum, ListWithEnum>()));
+
+  []<typename... Args>(Args&&...) {
+    using ArgsList = meta::list<Args...>;
+    EXPECT_TRUE((isMemberOfList<Enum, ArgsList>()));
+  }(15, Enum::kBar);
+}
+
 TEST(MetaprogrammingTests, TestPolicyResolver) {
   struct Policy1Tag {};
   struct DefaultPolicy1 : Policy1Tag {};

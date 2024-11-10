@@ -243,6 +243,31 @@ inline constexpr bool isMemberOfList() {
   return detail::IsMemberOf<std::remove_cvref_t<T>, DecayAll<Lst>>{}();
 }
 
+
+namespace detail
+{
+using namespace meta::placeholders;
+template<typename T1, typename T2>
+struct Matched : std::integral_constant<size_t, 0> {};
+template<typename T>
+struct Matched<T, T> : std::integral_constant<size_t, 1> {};
+
+template<typename T>
+using CountMatchesLambda =
+  meta::lambda<_a, _b, meta::lazy::plus<_a, Matched<T, _b>>>;
+
+template<typename T, TypeListT Lst>
+using CountMatches = meta::fold<Lst, std::integral_constant<size_t, 0>, CountMatchesLambda<T>>;
+} // namespace detail
+template<typename T, TypeListT Lst>
+inline constexpr bool isUniqueMemberOfList() {
+  return static_cast<size_t>(1) == detail::CountMatches<T, Lst>{};
+}
+template<typename T, TypeListT Lst>
+inline constexpr bool entryCount() {
+  return detail::CountMatches<T, Lst>{};
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // support code for using policies to configure class templates at
 // compile time
