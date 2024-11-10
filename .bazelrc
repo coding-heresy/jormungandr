@@ -4,8 +4,8 @@ common --enable_bzlmod
 
 # builds with C++20
 build --action_env=BAZEL_CXXOPTS="-std=c++20"
-build --action_env=CC=/usr/bin/gcc-12
-build --action_env=CXX=/usr/bin/g++-12
+build --action_env=CC=/usr/bin/gcc
+build --action_env=CXX=/usr/bin/g++
 
 build --features=external_include_paths
 
