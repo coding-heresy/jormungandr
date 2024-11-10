@@ -71,6 +71,16 @@ cc_test(
 )
 
 cc_test(
+    name = "test_random",
+    srcs = ["test_random.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+    size = "small",
+)
+
+cc_test(
     name = "test_safe_types",
     srcs = ["test_safe_types.cpp"],
     deps = [

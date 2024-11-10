@@ -13,6 +13,7 @@ cc_library(
         "include/jmg/preprocessor.h",
         "include/jmg/ptree/ptree.h",
         "include/jmg/quickfix/quickfix.h",
+        "include/jmg/random.h",
         "include/jmg/safe_types.h",
         "include/jmg/server.h",
         "include/jmg/system.h",
