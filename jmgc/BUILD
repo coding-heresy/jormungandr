@@ -8,6 +8,8 @@ cc_binary(
         "jmgc.cpp",
         "quickfix_spec.cpp",
         "quickfix_spec.h",
+        "spec_util.cpp",
+        "spec_util.h",
     ],
     deps = [
         "//:jmg",

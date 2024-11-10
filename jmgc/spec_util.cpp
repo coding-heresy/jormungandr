@@ -30,56 +30,28 @@
  *
  */
 
-/**
- * compiler for Jormungandr field and message definitions
- */
+#include "spec_util.h"
 
-#include <iostream>
-
-#include "jmg/cmdline.h"
-#include "jmg/meta.h"
-
-#include "jmg_spec.h"
-#include "quickfix_spec.h"
+#include "jmg/file_util.h"
+#include "jmg/ptree/ptree.h"
 
 using namespace jmg;
 using namespace std;
 
-using JmgFlag =
-  NamedParam<bool, "JMG", "file format is JMG, file type is YAML", Required>;
-using FixFlag =
-  NamedParam<bool, "FIX", "file format is FIX protocol, file type is XML",
-             Required>;
-using SrcFile =
-  PosnParam<string, "src_file", "the file to read source definitions from">;
+namespace jmg
+{
 
-int main(const int argc, const char** argv) {
-  try {
-    using CmdLine = CmdLineArgs<FixFlag, JmgFlag, SrcFile>;
-    const auto cmdline = CmdLine(argc, argv);
-
-    if (get<FixFlag>(cmdline)) {
-      // generate header file for FIX specification
-      JMG_ENFORCE_USING(CmdLineError, !get<JmgFlag>(cmdline),
-                        "at most one of [-JMG, -FIX] may be specified");
-      quickfix_spec::process(get<SrcFile>(cmdline));
-    }
-    else {
-      JMG_ENFORCE_USING(CmdLineError, get<JmgFlag>(cmdline),
-                        "at least one of [-JMG, -FIX] must be specified");
-      jmg_spec::process(get<SrcFile>(cmdline));
-    }
-    return EXIT_SUCCESS;
-  }
-  catch (const CmdLineError& e) {
-    cerr << "ERROR: " << e.what() << "\n";
-  }
-  catch (const exception& e) {
-    cerr << "exception: " << e.what() << "\n";
-  }
-  catch (...) {
-    cerr << "unexpected exception type [" << current_exception_type_name()
-         << "]\n";
-  }
-  return EXIT_FAILURE;
+boost::property_tree::ptree loadXmlData(const string_view filePath,
+                                        const string_view description) {
+  JMG_ENFORCE(filePath.ends_with(".xml"),
+              "encountered non-XML file ["
+              << filePath
+              << "] when attempting to process a specification for "
+              << description);
+  auto strm = open_file<ifstream>(filePath);
+  boost::property_tree::ptree rslt;
+  read_xml(strm, rslt);
+  return rslt;
 }
+
+} // namespace jmg

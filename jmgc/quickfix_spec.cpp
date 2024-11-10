@@ -31,6 +31,7 @@
  */
 
 #include <cstdlib>
+
 #include <iostream>
 #include <iterator>
 #include <optional>
@@ -44,6 +45,7 @@
 #include "jmg/ptree/ptree.h"
 #include "jmg/types.h"
 #include "jmg/util.h"
+#include "spec_util.h"
 
 using namespace jmg;
 using namespace std;
@@ -76,7 +78,7 @@ constexpr string_view kHeaderDef = "MsgHeader";
 constexpr string_view kTrailerDef = "MsgTrailer";
 
 ////////////////////////////////////////////////////////////////////////////////
-// Jormungandr field definitions at various levels
+// field definitions at various levels
 ////////////////////////////////////////////////////////////////////////////////
 
 // top level fields
@@ -96,18 +98,20 @@ JMG_XML_FIELD_DEF(FixFieldType, "type", string, true);
 // fields for FIX enum value  declarations
 JMG_XML_FIELD_DEF(EnumValue, "enum", string, true);
 JMG_XML_FIELD_DEF(EnumDescription, "description", string, true);
+
 ////////////////////////////////////////////////////////////////////////////////
-// fields and objects associated with FIX message definitions
+// objects associated with FIX message definitions
 ////////////////////////////////////////////////////////////////////////////////
-// object specifying a FIX field within a FIX message definition
+
+// FIX field within a FIX message definition
 using MsgField = xml::Object<FixFieldName, RequiredFlag>;
-// field referencing an array of FIX message field specifications
+// array of FIX message field specifications
 using MsgFields = xml::Elements<MsgField, xml::ElementsRequired>;
-// object containing an array of FIX message field declarations
+// array of FIX message field declarations
 using MsgFieldDefs = xml::ElementsArrayT<MsgField>;
-// object specifying a FIX message definition
+// FIX message definition
 using FixMsg = xml::Object<FixMsgName, FixMsgType, FixMsgCategory, MsgFields>;
-// field referencing an array of FIX message definitions
+// array of FIX message definitions
 using FixMsgDefs = xml::ElementsArrayT<FixMsg>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -124,8 +128,9 @@ using FixField =
 using FixFieldDefs = xml::ElementsArrayT<FixField>;
 
 // union that holds one of the following:
-//  1. an array of FIX message definitions
-//  2. an array of FIX field definitions
+//  1. an array of FIX message field definitions
+//  2. an array of FIX message definitions
+//  3. an array of FIX field definitions
 // TODO add components definitions section?
 using AnyFixDefinitionSection =
   Union<boost::property_tree::ptree, MsgFieldDefs, FixMsgDefs, FixFieldDefs>;
@@ -530,14 +535,7 @@ const Set<string> AllFixDefs::kCharFieldTypes_ = {"CHAR", "STRING", "BOOLEAN",
                                                   "MULTIPLEVALUESTRING"};
 
 void process(const string_view filePath) {
-  JMG_ENFORCE(filePath.ends_with(".xml"),
-              "encountered non-XML file ["
-                << filePath
-                << "] when attempting to process a quickfix "
-                   "specification");
-  auto strm = open_file<ifstream>(filePath);
-  boost::property_tree::ptree data;
-  read_xml(strm, data);
+  const auto data = loadXmlData(filePath, "quickfix"sv);
 
   const AllXmlElements allElements{data};
   JMG_ENFORCE(1 == allElements.size(), "quickfix XML spec should have a single "
