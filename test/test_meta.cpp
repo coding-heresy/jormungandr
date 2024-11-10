@@ -100,7 +100,8 @@ template<typename T>
 using CountMatchesLambda =
   meta::lambda<_a, _b, meta::lazy::plus<_a, Matched<T, _b>>>;
 template<typename T, TypeListT Lst>
-using CountMatches = meta::fold<Lst, std::integral_constant<uint8_t, 0>, CountMatchesLambda<T>>;
+using CountMatches =
+  meta::fold<Lst, std::integral_constant<uint8_t, 0>, CountMatchesLambda<T>>;
 
 TEST(MetaprogrammingTests, TestIsMemberOfList) {
   using List = meta::list<int, double, string>;

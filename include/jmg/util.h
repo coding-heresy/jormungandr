@@ -65,7 +65,9 @@ void always_emplace(std::string_view description,
 }
 
 template<typename T>
-bool pred(const T& val) { return static_cast<bool>(val); }
+bool pred(const T& val) {
+  return static_cast<bool>(val);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // retrieve a specific type from a parameter pack
@@ -79,9 +81,7 @@ template<typename Tgt, typename... Args>
 Tgt getFromArgs(Args&&... args) {
   Tgt rslt;
   auto processArg = [&]<typename T>(T&& arg) {
-    if constexpr (decayedSameAs<T, Tgt>()) {
-      rslt = std::forward<T>(arg);
-    }
+    if constexpr (decayedSameAs<T, Tgt>()) { rslt = std::forward<T>(arg); }
   };
   (processArg(args), ...);
   return rslt;
@@ -95,9 +95,7 @@ std::optional<Tgt> tryGetFromArgs(Args&&... args) {
 
   Tgt rslt;
   auto processArg = [&]<typename T>(T&& arg) {
-    if constexpr (decayedSameAs<T, Tgt>()) {
-      rslt = std::forward<T>(arg);
-    }
+    if constexpr (decayedSameAs<T, Tgt>()) { rslt = std::forward<T>(arg); }
   };
   (processArg(args), ...);
   return rslt;

@@ -73,6 +73,5 @@ struct IsUnion<Union<T, Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept UnionT = detail::IsUnion<T>
-{}();
+concept UnionT = detail::IsUnion<T>{}();
 } // namespace jmg

@@ -76,8 +76,7 @@ struct IsTypeList<meta::list<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept TypeListT = detail::IsTypeList<T>
-{}();
+concept TypeListT = detail::IsTypeList<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for numeric types
@@ -93,28 +92,27 @@ concept NumericT = std::integral<std::remove_cvref_t<T>>
 
 #if defined(__cpp_lib_is_scoped_enum)
 template<typename T>
-concept EnumT = std::is_enum_v<std::remove_cvref_t<T>> &&
-  !std::is_scoped_enum_v<std::remove_cvref_t<T>>;
+concept EnumT = std::is_enum_v<std::remove_cvref_t<T>>
+                && !std::is_scoped_enum_v<std::remove_cvref_t<T>>;
 
 template<typename T>
 concept ScopedEnumT = std::is_scoped_enum_v<std::remove_cvref_t<T>>;
 #else
 // TODO remove this section when the library requires c++23
-namespace detail {
-template<typename E>
-struct is_scoped_enum : std::bool_constant<requires
+namespace detail
 {
-    requires std::is_enum_v<E>;
-    requires !std::is_convertible_v<E, std::underlying_type_t<E>>;
-}>
-{};
+template<typename E>
+  struct is_scoped_enum : std::bool_constant < requires {
+  requires std::is_enum_v<E>;
+  requires !std::is_convertible_v<E, std::underlying_type_t<E>>;
+} > {};
 template<class T>
 constexpr bool is_scoped_enum_v = is_scoped_enum<T>::value;
 } // namespace detail
 
 template<typename T>
-concept EnumT = std::is_enum_v<std::remove_cvref_t<T>> &&
-  !detail::is_scoped_enum_v<std::remove_cvref_t<T>>;
+concept EnumT = std::is_enum_v<std::remove_cvref_t<T>>
+                && !detail::is_scoped_enum_v<std::remove_cvref_t<T>>;
 
 template<typename T>
 concept ScopedEnumT = detail::is_scoped_enum_v<std::remove_cvref_t<T>>;
@@ -154,20 +152,17 @@ struct IsStringLike<const char[kSz]> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept CStyleStringT = detail::IsCStyleString<std::remove_cvref_t<T>>
-{}();
+concept CStyleStringT = detail::IsCStyleString<std::remove_cvref_t<T>>{}();
 
 template<typename T>
-concept StringLikeT = detail::IsStringLike<std::remove_cvref_t<T>>
-{}();
+concept StringLikeT = detail::IsStringLike<std::remove_cvref_t<T>>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for non-bool types
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept NonBoolT = !
-std::same_as<T, bool>;
+concept NonBoolT = !std::same_as<T, bool>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for class and non-class types
@@ -177,8 +172,7 @@ template<typename T>
 concept ClassT = std::is_class_v<std::remove_cvref_t<T>>;
 
 template<typename T>
-concept NonClassT = !
-ClassT<T>;
+concept NonClassT = !ClassT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // always_false wrapper to defer evaluation of static_assert
@@ -243,7 +237,6 @@ inline constexpr bool isMemberOfList() {
   return detail::IsMemberOf<std::remove_cvref_t<T>, DecayAll<Lst>>{}();
 }
 
-
 namespace detail
 {
 using namespace meta::placeholders;
@@ -257,7 +250,8 @@ using CountMatchesLambda =
   meta::lambda<_a, _b, meta::lazy::plus<_a, Matched<T, _b>>>;
 
 template<typename T, TypeListT Lst>
-using CountMatches = meta::fold<Lst, std::integral_constant<size_t, 0>, CountMatchesLambda<T>>;
+using CountMatches =
+  meta::fold<Lst, std::integral_constant<size_t, 0>, CountMatchesLambda<T>>;
 } // namespace detail
 template<typename T, TypeListT Lst>
 inline constexpr bool isUniqueMemberOfList() {

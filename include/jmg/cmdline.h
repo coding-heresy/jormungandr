@@ -128,12 +128,10 @@ struct IsNamedParam<NamedParam<T, kName, kDesc, IsRequired>> : std::true_type {
 } // namespace detail
 
 template<typename T>
-concept PosnParamT = detail::IsPosnParam<std::remove_cvref_t<T>>
-{}();
+concept PosnParamT = detail::IsPosnParam<std::remove_cvref_t<T>>{}();
 
 template<typename T>
-concept NamedParamT = detail::IsNamedParam<std::remove_cvref_t<T>>
-{}();
+concept NamedParamT = detail::IsNamedParam<std::remove_cvref_t<T>>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // specific exception for command line processing errors that should

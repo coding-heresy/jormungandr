@@ -48,8 +48,7 @@ using namespace std;
 using JmgFlag =
   NamedParam<bool, "JMG", "file format is JMG, file type is YAML", Required>;
 using FixFlag =
-  NamedParam<bool, "FIX", "file format is FIX protocol, file type is XML",
-             Required>;
+  NamedParam<bool, "FIX", "file format is FIX protocol, file type is XML", Required>;
 using SrcFile =
   PosnParam<string, "src_file", "the file to read source definitions from">;
 

@@ -44,13 +44,9 @@ template<std::integral T>
 class RandomInRange {
 public:
   RandomInRange(const T rng_begin, const T rng_end)
-    : generator_(dev_())
-    , distribution_(rng_begin, rng_end)
-  {}
+    : generator_(dev_()), distribution_(rng_begin, rng_end) {}
 
-  T get() {
-    return distribution_(generator_);
-  }
+  T get() { return distribution_(generator_); }
 
 private:
   std::random_device dev_;

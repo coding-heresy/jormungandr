@@ -47,6 +47,8 @@ namespace jmg
 
 template<FieldDefT...>
 struct FieldGroupDef {};
+struct FieldGroupDef {
+};
 
 namespace detail
 {
@@ -57,8 +59,7 @@ struct IsFieldGroupDef<FieldGroupDef<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept FieldGroupDefT = detail::IsFieldGroupDef<T>
-{}();
+concept FieldGroupDefT = detail::IsFieldGroupDef<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains a type to being a field or a field group

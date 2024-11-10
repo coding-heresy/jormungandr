@@ -264,8 +264,7 @@ struct IsViewingArrayProxy<ViewingArrayProxy<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept ViewingArrayProxyT = detail::IsViewingArrayProxy<T>
-{}();
+concept ViewingArrayProxyT = detail::IsViewingArrayProxy<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // OwningArrayProxyT concept
@@ -280,7 +279,6 @@ struct IsOwningArrayProxy<OwningArrayProxy<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept OwningArrayProxyT = detail::IsOwningArrayProxy<T>
-{}();
+concept OwningArrayProxyT = detail::IsOwningArrayProxy<T>{}();
 
 } // namespace jmg
