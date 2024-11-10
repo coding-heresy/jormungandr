@@ -160,6 +160,13 @@
     }                                                 \
   } while (0)
 
+#define JMG_SYSTEM_PTR_RETURN(func, errMsg)             \
+  []() {                                                \
+    auto* ptr = (func);                                 \
+    JMG_ENFORCE(static_cast<bool>(ptr), errMsg);        \
+    return ptr;                                         \
+  }()
+
 ////////////////////////////////////////////////////////////////////////////////
 // helper macros for testing
 ////////////////////////////////////////////////////////////////////////////////
