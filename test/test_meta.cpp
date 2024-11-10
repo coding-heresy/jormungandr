@@ -48,6 +48,15 @@ TEST(MetaprogrammingTests, TestTypeListConcept) {
   EXPECT_FALSE(TypeListT<int>);
 }
 
+TEST(MetaprogrammingTests, TestDecayedSameAs) {
+  int val;
+  const int& ref = val;
+  using ValT = decltype(val);
+  using RefT = decltype(ref);
+  EXPECT_FALSE((std::same_as<ValT, RefT>));
+  EXPECT_TRUE((decayedSameAs<ValT, RefT>()));
+}
+
 TEST(MetaprogrammingTests, TestCStyleStringConcept) {
   EXPECT_FALSE(CStyleStringT<string>);
   EXPECT_FALSE(CStyleStringT<string_view>);

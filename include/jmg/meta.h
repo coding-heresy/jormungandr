@@ -35,6 +35,7 @@
 #include <exception>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <typeinfo>
 
 #include <cxxabi.h>
@@ -50,6 +51,16 @@ namespace jmg
 template<typename T>
 concept TypeFlagT =
   std::same_as<T, std::true_type> || std::same_as<T, std::false_type>;
+
+////////////////////////////////////////////////////////////////////////////////
+// replacement for std::same_as that removes const, volatile and
+// references
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename TLhs, typename TRhs>
+constexpr bool decayedSameAs() {
+  return std::same_as<std::remove_cvref_t<TLhs>, std::remove_cvref_t<TRhs>>;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for meta::list
@@ -173,6 +184,13 @@ template<TypeListT T>
 using safe_front = meta::_t<detail::safe_front_<T>>;
 template<TypeListT T>
 using safe_back = meta::_t<detail::safe_back_<T>>;
+
+////////////////////////////////////////////////////////////////////////////////
+// general use metafunctions
+////////////////////////////////////////////////////////////////////////////////
+
+template<TypeListT Lst>
+using DecayAll = meta::transform<Lst, meta::quote<std::remove_cvref_t>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // helper metafunctions for checking list membership
