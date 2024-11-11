@@ -17,6 +17,7 @@ cc_library(
         "include/jmg/safe_types.h",
         "include/jmg/server.h",
         "include/jmg/system.h",
+        "include/jmg/tuple_object/tuple_object.h",
         "include/jmg/types.h",
         "include/jmg/union.h",
         "include/jmg/util.h",

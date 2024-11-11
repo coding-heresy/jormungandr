@@ -112,3 +112,12 @@ TEST(SafeTypesTests, IdsAreHashable) {
 }
 
 #undef CONFIRM_DICT_HANDLING
+
+using TestSafeInt = SafeType<int32_t>;
+
+TEST(SafeTypeTests, SafeRefOfTest) {
+  int32_t val;
+  auto& unsafe_ref = val;
+  auto& safe_ref = SafeRefOf<TestSafeInt>::from(unsafe_ref);
+  EXPECT_TRUE((decayedSameAs<decltype(safe_ref), TestSafeInt>()));
+}

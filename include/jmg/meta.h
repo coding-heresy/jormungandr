@@ -219,6 +219,21 @@ using safe_back = meta::_t<detail::safe_back_<T>>;
 template<TypeListT Lst>
 using DecayAll = meta::transform<Lst, meta::quote<std::remove_cvref_t>>;
 
+namespace detail
+{
+template<typename T>
+struct ReturnTypeFor {
+  using type = std::remove_cvref_t<T>;
+};
+template<ClassT T>
+struct ReturnTypeFor<T> {
+  using type = std::remove_cvref_t<T>&;
+};
+} // namespace detail
+
+template<typename T>
+using ReturnTypeForT = detail::ReturnTypeFor<T>::type;
+
 ////////////////////////////////////////////////////////////////////////////////
 // helper metafunctions for checking list membership
 ////////////////////////////////////////////////////////////////////////////////

@@ -91,6 +91,16 @@ cc_test(
 )
 
 cc_test(
+    name = "test_tuple_object",
+    srcs = ["test_tuple_object.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+    size = "small",
+)
+
+cc_test(
     name = "test_util",
     srcs = ["test_util.cpp"],
     deps = [

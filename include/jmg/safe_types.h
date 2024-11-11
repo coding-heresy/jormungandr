@@ -108,6 +108,37 @@ auto unsafe(SafeT auto safe) { return safe.value(); }
 template<SafeT T>
 using UnsafeTypeFromT = typename T::value_type;
 
+/**
+ * convert a reference from an unsafe type to a reference to a safe
+ * type that wraps it
+ */
+template<SafeT T>
+struct SafeRefOf {
+  using Unsafe = T::value_type;
+  // convert to non-const reference
+  constexpr static T& from(Unsafe& ref) { return reinterpret_cast<T&>(ref); }
+  // convert to const reference
+  constexpr static const T& from(const Unsafe& ref) {
+    return reinterpret_cast<const T&>(ref);
+  }
+};
+
+namespace detail
+{
+template<SafeT T, typename U>
+struct ReturnTypeForSafe {
+  using type = std::remove_cvref_t<T>;
+};
+template<SafeT T, ClassT U>
+struct ReturnTypeForSafe<T, U> {
+  using type = std::remove_cvref_t<T>&;
+};
+} // namespace detail
+
+template<typename T>
+using ReturnTypeForSafeT =
+  detail::ReturnTypeForSafe<T, typename T::value_type>::type;
+
 } // namespace jmg
 
 /**

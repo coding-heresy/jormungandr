@@ -54,6 +54,9 @@ public:
 
   /**
    * delegate for jmg::get()
+   *
+   * NOTE: due to the way that yaml-cpp is implemented, returning
+   * references is very troublesome
    */
   template<RequiredField FldT>
   typename FldT::type get() const {

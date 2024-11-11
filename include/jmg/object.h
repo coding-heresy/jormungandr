@@ -156,15 +156,15 @@ inline constexpr bool isMemberOfObject() {
 
 // TODO figure out how to return string_view instead of string
 
-template<FieldDefT Fld, ObjectDefT Obj>
-typename Fld::type get(const Obj& obj)
+template<RequiredField Fld, ObjectDefT Obj>
+decltype(auto) get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
 {
   return obj.template get<Fld>();
 }
 
-template<FieldDefT Fld, ObjectDefT Obj>
-std::optional<typename Fld::type> try_get(const Obj& obj)
+template<OptionalField Fld, ObjectDefT Obj>
+decltype(auto) try_get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
 {
   return obj.template try_get<Fld>();
