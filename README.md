@@ -11,8 +11,17 @@ Experimental library that seeks to express some new ideas.
 * Users should be heavily rewarded for becoming familiar with the code base.
   * Common/standard idioms are defined and used consistently
   * Standard abbreviations are defined and used consistently
-* This is the opposite of the philosophy that code should be 'simple'
-  so that any user can quickly start using it
+
+This is the opposite of the philosophy that code should be 'simple' so
+that any user can quickly start using it. The 'simple' approach, in my
+experience, produces an outcome best described as _piles and piles of
+code_, where there is no attempt to create coherency and usage
+patterns are irregular and unpredictable.
+
+The approach taken here is that libraries should be designed as
+something akin to _domain-specific languages_ with powerful
+vocabularies to express solutions clearly and enable the reader of the
+code to quickly grasp its function
 
 ## Documentation placeholders
 ### _Safe_ Types Framework
@@ -62,8 +71,8 @@ style should be the same, and the code should look exactly (or almost
 exactly) the same in situations where the data has fields with the
 same semantics.
 
-The basic groundwork has been laid for read-only messages in the
-_standard interface_ style, and substantial work has been done on
+The basic groundwork has been laid for handline read-only messages in
+the _standard interface_ style, and substantial work has been done on
 building the facade for FIX protocol as the first implementation,
 although it hasn't yet been used to wrap the QuickFIX interface
 (commonly used in the financial industry)
@@ -86,6 +95,17 @@ have XML parsing working well in the _standard interface_ and that
 might help fill in some gaps in functionality before I sit down to
 design the YAML language, best to have all of it in place in my head
 before I start so that nothing important gets left out.
+
+#### TODO
+
+* A _standard interface_ for stream-based processing of messages that
+  is consistent with the handling of object representation
+  * The modivation here is the SAX approach to XML handling, as
+    compared to the DOM approach, which would then be analogous to the
+    existing implmementation that represents fully parsed/deserialized
+    objects
+* Creation and update of objects using the _standard interface_
+* Support for more encodings such as protobuf and JSON
 
 ### High performance event processing
 
@@ -114,11 +134,10 @@ exceptions and additions as outlined here
 
 These may or may not be controversial but they have served me well.
 
-#### If it can be **const** then it should be **const**
-
-#### Impute semantic meaning to types using the _safe_ types framework
-
-#### Use metaprogramming to make interfaces more robust
+* If it can be **const** then it should be **const**
+* Impute semantic meaning to types using the _safe_ types framework
+* Use metaprogramming to make interfaces more robust
+* **Always** use exceptions, and rely on RAII for error handling
 
 ### Standard abbreviations
 
@@ -130,7 +149,9 @@ obvious, look in this section for a defintion. When contributing code,
 please use these abbreviations where appropriate.
 
 * cncy - currency
+* ctrl - control/controller
 * def  - definition
+* fbr  - fiber
 * fld  - field
 * msg  - message
 * px   - price
@@ -139,10 +160,13 @@ please use these abbreviations where appropriate.
   will return a value from a function so as to take advantage of named
   return value optimization
 * rsp  - response
+* srvr - server
 * str  - string
 * strm - stream
 * svc  - service
-* sz   - size/length
+* sz   - size/length/count
+* tp   - time point
+* ts   - timestamp
 
 ### Some other naming standards
 
@@ -162,7 +186,7 @@ discerned when reading code
   all cases.
 
 * maybe - function name prefix indicating that the function will
-  attempt to perform an action but that whether or not the action has
+  attempt to perform an action but whether or not the action has
   actually been performed is irrelevant to subsequent program
   logic. The most common example of this is `maybeInitialize()`, whose
   name expresses the intent that the function will perform some
