@@ -33,6 +33,8 @@
 
 #include <st/st.hpp>
 
+#include "jmg/meta.h"
+
 #define JMG_NEW_SAFE_PROTOTYPE(name, ...)                      \
   template<::jmg::UnsafeT T, typename Tag = decltype([]() {})> \
   using name = ::st::type<T, Tag, __VA_ARGS__>

@@ -15,6 +15,9 @@ build --cxxopt='-Wextra'
 build --cxxopt='-Werror'
 build --cxxopt='-Wpedantic'
 build --cxxopt='-pedantic-errors'
+# TODO(bd) remove this flag when gcc correctly handles anonymous lambdas
+# ignore spurious subobject-linkage warnings
+build --cxxopt='-Wno-subobject-linkage'
 
 # need to be able to diagnose severe errors in concepts
 build --cxxopt='-fconcepts-diagnostics-depth=10'

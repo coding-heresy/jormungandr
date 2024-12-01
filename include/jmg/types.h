@@ -31,6 +31,9 @@
  */
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include <absl/container/btree_map.h>
 #include <absl/container/btree_set.h>
 #include <absl/container/flat_hash_map.h>
@@ -90,5 +93,19 @@ inline TimeZone getTimeZone(const TimeZoneName tz_name) {
                                                             << tz_name << "]");
   return rslt;
 }
+
+/**
+ * subclass of std::string_view that is guaranteed to be a view to a
+ * NULL-delimited string
+ */
+class c_string_view : public std::string_view {
+  using Base = std::string_view;
+
+public:
+  c_string_view() = default;
+  c_string_view(const char* str) : std::string_view(str) {}
+  c_string_view(const std::string& str) : std::string_view(str) {}
+  const char* c_str() const { return data(); }
+};
 
 } // namespace jmg
