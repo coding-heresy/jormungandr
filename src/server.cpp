@@ -66,4 +66,8 @@ void Server::shutdown() {
   this->shutdownImpl();
 }
 
+bool Server::isShutdownInitiated() const {
+  return is_shutdown_initiated_.test();
+}
+
 } // namespace jmg

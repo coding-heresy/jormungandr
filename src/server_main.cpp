@@ -88,6 +88,9 @@ thread awaitShutdown(Server& srvr) {
     try {
       const auto sig_set = makeSigSet(kSignals);
       int rcvd_signal;
+      ////////////////////////////////////////
+      // code blocks here until a signal is received
+      ////////////////////////////////////////
       JMG_SYSTEM_ERRNO_RETURN(sigwait(&sig_set, &rcvd_signal),
                               "failed to wait on shutdown signals");
       cout << "received shutdown signal [" << rcvd_signal << "]" << endl;

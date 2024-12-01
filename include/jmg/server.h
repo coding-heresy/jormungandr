@@ -53,6 +53,8 @@ public:
 
   void shutdown();
 
+  bool isShutdownInitiated() const;
+
   virtual void shutdownImpl() = 0;
 
   virtual void startImpl(const int argc, const char** argv) = 0;
