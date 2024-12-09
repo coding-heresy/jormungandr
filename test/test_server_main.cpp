@@ -63,6 +63,6 @@ public:
   }
 };
 
-JMG_REGISTER_SERVER(jmg::TestServerMain)
+JMG_REGISTER_SERVER(TestServerMain)
 
 } // namespace jmg

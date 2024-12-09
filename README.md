@@ -24,20 +24,103 @@ vocabularies to express solutions clearly and enable the reader of the
 code to quickly grasp its function
 
 ## Documentation placeholders
-### _Safe_ Types Framework
-TODO
 ### Return Value Overloading
-TODO
-### Simple Server Framework
 TODO
 ### Standard Interface for Objects
 TODO
 ### Command Line Parameter Handling
 TODO
 
-## Some longer-term goals
+# Subsystems
 
-### _Standard Interface_ for _Objects_
+## _Safe_ Types Framework
+
+I first had the idea for this when reading about the failure of [the
+Mars Climate Orbiter](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter),
+where it was obvious that encoding something about the sematics of the
+value in its type would have prevented the bug from getting past the
+compilation stage. At the time, boost.units seemed like the right
+solution, but investigating it further revealed 2 issues:
+
+* There is a lot of complexity related to conversions between
+  different representations of a quantity. If you are trying to
+  calculate the difference between 2 distances where one is specified
+  in millimeters and the other is specified in angstroms, then this is
+  the right library, but it's overkill for my purposes.
+
+* It is very difficult to create new systems using the tools
+  available. I tried several times and was unable to make it work.
+
+I subsequently realized that what was really needed was to carefully
+separate values with different semantics, not safely intermix
+them. For this approach, it's sufficient to employ strongly-typed
+aliases so that, for example, when populating option risk data, you
+don't accidentally pass a Delta value where the system is expecting a
+Vega. To reach this goal, it's sufficient to have strongly-typed
+aliases (which c++ doesn't have out of the box) and there are several
+libraries available which implement this functionality, so I chose
+[what I found to be the best one](https://github.com/doom/strong_type)
+and based my solution on it.
+
+### Declaring a _Safe_ type
+
+A _safe_ type is essentially a compile-time wrapper around another
+type that prevents intermixing values of the _safe_ type with the
+_wrapped_ type. In addition, a _safe_ type can declare that certain
+operations can be performed between values of the type, but any
+operations not declared _safe_ are forbidden by the compiler. Here is
+an example of declaring a _safe_ identifier that is represented as a
+32-bit unsigned integer:
+```c++
+using SafeId32 = jmg::SafeType<uint32_t,
+    st::equality_comparable, st::orderable, st::hashable>
+```
+Note that use of the `st` namespace is an artifact of the underlying
+library and may be eliminated at some point. Declaring the type to be
+`st::equality_comparable` allows 2 IDs to be compared with
+`operator==`, while `st::orderable` permits use of inequality
+operators such as `operator<`, and `st::hashable` enables the use of
+`std::hash` on the type. Basically, this declaration allows `SafeId32`
+to be used as the key type in ordered and unordered dictionaries. For
+the moment, you can check the documentation for the underlying library
+to see what other operations are available. The only other important
+aspect of _safe_ types is the ability to extract the _wrapped_ type
+value using the _unsafe_ function so that it can be used to interact
+with other types where necessary. This facility should be used very
+sparingly, and the lifetime of the unwrapped value should be
+constrained as much as possible.
+
+### TODO document the _named parameter_ idiom
+
+## Simple Server Framework
+
+It turns out that there are some complex and subtle points involved in
+creating a robust server, mostly revolving around signal handling. In
+order to avoid having a choice between a flaky server and copying a
+bunch of boilerplate code, I created a framework that wraps `main` and
+performs all of this work automatically, leaving the developer to
+simply create a subclass of the `Server` class in the `jmg` namespace,
+implement a couple of member functions and register the class with a
+simple factory mechanism. The required member functions are named
+`startImpl` and `shutdownImpl`, and the base class is pure virtual so
+the compiler will require them to be overridden. As one might expect,
+`startImpl` is where the initialization code will go, and the server
+will continue waiting for a shutdown signal even if it
+returns. `shutdownImpl`, of course, should execute the shutdown and
+cleanup code, and it will be called automatically when a shutdown
+signal is received. The expected shutdown signals are `SIGTERM` and
+`SIGINT`; all other signals are ignored where possible. Once the
+`Server` subclass has been defined, it is necessary to call the
+`JMG_REGISTER_SERVER` macro on it so that the framework can start it
+automatically. The last thing to remember is that adding
+`//:jmg_server_main` to the `deps` of the bazel `cc_binary` target for
+the server will cause it to be linked auatomatically against the
+library that declares the `main` function. A simple demo of this
+framework can seen in the file test/test_server_main.cpp.
+
+# Some longer-term goals
+
+## _Standard Interface_ for _Objects_
 
 In this case, _objects_ can be thought of as hierarchical collections
 of key/value bindings. Many concepts can be viewed in this way:
@@ -77,7 +160,7 @@ building the facade for FIX protocol as the first implementation,
 although it hasn't yet been used to wrap the QuickFIX interface
 (commonly used in the financial industry)
 
-#### Interface Definition Language
+### Interface Definition Language
 
 It can be difficult to express interfaces in the raw building blocks
 of the _standard interface_ style, and some of the potential encodings
@@ -96,7 +179,7 @@ might help fill in some gaps in functionality before I sit down to
 design the YAML language, best to have all of it in place in my head
 before I start so that nothing important gets left out.
 
-#### TODO
+### TODO
 
 * A _standard interface_ for stream-based processing of messages that
   is consistent with the handling of object representation
@@ -107,7 +190,7 @@ before I start so that nothing important gets left out.
 * Creation and update of objects using the _standard interface_
 * Support for more encodings such as protobuf and JSON
 
-### High performance event processing
+## High performance event processing
 
 Not much work here yet, but the idea is to mix the _standard
 interface_ style of messaging with a high performance event loop based
@@ -119,7 +202,7 @@ something using existing boost tools that will produce the desired
 user-facing style and then work to steadily swap out the internals for
 improved performance.
 
-## Coding standards
+# Coding standards
 
 A corollary to the philosophy of expecting that users will be familiar
 with the code base is the requirement to make the familiarization
@@ -130,7 +213,7 @@ project, especially those that may differ from expected practice.
 In general, code should follow the C++ core guidelines, with a few
 exceptions and additions as outlined here
 
-### General principles
+## General principles
 
 These may or may not be controversial but they have served me well.
 
@@ -139,7 +222,7 @@ These may or may not be controversial but they have served me well.
 * Use metaprogramming to make interfaces more robust
 * **Always** use exceptions, and rely on RAII for error handling
 
-### Standard abbreviations
+## Standard abbreviations
 
 Naming is well known to be one of the hard problems in software
 engineering. To facilitate the appropriate naming of things while
@@ -168,9 +251,9 @@ please use these abbreviations where appropriate.
 * tp   - time point
 * ts   - timestamp
 
-### Some other naming standards
+## Some other naming standards
 
-#### Common prefixes
+### Common prefixes
 
 These prefixes are intended to allow intent/function to be easily
 discerned when reading code
