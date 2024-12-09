@@ -51,10 +51,40 @@ TEST(MetaprogrammingTests, TestTypeListConcept) {
 TEST(MetaprogrammingTests, TestDecayedSameAs) {
   int val;
   const int& ref = val;
+  const int& const_ref = val;
   using ValT = decltype(val);
   using RefT = decltype(ref);
+  using ConstRefT = decltype(const_ref);
+  // ValT is not the same as reference types
   EXPECT_FALSE((std::same_as<ValT, RefT>));
+  EXPECT_FALSE((std::same_as<ValT, ConstRefT>));
+  // all combinations of fully decayed types are the same as all others
   EXPECT_TRUE((decayedSameAs<ValT, RefT>()));
+  EXPECT_TRUE((decayedSameAs<ValT, ConstRefT>()));
+  EXPECT_TRUE((decayedSameAs<RefT, ValT>()));
+  EXPECT_TRUE((decayedSameAs<ConstRefT, ValT>()));
+  EXPECT_TRUE((decayedSameAs<RefT, ConstRefT>()));
+  EXPECT_TRUE((decayedSameAs<ConstRefT, RefT>()));
+}
+
+TEST(MetaprogrammingTests, TestSameAsDecayed) {
+  int val;
+  int& ref = val;
+  const int& const_ref = val;
+  using ValT = decltype(val);
+  using RefT = decltype(ref);
+  using ConstRefT = decltype(const_ref);
+  // only ValT is the same as itself
+  EXPECT_TRUE((std::same_as<ValT, ValT>));
+  EXPECT_FALSE((std::same_as<ValT, RefT>));
+  EXPECT_FALSE((std::same_as<ValT, ConstRefT>));
+  // ValT is the same as itself and the decayed type of any reference type
+  EXPECT_TRUE((sameAsDecayed<ValT, ValT>()));
+  EXPECT_TRUE((sameAsDecayed<ValT, RefT>()));
+  EXPECT_TRUE((sameAsDecayed<ValT, ConstRefT>()));
+  // decayed types of reference types are not the same as themselves
+  EXPECT_FALSE((sameAsDecayed<RefT, RefT>()));
+  EXPECT_FALSE((sameAsDecayed<ConstRefT, ConstRefT>()));
 }
 
 TEST(MetaprogrammingTests, TestCStyleStringConcept) {

@@ -62,6 +62,11 @@ constexpr bool decayedSameAs() {
   return std::same_as<std::remove_cvref_t<TLhs>, std::remove_cvref_t<TRhs>>;
 }
 
+template<typename TLhs, typename TRhs>
+constexpr bool sameAsDecayed() {
+  return std::same_as<TLhs, std::remove_cvref_t<TRhs>>;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // concept for meta::list
 ////////////////////////////////////////////////////////////////////////////////
