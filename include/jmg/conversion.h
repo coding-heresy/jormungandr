@@ -72,7 +72,7 @@ struct ConvertImpl {
       // conversions of strings to other types
 
       // convert string-like type to itself
-      if constexpr (std::same_as<Tgt, std::remove_cvref_t<Src>>) {
+      if constexpr (sameAsDecayed<Tgt, Src>()) {
         DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
         return src;
       }
@@ -102,7 +102,7 @@ struct ConvertImpl {
       }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
-    else if constexpr (std::same_as<TimePoint, std::remove_cvref_t<Src>>) {
+    else if constexpr (sameAsDecayed<TimePoint, Src>()) {
       // conversion of TimePoint to other types or representations
 
       // convert TimePoint to string
@@ -130,13 +130,13 @@ struct ConvertImpl {
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
     // convert from EpochSeconds to TimePoint
-    else if constexpr (std::same_as<EpochSeconds, std::remove_cvref_t<Src>>) {
+    else if constexpr (sameAsDecayed<EpochSeconds, Src>()) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from EpochSeconds must target TimePoint");
       return absl::FromTimeT(unsafe(src));
     }
     // convert from timesval to TimePoint
-    else if constexpr (std::same_as<timeval, std::remove_cvref_t<Src>>) {
+    else if constexpr (sameAsDecayed<timeval, Src>()) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timeval must target TimePoint");
       return absl::FromUnixMicros([&]() {
@@ -144,7 +144,7 @@ struct ConvertImpl {
       }());
     }
     // convert from timespec to TimePoint
-    else if constexpr (std::same_as<timespec, std::remove_cvref_t<Src>>) {
+    else if constexpr (sameAsDecayed<timespec, Src>()) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timespec must target TimePoint");
       return absl::FromUnixNanos([&]() {
@@ -152,7 +152,7 @@ struct ConvertImpl {
       }());
     }
     // convert from boost::posix_time::ptime to TimePoint
-    else if constexpr (std::same_as<ptime, std::remove_cvref_t<Src>>) {
+    else if constexpr (sameAsDecayed<ptime, Src>()) {
       static_assert(
         std::same_as<TimePoint, Tgt>,
         "conversion from boost::posix_time::ptime must target TimePoint");
@@ -183,13 +183,13 @@ private:
       std::optional<std::string_view> opt_fmt;
       std::optional<TimeZone> opt_zone;
       auto processArg = [&]<typename T>(const T& arg) {
-        if constexpr (std::same_as<TimePointFmt, std::remove_cvref_t<T>>) {
+        if constexpr (sameAsDecayed<TimePointFmt, T>()) {
           JMG_ENFORCE(!opt_fmt.has_value(),
                       "more than one format specified "
                       "when converting between string and time point");
           opt_fmt = unsafe(arg);
         }
-        else if constexpr (std::same_as<TimeZone, std::remove_cvref_t<T>>) {
+        else if constexpr (sameAsDecayed<TimeZone, T>()) {
           JMG_ENFORCE(!opt_zone.has_value(),
                       "more than one time zone specified when converting "
                       "between string and time point");
