@@ -34,6 +34,7 @@
 
 #include "jmg/conversion.h"
 
+using namespace boost::posix_time;
 using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
@@ -159,6 +160,12 @@ TEST(ConversionTests, TestTimespecFromTimePoint) {
   EXPECT_EQ(expected.tv_nsec, actual.tv_nsec);
 }
 
+TEST(ConversionTests, TestPosixTimeFromTimePoint) {
+  ptime actual = from(kTimePoint);
+  const auto expected = from_time_t(kTimePointSeconds);
+  EXPECT_EQ(expected, actual);
+}
+
 TEST(ConversionTests, TestTimePointFromEpochSeconds) {
   TimePoint actual = from(kEpochSeconds);
   const auto expected = kTimePoint;
@@ -177,6 +184,13 @@ TEST(ConversionTests, TestTimePointFromTimespec) {
   using Timespec = struct timespec;
   auto ts_tp = Timespec{.tv_sec = kTimePointSeconds, .tv_nsec = 0};
   TimePoint actual = from(ts_tp);
+  const auto expected = kTimePoint;
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(ConversionTests, TestTimePointFromPosixTime) {
+  const auto pt_tp = from_time_t(kTimePointSeconds);
+  TimePoint actual = from(pt_tp);
   const auto expected = kTimePoint;
   EXPECT_EQ(expected, actual);
 }
