@@ -42,6 +42,9 @@ using namespace std::literals::string_literals;
 // tests of 'from' function
 ////////////////////////////////////////////////////////////////////////////////
 
+////////////////////
+// conversions between string types
+
 TEST(ConversionTests, TestStringFromStringView) {
   const auto src = "foo"sv;
   EXPECT_EQ("foo"s, static_cast<string>(from(src)));
@@ -62,6 +65,9 @@ TEST(ConversionTests, TestStringFromCompileTimeCStyleString) {
   EXPECT_EQ("foo"s, static_cast<string>(from(src)));
 }
 
+////////////////////
+// conversions between numeric and string types
+
 TEST(ConversionTests, TestIntFromString) {
   EXPECT_EQ(42, static_cast<int>(from("42")));
 }
@@ -70,7 +76,7 @@ TEST(ConversionTests, TestDoubleFromString) {
   EXPECT_DOUBLE_EQ(0.5, static_cast<double>(from("0.5")));
 }
 
-TEST(ConversionTests, TestNumericDeclarations) {
+TEST(ConversionTests, TestNumericFromStringView) {
   const auto src = "42"sv;
   const int intVal = from(src);
   EXPECT_EQ(42, intVal);
@@ -78,18 +84,22 @@ TEST(ConversionTests, TestNumericDeclarations) {
   EXPECT_DOUBLE_EQ(42.0, dblVal);
 }
 
-TEST(ConversionTests, TestFailedIntFromString) {
+TEST(ConversionTests, TestFailedIntFromStringViewThrowsRuntimeError) {
   const auto src = "a"sv;
   EXPECT_THROW([[maybe_unused]] int bad = from(src), std::runtime_error);
 }
 
+////////////////////
+// conversions between time points and string types
+
+const auto kFmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
+const auto kUsEasternZone = getTimeZone(TimeZoneName("America/New_York"));
+
 TEST(ConversionTests, TestTimePointFromString) {
   const auto src = "2001-09-11 09:00:00"sv;
-  const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
-  const auto tz = getTimeZone(TimeZoneName("America/New_York"));
-  TimePoint us_eastern = from(src, fmt, tz);
+  TimePoint us_eastern = from(src, kFmt, kUsEasternZone);
   // conversion defaults to UTC timezone
-  TimePoint utc = from(src, fmt);
+  TimePoint utc = from(src, kFmt);
   // for time points generated using the same "local clock" time,
   // the UTC time point will be earlier than the US/Eastern time
   // point
@@ -97,14 +107,77 @@ TEST(ConversionTests, TestTimePointFromString) {
 }
 
 TEST(ConversionTests, TestStringFromTimePoint) {
-  const auto tz = getTimeZone(TimeZoneName("America/New_York"));
-  const auto tp = [&]() {
-    TimePoint rslt = from("2007-06-25T09:00:00", kIso8601Fmt, tz);
+  const auto tp = []() {
+    // NOTE: also testing ISO 8601 format from standard constant
+    TimePoint rslt = from("2007-06-25T09:00:00", kIso8601Fmt, kUsEasternZone);
     return rslt;
   }();
-  const auto fmt = TimePointFmt("%Y-%m-%d %H:%M:%S");
-  const std::string actual = from(tp, fmt, tz);
-  const auto expected = "2007-06-25 09:00:00"s;
+  {
+    const std::string actual_us_eastern = from(tp, kFmt, kUsEasternZone);
+    const auto expected = "2007-06-25 09:00:00"s;
+    EXPECT_EQ(expected, actual_us_eastern);
+  }
+  {
+    const std::string actual_gmt = from(tp, kFmt);
+    const auto expected = "2007-06-25 13:00:00"s;
+    EXPECT_EQ(expected, actual_gmt);
+  }
+}
+
+////////////////////
+// conversions between various time point types
+
+const auto kTimePoint = []() -> TimePoint {
+  // NOTE: static_cast will force the appropriate return type
+  return static_cast<TimePoint>(from("2001-09-11T09:00:00", kIso8601Fmt,
+                                     kUsEasternZone));
+}();
+
+// NOTE: the number of seconds corresponding to kTimePoint
+const auto kTimePointSeconds = time_t(1000213200);
+const auto kEpochSeconds = EpochSeconds(kTimePointSeconds);
+
+TEST(ConversionTests, TestEpochSecondsFromTimePoint) {
+  EpochSeconds actual = from(kTimePoint);
+  const auto expected = kEpochSeconds;
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(ConversionTests, TestTimevalFromTimePoint) {
+  using Timeval = struct timeval;
+  Timeval actual = from(kTimePoint);
+  const auto expected = Timeval{.tv_sec = kTimePointSeconds, .tv_usec = 0};
+  EXPECT_EQ(expected.tv_sec, actual.tv_sec);
+  EXPECT_EQ(expected.tv_usec, actual.tv_usec);
+}
+
+TEST(ConversionTests, TestTimespecFromTimePoint) {
+  using Timespec = struct timespec;
+  Timespec actual = from(kTimePoint);
+  const auto expected = Timespec{.tv_sec = kTimePointSeconds, .tv_nsec = 0};
+  EXPECT_EQ(expected.tv_sec, actual.tv_sec);
+  EXPECT_EQ(expected.tv_nsec, actual.tv_nsec);
+}
+
+TEST(ConversionTests, TestTimePointFromEpochSeconds) {
+  TimePoint actual = from(kEpochSeconds);
+  const auto expected = kTimePoint;
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(ConversionTests, TestTimePointFromTimeval) {
+  using Timeval = struct timeval;
+  auto tv_tp = Timeval{.tv_sec = kTimePointSeconds, .tv_usec = 0};
+  TimePoint actual = from(tv_tp);
+  const auto expected = kTimePoint;
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(ConversionTests, TestTimePointFromTimespec) {
+  using Timespec = struct timespec;
+  auto ts_tp = Timespec{.tv_sec = kTimePointSeconds, .tv_nsec = 0};
+  TimePoint actual = from(ts_tp);
+  const auto expected = kTimePoint;
   EXPECT_EQ(expected, actual);
 }
 

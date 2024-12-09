@@ -106,6 +106,10 @@ struct ConvertImpl {
       if constexpr (std::same_as<std::string, Tgt>) {
         return timePoint2Str(src, std::forward<Extras>(extras)...);
       }
+      // convert TimePoint to EpochSeconds
+      else if constexpr (std::same_as<EpochSeconds, Tgt>) {
+        return EpochSeconds(absl::ToTimeT(src));
+      }
       // convert TimePoint to timeval
       else if constexpr (std::same_as<timeval, Tgt>) {
         return absl::ToTimeval(src);
@@ -117,13 +121,28 @@ struct ConvertImpl {
       // TODO convert TimePoint to boost::posix_time::ptime
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
-
-    // TODO convert from timeval to TimePoint
-
-    // TODO convert from timespec to TimePoint
-
-    // TODO convert from safe type for time_t (AKA seconds since
-    // epoch) to TimePoint
+    // convert from EpochSeconds to TimePoint
+    else if constexpr (std::same_as<EpochSeconds, std::remove_cvref_t<Src>>) {
+      static_assert(std::same_as<TimePoint, Tgt>,
+                    "conversion from EpochSeconds must target TimePoint");
+      return TimePoint(absl::FromTimeT(unsafe(src)));
+    }
+    // convert from timesval to TimePoint
+    else if constexpr (std::same_as<timeval, std::remove_cvref_t<Src>>) {
+      static_assert(std::same_as<TimePoint, Tgt>,
+                    "conversion from timeval must target TimePoint");
+      return TimePoint(absl::FromUnixMicros([&]() {
+        return (src.tv_sec * 1000000) + src.tv_usec;
+      }()));
+    }
+    // convert from timespec to TimePoint
+    else if constexpr (std::same_as<timespec, std::remove_cvref_t<Src>>) {
+      static_assert(std::same_as<TimePoint, Tgt>,
+                    "conversion from timespec must target TimePoint");
+      return TimePoint(absl::FromUnixNanos([&]() {
+        return (src.tv_sec * 1000000000) + src.tv_nsec;
+      }()));
+    }
 
     // TODO convert from std::chrono::duration to Duration
 

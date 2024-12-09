@@ -31,6 +31,10 @@
  */
 #pragma once
 
+#include <sys/time.h>
+
+#include <ctime>
+
 #include <string>
 #include <string_view>
 
@@ -70,11 +74,15 @@ using OrderedSet = absl::btree_set<Ts...>;
 
 using TimePoint = absl::Time;
 using TimeZone = absl::TimeZone;
-// TODO use std::chrono duration instead of absl::Duration?
+// TODO(bd) use std::chrono duration instead of absl::Duration?
 using Duration = absl::Duration;
 
 using TimePointFmt = SafeType<std::string_view>;
 using TimeZoneName = SafeType<std::string_view>;
+
+// standard POSIX epoch is 1970-01-01
+using EpochSeconds = SafeType<time_t, st::arithmetic>;
+// TODO(bd) add a type for Microsoft seconds since epoch as double
 
 // Two formats for ISO 8601: with and without embedded time zone
 // specifier
@@ -88,11 +96,14 @@ inline TimeZone utcTimeZone() {
 
 inline TimeZone getTimeZone(const TimeZoneName tz_name) {
   TimeZone rslt;
-  JMG_ENFORCE(absl::LoadTimeZone(unsafe(tz_name), &rslt), "unable to load "
-                                                          "time zone ["
-                                                            << tz_name << "]");
+  JMG_ENFORCE(absl::LoadTimeZone(unsafe(tz_name), &rslt),
+              "unable to load time zone [" << tz_name << "]");
   return rslt;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// strings
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * subclass of std::string_view that is guaranteed to be a view to a
