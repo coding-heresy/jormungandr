@@ -155,6 +155,29 @@ cc_test(
     tags = ["manual"],
 )
 
+genrule(
+    name = 'jmg_example_header',
+    visibility = ['//visibility:public'],
+    srcs = [
+        '//jmgc:jmgc',
+        'data/example.yaml',
+    ],
+    outs = ['jmg_example.h'],
+    cmd = "$(location //jmgc:jmgc) -JMG $(location data/example.yaml) > $@",
+)
+
+cc_test(
+    name = "test_jmg_example",
+    srcs = [
+        ":jmg_example_header",
+        "test_jmg_example.cpp"
+    ],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+)
+
 cc_binary(
     name = "test_server_main",
     visibility = ["//visibility:public"],

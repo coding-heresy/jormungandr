@@ -30,6 +30,7 @@
  *
  */
 
+#include <absl/strings/str_join.h>
 #include <yaml-cpp/yaml.h>
 
 #include "jmg/file_util.h"
@@ -111,6 +112,8 @@ class AllJmgDefs {
     bool required;
   };
 
+  using StringLists = Dict<string, vector<string>>;
+
 public:
   AllJmgDefs(const Spec& spec) {
     package_ = get<Package>(spec);
@@ -126,7 +129,7 @@ public:
           JMG_ENFORCE(cncpt.has_value(),
                       "type alias must be associated with a concept");
           always_emplace("type aliases", types_, def_name,
-                         StrongAlias(type_name, *cncpt));
+                         StrongAlias(correctedTypeName(type_name), *cncpt));
         }
         else if (kEnum == type_name) {
           const auto& enumerations = try_get<EnumValues>(def);
@@ -174,48 +177,67 @@ public:
     // process groups
     const auto groups = try_get<Groups>(spec);
     if (groups.has_value()) {
-      for (const auto& group : *groups) {
-        const auto group_name = get<Name>(group);
-        const auto& group_fields = get<ObjGrpFields>(group);
-        vector<string> fields;
-        fields.reserve(group_fields.size());
-        for (const auto& fld : group_fields) {
-          const auto field_name = get<Name>(fld);
-          const auto field_type = get<Type>(fld);
-          const auto field_sub_type = try_get<SubType>(fld);
-          const auto field_required = try_get<RequiredFlag>(fld);
-          // fields default to being required
-          const bool required =
-            field_required.has_value() ? *field_required : true;
-          // check if the field already exists
-          const auto& entry = fields_.find(field_name);
-          if (entry != fields_.end()) {
-            // verify that the details match the existing field
-            verify_field(field_name, field_type, field_sub_type, required,
-                         value_of(*entry));
-          }
-          else {
-            // verify that types are valid
-            verify_field_type(field_name, field_type);
-            if (field_sub_type.has_value()) {
-              verify_field_type(field_name, *field_sub_type);
-            }
-            // add the entry for this field
-            always_emplace("fields", fields_, field_name,
-                           DefField{.type_name = field_type,
-                                    .sub_type_name = field_sub_type,
-                                    .required = required});
-          }
-          fields.push_back(std::move(field_name));
-        }
-        always_emplace("groups", groups_, group_name, std::move(fields));
-      }
+      groups_ = processGroupsOrObjects("groups", *groups);
     }
 
     // process objects
-    for (const auto& object : get<Objects>(spec)) {
-      // TODO(bd) process each object
+    objects_ = processGroupsOrObjects("objects", jmg::get<Objects>(spec));
+  }
+
+  void emit() const {
+    cout << "//////////////////////////////////////////////////////////////////"
+            "//////////////\n";
+    cout << "// WARNING: this file is generated automatically by jmgc and "
+            "should not be\n";
+    cout << "// edited manually\n";
+    cout << "//////////////////////////////////////////////////////////////////"
+            "//////////////\n";
+    cout << "#pragma once\n\n";
+    cout << "#include \"jmg/safe_types.h\"\n";
+    // TODO(bd) allow encodings other than yaml
+    cout << "#include \"jmg/yaml/yaml.h\"\n";
+    cout << "\nnamespace " << package_ << "\n{\n";
+
+    // emit type aliases
+    cout << "////////////////////\n// types\n\n";
+    for (const auto& [name, alias] : types_) { emitType(name, alias); }
+
+    // emit enumerations
+    cout << "////////////////////\n// enumerations\n\n";
+    for (const auto& [name, enum_def] : enums_) { emitEnum(name, enum_def); }
+
+    // emit fields
+    cout << "////////////////////\n// fields\n\n";
+    for (const auto& [name, field_def] : fields_) {
+      emitField(name, field_def);
     }
+
+    // emit groups
+    cout << "////////////////////\n// groups\n\n";
+    for (const auto& [name, fields] : groups_) {
+      cout << "using " << name << " = jmg::FieldGroupDef<"
+           << absl::StrJoin(fields, ", ") << ">;\n\n";
+    }
+
+    // emit objects
+    cout << "////////////////////\n// objects\n\n";
+    for (const auto& [name, fields] : objects_) {
+      // TODO(bd) allow encodings other than yaml
+      cout << "using " << name << " = jmg::yaml::Object<"
+           << absl::StrJoin(fields, ", ") << ">;\n\n";
+    }
+
+    cout << "} // namespace " << package_ << "\n";
+  }
+
+private:
+  ////////////////////////////////////////////////////////////////////////////////
+  // member functions
+  ////////////////////////////////////////////////////////////////////////////////
+
+  static string correctedTypeName(const string_view type_name) {
+    if ("string" == type_name) { return absl::StrCat("std::", type_name); }
+    return string(type_name.data(), type_name.size());
   }
 
   /**
@@ -231,7 +253,7 @@ public:
       JMG_ENFORCE(kArithmeticConcept == alias.cncpt,
                   "unsupported concept ["
                     << alias.cncpt << "] specified for type [" << name << "]");
-      cout << "st::aritmetic>;\n\n";
+      cout << "st::arithmetic>;\n\n";
     }
   }
 
@@ -255,16 +277,18 @@ public:
    * emit a single field
    */
   static void emitField(const string_view name, const DefField& field_def) {
-    cout << "using " << name << " = FieldDef<";
+    cout << "using " << name << " = jmg::FieldDef<";
     if ("array" == field_def.type_name) {
       JMG_ENFORCE(field_def.sub_type_name.has_value(),
                   "field [" << name << "] is an array but has no subtype");
       // TODO(bd) allow encodings other than yaml
-      cout << "yaml::ArrayT<" << *(field_def.sub_type_name) << ">";
+      cout << "jmg::yaml::ArrayT<"
+           << correctedTypeName(*(field_def.sub_type_name)) << ">";
     }
     else { cout << field_def.type_name; }
     cout << ", \"" << name << "\", "
-         << (field_def.required ? "Required"sv : "Optional"sv) << ">;\n\n";
+         << (field_def.required ? "jmg::Required"sv : "jmg::Optional"sv)
+         << ">;\n\n";
   }
 
   /**
@@ -303,46 +327,61 @@ public:
    * verify that a type or subtype of a field was previously declared
    */
   void verify_field_type(const string_view fld_name,
-                         const string_view fld_type) {
+                         const string_view fld_type,
+                         StringLists internally_declared) {
     JMG_ENFORCE((primitive_types.contains(fld_type) || types_.contains(fld_type)
-                 || enums_.contains(fld_type) || objects_.contains(fld_type)),
+                 || enums_.contains(fld_type) || objects_.contains(fld_type)
+                 || internally_declared.contains(fld_type)),
                 "field [" << fld_name << "] has type (or subtype) [" << fld_type
                           << "] that was not previously declared");
   }
 
-  void emit() const {
-    cout << "//////////////////////////////////////////////////////////////////"
-            "//////////////\n";
-    cout << "// WARNING: this file is generated automatically by jmgc and "
-            "should not be\n";
-    cout << "// edited manually\n";
-    cout << "//////////////////////////////////////////////////////////////////"
-            "//////////////\n";
-    cout << "#pragma once\n\n";
-    cout << "#include \"jmg/safe_types.h\"\n";
-    // TODO(bd) allow encodings other than yaml
-    cout << "#include \"jmg/yaml/yaml.h\"\n";
-    cout << "\nnamespace " << package_ << "\n{\n";
-
-    // emit type aliases
-    for (const auto& [name, alias] : types_) { emitType(name, alias); }
-
-    // emit enumerations
-    for (const auto& [name, enum_def] : enums_) { emitEnum(name, enum_def); }
-
-    // emit fields
-    for (const auto& [name, field_def] : fields_) {
-      emitField(name, field_def);
+  StringLists processGroupsOrObjects(const string_view description,
+                                     const ObjGrpList& spec) {
+    StringLists rslt;
+    for (const auto& sub_spec : spec) {
+      const auto spec_name = get<Name>(sub_spec);
+      const auto& spec_fields = get<ObjGrpFields>(sub_spec);
+      vector<string> fields;
+      fields.reserve(spec_fields.size());
+      for (const auto& fld : spec_fields) {
+        const auto field_name = get<Name>(fld);
+        const auto field_type = get<Type>(fld);
+        const auto field_sub_type = try_get<SubType>(fld);
+        const auto field_required = try_get<RequiredFlag>(fld);
+        // fields default to being required
+        const bool required =
+          field_required.has_value() ? *field_required : true;
+        // check if the field already exists
+        const auto& entry = fields_.find(field_name);
+        if (entry != fields_.end()) {
+          // verify that the details match the existing field
+          verify_field(field_name, field_type, field_sub_type, required,
+                       value_of(*entry));
+        }
+        else {
+          // verify that types are valid
+          verify_field_type(field_name, field_type, rslt);
+          if (field_sub_type.has_value()) {
+            verify_field_type(field_name, *field_sub_type, rslt);
+          }
+          // add the entry for this field
+          always_emplace("fields", fields_, field_name,
+                         DefField{.type_name = correctedTypeName(field_type),
+                                  .sub_type_name = field_sub_type,
+                                  .required = required});
+        }
+        fields.push_back(std::move(field_name));
+      }
+      always_emplace(description, rslt, spec_name, std::move(fields));
     }
-
-    // TODO(bd) emit groups
-
-    // TODO(bd) emit objects
-
-    cout << "} // namespace " << package_ << "\n";
+    return rslt;
   }
 
-private:
+  ////////////////////////////////////////////////////////////////////////////////
+  // constants
+  ////////////////////////////////////////////////////////////////////////////////
+
   static constexpr string_view kEnum = "enum";
   static constexpr string_view kArray = "array";
   static constexpr string_view kUnion = "array";
@@ -353,12 +392,16 @@ private:
   static const Set<string> allowed_enum_ul_types;
   static const Set<string> allowed_concepts;
 
+  ////////////////////////////////////////////////////////////////////////////////
+  // data members
+  ////////////////////////////////////////////////////////////////////////////////
+
   string package_;
   Dict<string, StrongAlias> types_;
   Dict<string, DefEnum> enums_;
   Dict<string, DefField> fields_;
-  Dict<string, vector<string>> groups_;
-  Dict<string, vector<string>> objects_;
+  StringLists groups_;
+  StringLists objects_;
 };
 
 const Set<string> AllJmgDefs::primitive_types = {"array"s,              //

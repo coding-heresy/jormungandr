@@ -1,0 +1,66 @@
+package: "example"
+types:
+  - name: "ZipCode"
+    type: "string"
+    concept: key
+  - name: "Age"
+    type: "uint8_t"
+    concept: arithmetic
+  - name: "TestEnum"
+    type: "enum"
+    values:
+      - name: "Foo"
+        value: 0
+      - name: "Bar"
+        value: 1
+  - name: "TestEnumWithUlType"
+    type: "enum"
+    underlying_type: "uint8_t"
+    values:
+      - name: "bazz"
+        value: 10
+      - name: "blub"
+        value: 100
+groups:
+  - name: "Address"
+    fields:
+    - name: "Number"
+      type: "string"
+      required: true
+    - name: "Street"
+      type: "string"
+      required: true
+    - name: "Apartment"
+      type: "string"
+      required: false
+    - name: "City"
+      type: "string"
+      required: true
+    - name: "State"
+      type: "string"
+      required: true
+    - name: "Zip"
+      type: "string"
+      required: true
+objects:
+  - name: "Person"
+    fields:
+      - name: "FirstName"
+        type: "string"
+        required: true
+      - name: "LastName"
+        type: "string"
+        required: true
+      - name: "MiddleName"
+        type: "string"
+        required: false
+      # TODO(bd) insert Address group here
+      - name: "PersonAge"
+        type: "Age"
+        required: true
+  # TODO(bd) fix jmgc to handle dependencies in declarations
+  #- name: "People"
+  #  fields:
+  #    - name: "Values"
+  #      type: "array"
+  #      subtype: "Person"
