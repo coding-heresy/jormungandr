@@ -39,6 +39,10 @@
 namespace jmg
 {
 
+////////////////////////////////////////////////////////////////////////////////
+// declarations of iterator types
+////////////////////////////////////////////////////////////////////////////////
+
 /**
  * proxy for a const_iterator type that returns a stashed proxy to the
  * actual value in the container when dereferenced
@@ -135,6 +139,10 @@ protected:
   ProxiedItrT itr_;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// iterator policy types
+////////////////////////////////////////////////////////////////////////////////
+
 /**
  * tag that supports using the PolicyResolverT infrastructure to allow
  * specification of policies for how to iterate over the elements of a
@@ -182,6 +190,15 @@ struct ProxiedItrPolicy : ItrPolicyTag {
   }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// size retrieval policy types
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * tag that supports using the PolicyResolverT infrastructure to allow
+ * specification of policies for how to retrieve the size of a
+ * container proxied as an array
+ */
 struct SizePolicyTag {};
 
 /**
@@ -192,6 +209,10 @@ template<typename SrcContainerT>
 struct DefaultSizePolicy : SizePolicyTag {
   static size_t size(const SrcContainerT* src) { return src->size(); }
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// array proxy types
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * class template for a proxy that can be used to wrap some container

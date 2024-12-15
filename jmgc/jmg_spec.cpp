@@ -59,8 +59,7 @@ using RequiredFlag = FieldDef<bool, "required", Optional>;
 using EnumValue = FieldDef<int64_t, "value", Required>;
 using EnumUlType = FieldDef<string, "underlying_type", Optional>;
 using Enumeration = yaml::Object<Name, EnumValue>;
-using Enumerations = yaml::ArrayT<Enumeration>;
-using EnumValues = FieldDef<Enumerations, "values", Optional>;
+using EnumValues = FieldDef<yaml::Array<Enumeration>, "values", Optional>;
 
 // objects in the 'types' section
 using TypeDef =
@@ -68,25 +67,17 @@ using TypeDef =
 
 // objects in the 'groups' and 'objects' sections
 using ObjGrpField = yaml::Object<Name, Type, SubType, RequiredFlag>;
-using Fields = yaml::ArrayT<ObjGrpField>;
-using ObjGrpFields = FieldDef<Fields, "fields", Required>;
+using ObjGrpFields = FieldDef<yaml::Array<ObjGrpField>, "fields", Required>;
 
 // objects in the 'groups' and 'objects' sections have a name and a
 // list of fields
 using ObjGrp = yaml::Object<Name, ObjGrpFields>;
 
-// TypesList represents the contents of the 'types' section
-using TypesList = yaml::ArrayT<TypeDef>;
-
-// ObjGrpList represents the contents of the 'groups' and 'objects'
-// sections
-using ObjGrpList = yaml::ArrayT<ObjGrp>;
-
 // top-level fields
 using Package = FieldDef<string, "package", Required>;
-using Types = FieldDef<TypesList, "types", Optional>;
-using Groups = FieldDef<ObjGrpList, "groups", Optional>;
-using Objects = FieldDef<ObjGrpList, "objects", Required>;
+using Types = FieldDef<yaml::Array<TypeDef>, "types", Optional>;
+using Groups = FieldDef<yaml::Array<ObjGrp>, "groups", Optional>;
+using Objects = FieldDef<yaml::Array<ObjGrp>, "objects", Required>;
 
 using Spec = yaml::Object<Package, Types, Groups, Objects>;
 
@@ -282,7 +273,7 @@ private:
       JMG_ENFORCE(field_def.sub_type_name.has_value(),
                   "field [" << name << "] is an array but has no subtype");
       // TODO(bd) allow encodings other than yaml
-      cout << "jmg::yaml::ArrayT<"
+      cout << "jmg::yaml::Array<"
            << correctedTypeName(*(field_def.sub_type_name)) << ">";
     }
     else { cout << field_def.type_name; }
@@ -336,8 +327,13 @@ private:
                           << "] that was not previously declared");
   }
 
+  /**
+   * process the specs for both groups and objects
+   *
+   * NOTE: the format is the same for both
+   */
   StringLists processGroupsOrObjects(const string_view description,
-                                     const ObjGrpList& spec) {
+                                     const yaml::Array<ObjGrp>& spec) {
     StringLists rslt;
     for (const auto& sub_spec : spec) {
       const auto spec_name = get<Name>(sub_spec);

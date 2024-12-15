@@ -112,7 +112,7 @@ struct ArrayTypeFactory {
 };
 } // namespace detail
 template<ObjectDefT Obj>
-using ArrayT = meta::_t<detail::ArrayTypeFactory<Obj>>;
+using Array = meta::_t<detail::ArrayTypeFactory<Obj>>;
 
 } // namespace yaml
 } // namespace jmg

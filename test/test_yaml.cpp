@@ -45,7 +45,7 @@ using Id32 = SafeId32<>;
 
 using InnerField = FieldDef<int, "inner", Required>;
 using InnerObject = yaml::Object<InnerField>;
-using ComplexArrayProxy = yaml::ArrayT<InnerObject>;
+using ComplexArrayProxy = yaml::Array<InnerObject>;
 
 using StrField = FieldDef<string, "str", Required>;
 using IntField = FieldDef<int, "int", Required>;
