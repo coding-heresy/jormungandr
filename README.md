@@ -162,22 +162,38 @@ although it hasn't yet been used to wrap the QuickFIX interface
 
 ### Interface Definition Language
 
-It can be difficult to express interfaces in the raw building blocks
-of the _standard interface_ style, and some of the potential encodings
-also use IDL compilers to generate code (e.g. protobuf), which is a
-very effective technique. I envision creating and interface definition
-language in YAML (no need to build a separate parser for this) that
-will have a compiler to generate _standard interface_ definitions (and
-possibly even definitions in other IDLs so that the JMG definition can
-be the source of ground truth). This will be **jmgc**, and there has
-been initial work already to parse the QuickFIX XML definitions and
-generate standard interface code from those. The next step here will
-be to design the YAML language for JMG and implement that, although I
-might also take a detour into the SBE specification since I already
-have XML parsing working well in the _standard interface_ and that
-might help fill in some gaps in functionality before I sit down to
-design the YAML language, best to have all of it in place in my head
-before I start so that nothing important gets left out.
+It is complex and difficult to express interfaces in the raw building
+blocks of the _standard interface_ style, and some of the potential
+encodings also use IDL compilers to generate code (e.g. protobuf),
+which is a very effective technique. In order to simplify generation
+and conversion of interfaces, Jormungandr has a simple IDL called
+JMG that is specified in YAML to avoid needing to write a separate
+parser, and a compiler named **jmgc** that generates 'stubs'.
+
+#### JMG IDL language specification
+
+**TODO**
+
+#### jmgc - IDL compiler
+
+The compiler generates 'stub' definition header files from IDL
+specifications. It currently works for definitions written in the JMG
+language (although this is still very much a work in progress), and
+also has limited support for QuickFIX XML definitions (written as a
+proof of concept without much support or testing for intracting with
+actual FIX messages).
+
+One experimental idea under consideration here is to have **jmgc**
+support generating specificiations in other IDLs where Jormungandr has
+support for wrapping their native objects. An example would be
+protobuf and the idea is to have _standard interface_ wrapper support
+for protobuf objects and **jmgc** support for generating .proto
+files. This would allow the source of ground truth for the system
+protocol to be JMG language and would be valuable even if Jormungandr
+has direct implementation of serialization and deserialization of
+protobuf wire format (under consideration) because protoc could still
+be used to generate the bindings for other languages such as Java or
+Python.
 
 ### TODO
 
@@ -188,6 +204,10 @@ before I start so that nothing important gets left out.
     existing implmementation that represents fully parsed/deserialized
     objects
 * Creation and update of objects using the _standard interface_
+* Finish parsing and generation for SBE specification (some partial
+  work has been done here)
+* Develop a plugin architecture for **jmgc** to simplify adding
+  support for new _standard interface_ wrappers and other IDLs?
 * Support for more encodings such as protobuf and JSON
 
 ## High performance event processing
