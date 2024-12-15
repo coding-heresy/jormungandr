@@ -22,6 +22,9 @@ build --cxxopt='-Wno-subobject-linkage'
 # need to be able to diagnose severe errors in concepts
 build --cxxopt='-fconcepts-diagnostics-depth=10'
 
+# use nanosecond precision with boost
+build --cxxopt='-DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG'
+
 # debug builds
 build:dbg --cxxopt='-Og'
 build:dbg --cxxopt='-fno-inline'

@@ -134,7 +134,7 @@
  * on error, or gethostbyname_r, which returns nullptr on error but
  * uses h_errno to report the cause)
  */
-#define JMG_CALL_SYSTEM_FUNC(func, errVal, errMsg)                          \
+#define JMG_CALL_SYSFCN(func, errVal, errMsg)                               \
   do {                                                                      \
     if (JMG_UNLIKELY(errVal == (func))) { JMG_THROW_SYSTEM_ERROR(errMsg); } \
   } while (0)
@@ -145,7 +145,7 @@
  * std::system_error if it fails
  */
 #define JMG_SYSTEM(func, errMsg) \
-  do { JMG_CALL_SYSTEM_FUNC(func, -1, errMsg); } while (0)
+  do { JMG_CALL_SYSFCN(func, -1, errMsg); } while (0)
 
 /**
  * call a POSIX-style system function that returns 0 on success and
@@ -160,7 +160,7 @@
     }                                                 \
   } while (0)
 
-#define JMG_SYSTEM_PTR_RETURN(func, errMsg)      \
+#define JMG_SYSFCN_PTR_RETURN(func, errMsg)      \
   []() {                                         \
     auto* ptr = (func);                          \
     JMG_ENFORCE(static_cast<bool>(ptr), errMsg); \
