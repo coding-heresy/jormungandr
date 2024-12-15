@@ -47,8 +47,6 @@ namespace jmg
 
 template<FieldDefT...>
 struct FieldGroupDef {};
-struct FieldGroupDef {
-};
 
 namespace detail
 {
