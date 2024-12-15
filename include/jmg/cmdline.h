@@ -140,8 +140,18 @@ concept NamedParamT = detail::IsNamedParam<std::remove_cvref_t<T>>{}();
 
 JMG_DEFINE_RUNTIME_EXCEPTION(CmdLineError);
 
+/**
+ * macro for enforcing some predicate about a command line parse by
+ * throwing CmdLineError with embedded usage
+ */
 #define JMG_ENFORCE_CMDLINE(predicate, msg) \
-  JMG_ENFORCE_USING(CmdLineError, predicate, msg)
+  do {                                      \
+    if (JMG_UNLIKELY(!(predicate))) {       \
+      std::ostringstream what;              \
+      what << msg;                          \
+      throw CmdLineError(what.str());       \
+    }                                       \
+  } while (0)
 
 ////////////////////////////////////////////////////////////////////////////////
 // parsing/handling implementation
@@ -313,11 +323,6 @@ public:
     return std::get<idx>(values_);
   }
 
-private:
-  enum class ScanState { Opts, ReqdPosns, OptPosns };
-  using ParamList = meta::list<Params...>;
-  using Values = Tuplize<meta::transform<ParamList, Optionalize>>;
-
   /**
    * usage message to log when invalid command line parameters are
    * received or help is requested
@@ -332,6 +337,11 @@ private:
     (describe<Params>(strm), ...);
     return strm.str();
   }
+
+private:
+  enum class ScanState { Opts, ReqdPosns, OptPosns };
+  using ParamList = meta::list<Params...>;
+  using Values = Tuplize<meta::transform<ParamList, Optionalize>>;
 
   /**
    * construct the portion of the usage command line for one declared
@@ -437,7 +447,5 @@ private:
   std::string program_;
   Values values_;
 };
-
-#undef JMG_ENFORCE_CMDLINE
 
 } // namespace jmg

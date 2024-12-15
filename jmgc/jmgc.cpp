@@ -47,31 +47,39 @@ using namespace std;
 
 using JmgFlag =
   NamedParam<bool, "JMG", "file format is JMG, file type is YAML", Required>;
-using FixFlag =
-  NamedParam<bool, "FIX", "file format is FIX protocol, file type is XML", Required>;
+using FixFlag = NamedParam<bool,
+                           "FIX",
+                           "file format is QuickFIX protocol, file type is XML",
+                           Required>;
 using SrcFile =
   PosnParam<string, "src_file", "the file to read source definitions from">;
 
 int main(const int argc, const char** argv) {
   try {
-    using CmdLine = CmdLineArgs<FixFlag, JmgFlag, SrcFile>;
+    using CmdLine = CmdLineArgs<JmgFlag, FixFlag, SrcFile>;
     const auto cmdline = CmdLine(argc, argv);
 
-    if (get<FixFlag>(cmdline)) {
+    if (jmg::get<FixFlag>(cmdline)) {
       // generate header file for FIX specification
-      JMG_ENFORCE_USING(CmdLineError, !get<JmgFlag>(cmdline),
-                        "at most one of [-JMG, -FIX] may be specified");
+      JMG_ENFORCE_CMDLINE(
+        !jmg::get<JmgFlag>(cmdline),
+        cmdline.usage("at most one of [-JMG, -FIX] may be specified"));
       quickfix_spec::process(get<SrcFile>(cmdline));
     }
     else {
-      JMG_ENFORCE_USING(CmdLineError, get<JmgFlag>(cmdline),
-                        "at least one of [-JMG, -FIX] must be specified");
-      jmg_spec::process(get<SrcFile>(cmdline));
+      // must be -JMG
+      JMG_ENFORCE_CMDLINE(
+        jmg::get<JmgFlag>(cmdline),
+        cmdline.usage("at least one of [-JMG, -FIX] must be specified"));
+      JMG_ENFORCE_CMDLINE(
+        !jmg::get<FixFlag>(cmdline),
+        cmdline.usage("at most one of [-JMG, -FIX] may be specified"));
+      jmg_spec::process(jmg::get<SrcFile>(cmdline));
     }
     return EXIT_SUCCESS;
   }
   catch (const CmdLineError& e) {
-    cerr << "ERROR: " << e.what() << "\n";
+    cerr << e.what() << "\n";
   }
   catch (const exception& e) {
     cerr << "exception: " << e.what() << "\n";
