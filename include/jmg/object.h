@@ -45,7 +45,7 @@ namespace jmg
 // declaration of a field group
 ////////////////////////////////////////////////////////////////////////////////
 
-template<FieldDefT...>
+template<typename...>
 struct FieldGroupDef {};
 
 namespace detail
