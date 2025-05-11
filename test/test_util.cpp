@@ -33,12 +33,20 @@
 #include <gtest/gtest.h>
 
 #include <string>
+#include <tuple>
 
 #include "jmg/util.h"
 
 using namespace jmg;
 using namespace std;
 using namespace std::string_literals;
+
+TEST(GeneralUtilitiesTest, TestStreamTupleOut) {
+  const auto tp = make_tuple(20010911, 42.0, "foo"s);
+  ostringstream strm;
+  strm << tp;
+  EXPECT_EQ("20010911, 42, foo"s, strm.str());
+}
 
 TEST(GeneralUtilitiesTest, TestGetFromArgs) {
   const auto int_val = 20010911;
