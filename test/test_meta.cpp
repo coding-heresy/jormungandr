@@ -87,6 +87,21 @@ TEST(MetaprogrammingTests, TestSameAsDecayed) {
   EXPECT_FALSE((sameAsDecayed<ConstRefT, ConstRefT>()));
 }
 
+TEST(MetaprogrammingTests, TestNumericConcepts) {
+  // integer types
+  EXPECT_FALSE(IntegralT<bool>);
+  EXPECT_FALSE(IntegralT<float>);
+  EXPECT_TRUE(IntegralT<int>);
+  // floating point types
+  EXPECT_FALSE(FloatingPointT<bool>);
+  EXPECT_TRUE(FloatingPointT<float>);
+  EXPECT_FALSE(FloatingPointT<int>);
+  // generic numeric types
+  EXPECT_FALSE(ArithmeticT<bool>);
+  EXPECT_TRUE(ArithmeticT<float>);
+  EXPECT_TRUE(ArithmeticT<int>);
+}
+
 TEST(MetaprogrammingTests, TestCStyleStringConcept) {
   EXPECT_FALSE(CStyleStringT<string>);
   EXPECT_FALSE(CStyleStringT<string_view>);

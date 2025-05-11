@@ -83,8 +83,8 @@ struct ConvertImpl {
         DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, string);
         return Tgt(src);
       }
-      // convert string-like type to numeric type
-      else if constexpr (NumericT<Tgt>) {
+      // convert string-like type to arithmetic type
+      else if constexpr (ArithmeticT<Tgt>) {
         DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
         auto rslt = Tgt();
         const auto [_, err] =

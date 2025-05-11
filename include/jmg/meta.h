@@ -84,12 +84,20 @@ template<typename T>
 concept TypeListT = detail::IsTypeList<T>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
-// concept for numeric types
+// concepts for numeric types
 ////////////////////////////////////////////////////////////////////////////////
 
+// NOTE: explicitly excluding bool from the set of integral types
 template<typename T>
-concept NumericT = std::integral<std::remove_cvref_t<T>>
-                   || std::floating_point<std::remove_cvref_t<T>>;
+concept IntegralT = std::integral<std::remove_cvref_t<T>>
+                    && !std::same_as<bool, std::remove_cvref_t<T>>;
+
+template<typename T>
+concept FloatingPointT = std::floating_point<std::remove_cvref_t<T>>;
+
+template<typename T>
+concept ArithmeticT =
+  IntegralT<T> || std::floating_point<std::remove_cvref_t<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for enums
