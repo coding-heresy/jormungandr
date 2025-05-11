@@ -40,6 +40,7 @@
 
 #include "meta.h"
 #include "preprocessor.h"
+#include "types.h"
 
 namespace jmg
 {
@@ -59,6 +60,19 @@ void streamOutItems(std::ostream& strm, const T& first, const Ts&... rest) {
 template<typename... Ts>
 std::ostream& operator<<(std::ostream& strm, const std::tuple<Ts...> arg) {
   apply([&](auto&&... args) { detail::streamOutItems(strm, args...); }, arg);
+  return strm;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// stream octet to output
+////////////////////////////////////////////////////////////////////////////////
+
+std::ostream& operator<<(std::ostream& strm, Octet arg) {
+  const auto old_fill = strm.fill('0');
+  const auto old_width = strm.width(8);
+  strm << std::bitset<8>(unsafe(arg));
+  strm.fill(old_fill);
+  strm.width(old_width);
   return strm;
 }
 

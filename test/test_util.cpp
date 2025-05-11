@@ -48,6 +48,21 @@ TEST(GeneralUtilitiesTest, TestStreamTupleOut) {
   EXPECT_EQ("20010911, 42, foo"s, strm.str());
 }
 
+TEST(GeneralUtilitiesTest, TestStreamOctetOut) {
+  auto value = uint8_t(1);
+  std::array<char, 9> expected;
+  expected.fill('0');
+  expected[8] = '\0';
+  for (size_t counter = 0; counter < 8; ++counter) {
+    if (counter > 0) { expected[7 - (counter - 1)] = '0'; }
+    expected[7 - counter] = '1';
+    ostringstream strm;
+    strm << Octet(value);
+    EXPECT_EQ(strm.str(), string(expected.data()));
+    value <<= 1;
+  }
+}
+
 TEST(GeneralUtilitiesTest, TestGetFromArgs) {
   const auto int_val = 20010911;
   const auto dbl_val = 42.0;
