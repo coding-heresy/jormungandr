@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <exception>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
@@ -98,6 +99,22 @@ concept FloatingPointT = std::floating_point<std::remove_cvref_t<T>>;
 template<typename T>
 concept ArithmeticT =
   IntegralT<T> || std::floating_point<std::remove_cvref_t<T>>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for optional types
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct IsOptional : std::false_type {};
+
+template<typename T>
+struct IsOptional<std::optional<T>> : std::true_type {};
+}; // namespace detail
+
+template<typename T>
+concept OptionalT = detail::IsOptional<std::remove_cvref_t<T>>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for enums

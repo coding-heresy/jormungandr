@@ -233,6 +233,13 @@ TEST(MetaprogrammingTests, TestPolicyResolver) {
   }
 }
 
+TEST(MetaprogrammingTests, TestOptionalConcept) {
+  using TestType = int;
+  EXPECT_FALSE(OptionalT<TestType>);
+  using OptionalType = optional<int>;
+  EXPECT_TRUE(OptionalT<OptionalType>);
+}
+
 TEST(MetaprogrammingTests, TestEnumConcepts) {
   enum Enum { kFoo, kBar };
   enum class ScopedEnum { kFoo, kBar };
