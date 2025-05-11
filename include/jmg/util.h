@@ -49,7 +49,8 @@ namespace jmg
 // stream tuple values to output
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail {
+namespace detail
+{
 template<typename T, typename... Ts>
 void streamOutItems(std::ostream& strm, const T& first, const Ts&... rest) {
   strm << first;
@@ -58,7 +59,7 @@ void streamOutItems(std::ostream& strm, const T& first, const Ts&... rest) {
 } // namespace detail
 
 template<typename... Ts>
-std::ostream& operator<<(std::ostream& strm, const std::tuple<Ts...> arg) {
+std::ostream& operator<<(std::ostream& strm, const std::tuple<Ts...>& arg) {
   apply([&](auto&&... args) { detail::streamOutItems(strm, args...); }, arg);
   return strm;
 }

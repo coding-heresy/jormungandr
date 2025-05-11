@@ -82,7 +82,10 @@ using TimeZoneName = SafeType<std::string_view>;
 
 // standard POSIX epoch is 1970-01-01
 using EpochSeconds = SafeType<time_t, st::arithmetic>;
-// TODO(bd) add a type for Microsoft seconds since epoch as double
+
+// epoch for spreadsheets conforming to the ECMA Office Open XML
+// specification
+using SpreadsheetEpochSeconds = SafeType<double, st::arithmetic>;
 
 // Two formats for ISO 8601: with and without embedded time zone
 // specifier
