@@ -114,6 +114,8 @@ public:
                     << "] was longer than internal limit value [1024]");
       tmpPath.native().copy(fileName, tmpPath.native().size());
     }
+    // TODO(bd) add another macro for POSIX functions returning file
+    // descriptor or -1?
     const int fd = mkstemp(fileName);
     if (-1 == fd) { JMG_THROW_SYSTEM_ERROR("unable to create temporary file"); }
     auto tmpBuf = __gnu_cxx::stdio_filebuf<char>(fd, std::ios::out);

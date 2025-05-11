@@ -411,7 +411,7 @@ inline std::string demangle(const std::type_info* id) { return demangle(*id); }
 template<typename T>
 std::string type_name_for() {
   // the actual type of std::string is annoying
-  if constexpr (std::same_as<T, std::string>) { return "std::string"; }
+  if constexpr (sameAsDecayed<std::string, T>()) { return "std::string"; }
   return demangle(typeid(T));
 }
 

@@ -176,6 +176,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    size = 'small',
 )
 
 cc_binary(
