@@ -62,13 +62,8 @@ public:
   template<RequiredField FldT>
   decltype(auto) get() const {
     using FldType = typename FldT::type;
-    if constexpr (SafeT<FldType>) {
-      using Rslt = ReturnTypeForSafeT<FldType>;
-      Rslt rslt = std::get<typename FldT::type>(obj_);
-      return rslt;
-    }
-    using Rslt = ReturnTypeForT<typename FldT::type>;
-    Rslt rslt = std::get<typename FldT::type>(obj_);
+    using Rslt = ReturnTypeForAnyT<typename FldT::type>;
+    const Rslt rslt = std::get<typename FldT::type>(obj_);
     return rslt;
   }
 
@@ -78,20 +73,9 @@ public:
   template<OptionalField FldT>
   decltype(auto) try_get() const {
     using FldType = typename FldT::type;
-    // actual type stored in the tuple is optional<FldT::type>
+    // NOTE: actual type stored in the tuple is optional<FldT::type>
     using OptType = std::optional<FldType>;
-    if constexpr (SafeT<FldType>) {
-      using Intermediate = ReturnTypeForSafeT<FldType>;
-      if constexpr (std::is_reference_v<Intermediate>) {
-        // std::optional is not allowed for reference types, return a
-        // pointer instead
-        FldType* ptr = nullptr;
-        auto& ref = std::get<OptType>(obj_);
-        if (ref.has_value()) { ptr = &(*ref); }
-        return ptr;
-      }
-    }
-    using Intermediate = ReturnTypeForT<FldType>;
+    using Intermediate = ReturnTypeForAnyT<FldType>;
     if constexpr (std::is_reference_v<Intermediate>) {
       // std::optional is not allowed for reference types, return a
       // pointer instead

@@ -43,6 +43,8 @@ using namespace std;
 using IntFld = FieldDef<int, "int", Required>;
 using DblFld = FieldDef<double, "dbl", Required>;
 using OptDblFld = FieldDef<double, "dbl", Optional>;
+using StrFld = FieldDef<string, "str", Required>;
+using OptStrFld = FieldDef<string, "opt_str", Optional>;
 
 TEST(TupleObjectTests, GetTest) {
   using TestObject = Object<IntFld, DblFld>;

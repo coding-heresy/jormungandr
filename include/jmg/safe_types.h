@@ -141,6 +141,21 @@ template<typename T>
 using ReturnTypeForSafeT =
   detail::ReturnTypeForSafe<T, typename T::value_type>::type;
 
+namespace detail
+{
+template<typename T>
+struct ReturnTypeForAny {
+  using type = ReturnTypeForT<T>;
+};
+template<SafeT T>
+struct ReturnTypeForAny<T> {
+  using type = ReturnTypeForSafeT<T>;
+};
+} // namespace detail
+
+template<typename T>
+using ReturnTypeForAnyT = detail::ReturnTypeForAny<T>::type;
+
 } // namespace jmg
 
 /**

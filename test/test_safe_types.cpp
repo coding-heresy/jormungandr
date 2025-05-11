@@ -121,3 +121,21 @@ TEST(SafeTypeTests, SafeRefOfTest) {
   auto& safe_ref = SafeRefOf<TestSafeInt>::from(unsafe_ref);
   EXPECT_TRUE((decayedSameAs<decltype(safe_ref), TestSafeInt>()));
 }
+
+TEST(SafeTypeTests, ReturnTypeForSafeTest) {
+  using ReturnTypeForId32 = ReturnTypeForSafeT<TestId32>;
+  EXPECT_FALSE(is_reference_v<ReturnTypeForId32>);
+  using ReturnTypeForIdStr = ReturnTypeForSafeT<TestIdStr>;
+  EXPECT_TRUE(is_reference_v<ReturnTypeForIdStr>);
+}
+
+TEST(SafeTypeTests, ReturnTypeForAnyTest) {
+  using ReturnTypeForId32 = ReturnTypeForAnyT<TestId32>;
+  EXPECT_FALSE(is_reference_v<ReturnTypeForId32>);
+  using ReturnTypeForIdStr = ReturnTypeForAnyT<TestIdStr>;
+  EXPECT_TRUE(is_reference_v<ReturnTypeForIdStr>);
+  using ReturnTypeForInt64 = ReturnTypeForAnyT<int64_t>;
+  EXPECT_FALSE(is_reference_v<ReturnTypeForInt64>);
+  using ReturnTypeForRawStr = ReturnTypeForAnyT<string>;
+  EXPECT_TRUE(is_reference_v<ReturnTypeForRawStr>);
+}
