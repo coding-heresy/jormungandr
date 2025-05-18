@@ -35,12 +35,12 @@
 
 #include "jmg/meta.h"
 
-#define JMG_NEW_SAFE_PROTOTYPE(name, ...)                      \
-  template<::jmg::UnsafeT T, typename Tag = decltype([]() {})> \
+#define JMG_NEW_SAFE_PROTOTYPE(name, ...)                    \
+  template<::jmg::UnsafeT T, typename Tag = decltype([] {})> \
   using name = ::st::type<T, Tag, __VA_ARGS__>
 
 #define JMG_NEW_SAFE_BASE_TYPE(name, unsafe_type, ...) \
-  template<typename Tag = decltype([]() {})>           \
+  template<typename Tag = decltype([] {})>             \
   using name = ::st::type<unsafe_type, Tag, __VA_ARGS__>
 
 namespace jmg

@@ -6,6 +6,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -16,6 +17,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -26,6 +28,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -36,6 +39,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -46,6 +50,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -56,6 +61,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -67,6 +73,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -77,6 +84,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -87,6 +95,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -97,6 +106,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -107,6 +117,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -117,6 +128,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -127,6 +139,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 
@@ -176,6 +189,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    linkstatic = True,
     size = 'small',
 )
 

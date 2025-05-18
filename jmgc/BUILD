@@ -11,6 +11,7 @@ cc_binary(
         'spec_util.cpp',
         'spec_util.h',
     ],
+    linkstatic = True,
     deps = [
         '//:jmg',
     ],
