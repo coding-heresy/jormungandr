@@ -37,6 +37,7 @@
 
 #include "jmg/meta.h"
 #include "jmg/safe_types.h"
+#include "jmg/types.h"
 
 using namespace jmg;
 using namespace std;
@@ -46,6 +47,14 @@ using TestId32 = SafeId32<>;
 using OtherId32 = SafeId32<>;
 using TestIdStr = SafeIdStr<>;
 using OtherIdStr = SafeId<string>;
+
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
+using NonBaseType1 = SafeType<Duration, st::arithmetic>;
+using NonBaseType2 = SafeType<Duration, st::arithmetic>;
+#else
+JMG_NEW_SAFE_TYPE(NonBaseType1, Duration, st::arithmetic);
+JMG_NEW_SAFE_TYPE(NonBaseType2, Duration, st::arithmetic);
+#endif
 
 #define CONFIRM_STRONG_TYPES(type1, type2)                 \
   do {                                                     \
@@ -59,6 +68,7 @@ using OtherIdStr = SafeId<string>;
 TEST(SafeTypesTests, TypesAreStrong) {
   CONFIRM_STRONG_TYPES(TestId32, OtherId32);
   CONFIRM_STRONG_TYPES(TestIdStr, OtherIdStr);
+  CONFIRM_STRONG_TYPES(NonBaseType1, NonBaseType2);
 }
 
 #undef CONFIRM_STRONG_TYPES
@@ -113,7 +123,11 @@ TEST(SafeTypesTests, IdsAreHashable) {
 
 #undef CONFIRM_DICT_HANDLING
 
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using TestSafeInt = SafeType<int32_t>;
+#else
+JMG_NEW_SIMPLE_SAFE_TYPE(TestSafeInt, int32_t);
+#endif
 
 TEST(SafeTypeTests, SafeRefOfTest) {
   int32_t val;

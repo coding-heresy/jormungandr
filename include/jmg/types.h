@@ -77,15 +77,38 @@ using TimeZone = absl::TimeZone;
 // TODO(bd) use std::chrono duration instead of absl::Duration?
 using Duration = absl::Duration;
 
-using TimePointFmt = SafeType<std::string_view>;
-using TimeZoneName = SafeType<std::string_view>;
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
+using TimePointFmt =
+  SafeType<std::string_view, st::equality_comparable, st::hashable, st::orderable>;
+using TimeZoneName =
+  SafeType<std::string_view, st::equality_comparable, st::hashable, st::orderable>;
+#else
+JMG_NEW_SAFE_TYPE(TimePointFmt,
+                  std::string_view,
+                  st::equality_comparable,
+                  st::hashable,
+                  st::orderable);
+JMG_NEW_SAFE_TYPE(TimeZoneName,
+                  std::string_view,
+                  st::equality_comparable,
+                  st::hashable,
+                  st::orderable);
+#endif
 
 // standard POSIX epoch is 1970-01-01
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using EpochSeconds = SafeType<time_t, st::arithmetic>;
+#else
+JMG_NEW_SAFE_TYPE(EpochSeconds, time_t, st::arithmetic);
+#endif
 
 // epoch for spreadsheets conforming to the ECMA Office Open XML
 // specification
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using SpreadsheetEpochSeconds = SafeType<double, st::arithmetic>;
+#else
+JMG_NEW_SAFE_TYPE(SpreadsheetEpochSeconds, time_t, st::arithmetic);
+#endif
 
 // Two formats for ISO 8601: with and without embedded time zone
 // specifier
@@ -126,6 +149,10 @@ public:
 // miscellaneous
 ////////////////////////////////////////////////////////////////////////////////
 
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using Octet = SafeType<uint8_t, st::arithmetic>;
+#else
+JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
+#endif
 
 } // namespace jmg

@@ -60,8 +60,23 @@ concept UnsafeT = (!st::is_strong_type_v<T>);
 // type aliases
 ////////////////////////////////////////////////////////////////////////////////
 
+// TODO(davisb) gcc/g++ does not correctly generate separate types for
+// the trivial anonymous lambda, so the following construct will not
+// work at least as of gcc 15.0
+#if !defined(__GNUG__)
+#define SAFETYPE_ALIAS_TEMPLATE_WORKS
+#endif
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 template<UnsafeT T, typename... Policies>
-using SafeType = st::type<T, decltype([]() {}), Policies...>;
+using SafeType = st::type<T, decltype([] {}), Policies...>;
+#else
+#define JMG_NEW_SAFE_TYPE(safe_type, unsafe_type, ...) \
+  struct safe_type##_TAG_ {};                          \
+  using safe_type = ::st::type<unsafe_type, safe_type##_TAG_, __VA_ARGS__>
+#define JMG_NEW_SIMPLE_SAFE_TYPE(safe_type, unsafe_type) \
+  struct safe_type##_TAG_ {};                            \
+  using safe_type = ::st::type<unsafe_type, safe_type##_TAG_>
+#endif
 
 /**
  * prototype for an ID type, which must be equality_comparable, hashable
