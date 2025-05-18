@@ -4,10 +4,6 @@ common --enable_bzlmod
 
 # builds with C++20
 build --action_env=BAZEL_CXXOPTS="-std=c++20"
-build --action_env=CC=/usr/bin/gcc
-build --action_env=CXX=/usr/bin/g++
-
-build --features=external_include_paths
 
 # be safe...
 build --cxxopt='-Wall'
@@ -15,12 +11,31 @@ build --cxxopt='-Wextra'
 build --cxxopt='-Werror'
 build --cxxopt='-Wpedantic'
 build --cxxopt='-pedantic-errors'
+
+# TODO(davisb) use hermetic toolchain
+
+# gcc toolchain
+build --repo_env=CC=/usr/bin/gcc
+build --repo_env=CXX=/usr/bin/g++
+build --action_env=CC=/usr/bin/gcc
+build --action_env=CXX=/usr/bin/g++
+# need to be able to diagnose severe errors in concepts
+build --cxxopt='-fconcepts-diagnostics-depth=10'
 # TODO(bd) remove this flag when gcc correctly handles anonymous lambdas
 # ignore spurious subobject-linkage warnings
 build --cxxopt='-Wno-subobject-linkage'
 
-# need to be able to diagnose severe errors in concepts
-build --cxxopt='-fconcepts-diagnostics-depth=10'
+# clang toolchain
+# build --repo_env=CC=/usr/bin/clang
+# build --repo_env=CXX=/usr/bin/clang++
+# build --action_env=CC=/usr/bin/clang
+# build --action_env=CXX=/usr/bin/clang++
+# # TODO(davisb) compiler flag is specific to clang and prevents an
+# # error that seems to be caused by the abseil library insisting on
+# # building its files with clang instead of clang++
+# build --cxxopt='-Wno-gcc-compat'
+
+build --features=external_include_paths
 
 # use nanosecond precision with boost
 build --cxxopt='-DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG'
