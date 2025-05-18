@@ -235,17 +235,26 @@ private:
    * emit a single type
    */
   static void emitType(const string_view name, const StrongAlias& alias) {
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
     cout << "using " << name << " = jmg::SafeType<" << alias.type_name << ", ";
+#else
+    cout << "JMG_NEW_SAFE_TYPE(" << name << "," << alias.type_name << ", ";
+#endif
     if (kKeyConcept == alias.cncpt) {
       cout << "\n  st::equality_comparable," << "\n  st::hashable,"
-           << "\n  st::orderable>;\n\n";
+           << "\n  st::orderable";
     }
     else {
       JMG_ENFORCE(kArithmeticConcept == alias.cncpt,
                   "unsupported concept ["
                     << alias.cncpt << "] specified for type [" << name << "]");
-      cout << "st::arithmetic>;\n\n";
+      cout << "st::arithmetic";
     }
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
+    cout << ">;\n\n";
+#else
+    cout << ");\n\n";
+#endif
   }
 
   /**
