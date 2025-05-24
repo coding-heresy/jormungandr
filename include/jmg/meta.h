@@ -54,18 +54,33 @@ concept TypeFlagT =
   std::same_as<T, std::true_type> || std::same_as<T, std::false_type>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// replacement for std::same_as that removes const, volatile and
-// references
+// helpers for decaying types
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * slightly less verbose version of std::remove_cvref_t that expresses
+ * the wish that std::decay did not get involved with arrays and
+ * pointers
+ */
+template<typename T>
+using Decay = std::remove_cvref_t<T>;
+
+/**
+ * type comparison helper similar to std::same_as that removes const,
+ * volatile and references
+ */
 template<typename TLhs, typename TRhs>
 constexpr bool decayedSameAs() {
-  return std::same_as<std::remove_cvref_t<TLhs>, std::remove_cvref_t<TRhs>>;
+  return std::same_as<Decay<TLhs>, Decay<TRhs>>;
 }
 
+/**
+ * similar to decayedSameAs except that it only decays the second
+ * argument
+ */
 template<typename TLhs, typename TRhs>
 constexpr bool sameAsDecayed() {
-  return std::same_as<TLhs, std::remove_cvref_t<TRhs>>;
+  return std::same_as<TLhs, Decay<TRhs>>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -90,15 +105,13 @@ concept TypeListT = detail::IsTypeList<T>{}();
 
 // NOTE: explicitly excluding bool from the set of integral types
 template<typename T>
-concept IntegralT = std::integral<std::remove_cvref_t<T>>
-                    && !std::same_as<bool, std::remove_cvref_t<T>>;
+concept IntegralT = std::integral<Decay<T>> && !std::same_as<bool, Decay<T>>;
 
 template<typename T>
-concept FloatingPointT = std::floating_point<std::remove_cvref_t<T>>;
+concept FloatingPointT = std::floating_point<Decay<T>>;
 
 template<typename T>
-concept ArithmeticT =
-  IntegralT<T> || std::floating_point<std::remove_cvref_t<T>>;
+concept ArithmeticT = IntegralT<T> || std::floating_point<Decay<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for optional types
@@ -114,7 +127,7 @@ struct IsOptional<std::optional<T>> : std::true_type {};
 }; // namespace detail
 
 template<typename T>
-concept OptionalT = detail::IsOptional<std::remove_cvref_t<T>>{}();
+concept OptionalT = detail::IsOptional<Decay<T>>{}();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for enums
@@ -122,11 +135,10 @@ concept OptionalT = detail::IsOptional<std::remove_cvref_t<T>>{}();
 
 #if defined(__cpp_lib_is_scoped_enum)
 template<typename T>
-concept EnumT = std::is_enum_v<std::remove_cvref_t<T>>
-                && !std::is_scoped_enum_v<std::remove_cvref_t<T>>;
+concept EnumT = std::is_enum_v<Decay<T>> && !std::is_scoped_enum_v<Decay<T>>;
 
 template<typename T>
-concept ScopedEnumT = std::is_scoped_enum_v<std::remove_cvref_t<T>>;
+concept ScopedEnumT = std::is_scoped_enum_v<Decay<T>>;
 #else
 // TODO remove this section when the library requires c++23
 namespace detail
@@ -141,11 +153,10 @@ constexpr bool is_scoped_enum_v = is_scoped_enum<T>::value;
 } // namespace detail
 
 template<typename T>
-concept EnumT = std::is_enum_v<std::remove_cvref_t<T>>
-                && !detail::is_scoped_enum_v<std::remove_cvref_t<T>>;
+concept EnumT = std::is_enum_v<Decay<T>> && !detail::is_scoped_enum_v<Decay<T>>;
 
 template<typename T>
-concept ScopedEnumT = detail::is_scoped_enum_v<std::remove_cvref_t<T>>;
+concept ScopedEnumT = detail::is_scoped_enum_v<Decay<T>>;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -186,14 +197,14 @@ struct IsStringLike<const char[kSz]> : std::true_type {};
  * string-like types
  */
 template<typename T>
-concept CStyleStringT = detail::IsCStyleString<std::remove_cvref_t<T>>{}();
+concept CStyleStringT = detail::IsCStyleString<Decay<T>>{}();
 
 /**
  * concept for all string-like types that maintain a contiguous buffer
  * of bytes, i.e. it doesn't include things like absl::Cord
  */
 template<typename T>
-concept StringLikeT = detail::IsStringLike<std::remove_cvref_t<T>>{}();
+concept StringLikeT = detail::IsStringLike<Decay<T>>{}();
 
 ////////////////////
 // concepts that differentiate between string_view and all other
@@ -228,7 +239,7 @@ concept NonBoolT = !std::same_as<T, bool>;
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept ClassT = std::is_class_v<std::remove_cvref_t<T>>;
+concept ClassT = std::is_class_v<Decay<T>>;
 
 template<typename T>
 concept NonClassT = !ClassT<T>;
@@ -272,21 +283,19 @@ template<TypeListT T>
 using safe_back = meta::_t<detail::safe_back_<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// general use metafunctions
+// metafunction that determines whether a type should be returned by
+// value or by reference
 ////////////////////////////////////////////////////////////////////////////////
-
-template<TypeListT Lst>
-using DecayAll = meta::transform<Lst, meta::quote<std::remove_cvref_t>>;
 
 namespace detail
 {
 template<typename T>
 struct ReturnTypeFor {
-  using type = std::remove_cvref_t<T>;
+  using type = Decay<T>;
 };
 template<ClassT T>
 struct ReturnTypeFor<T> {
-  using type = std::remove_cvref_t<T>&;
+  using type = Decay<T>&;
 };
 } // namespace detail
 
@@ -294,8 +303,15 @@ template<typename T>
 using ReturnTypeForT = detail::ReturnTypeFor<T>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
-// helper metafunctions for checking list membership
+// helper metafunctions for checking list membership and manipulating
+// lists
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * decay all types in a type list
+ */
+template<TypeListT Lst>
+using DecayAll = meta::transform<Lst, meta::quote<Decay>>;
 
 namespace detail
 {
@@ -308,7 +324,7 @@ using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
 } // namespace detail
 template<typename T, TypeListT Lst>
 inline constexpr bool isMemberOfList() {
-  return detail::IsMemberOf<std::remove_cvref_t<T>, DecayAll<Lst>>{}();
+  return detail::IsMemberOf<Decay<T>, DecayAll<Lst>>{}();
 }
 
 namespace detail
@@ -451,7 +467,7 @@ std::string type_name_for() {
  */
 template<typename T>
 std::string type_name_for(const T& t) {
-  return type_name_for<std::remove_cvref_t<T>>();
+  return type_name_for<Decay<T>>();
 }
 
 /**
