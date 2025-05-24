@@ -155,4 +155,7 @@ using Octet = SafeType<uint8_t, st::arithmetic>;
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
 #endif
 
+using BufferView = std::span<const uint8_t, std::dynamic_extent>;
+using BufferProxy = std::span<uint8_t, std::dynamic_extent>;
+
 } // namespace jmg
