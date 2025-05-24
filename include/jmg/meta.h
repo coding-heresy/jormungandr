@@ -181,11 +181,40 @@ template<int kSz>
 struct IsStringLike<const char[kSz]> : std::true_type {};
 } // namespace detail
 
+/**
+ * concept differentiates between C-style strings and all other
+ * string-like types
+ */
 template<typename T>
 concept CStyleStringT = detail::IsCStyleString<std::remove_cvref_t<T>>{}();
 
+/**
+ * concept for all string-like types that maintain a contiguous buffer
+ * of bytes, i.e. it doesn't include things like absl::Cord
+ */
 template<typename T>
 concept StringLikeT = detail::IsStringLike<std::remove_cvref_t<T>>{}();
+
+////////////////////
+// concepts that differentiate between string_view and all other
+// string-like types with the purpose of carefully separating
+// ownership from use and facilitating an idiom where the main
+// implementation of many functions that work with strings will use
+// string_view and overloaded versions of the function will delegate
+// to the main implementation
+
+/**
+ * concept for string-like types other than string_view
+ */
+template<typename T>
+concept NonViewStringT =
+  StringLikeT<T> && !sameAsDecayed<std::string_view, T>();
+
+/**
+ * concept for string_view
+ */
+template<typename T>
+concept ViewStringT = sameAsDecayed<std::string_view, T>();
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for non-bool types

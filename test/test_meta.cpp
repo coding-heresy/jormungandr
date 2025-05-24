@@ -112,15 +112,29 @@ TEST(MetaprogrammingTests, TestCStyleStringConcept) {
   EXPECT_TRUE(CStyleStringT<decltype(compile_time)>);
 }
 
-TEST(MetaprogrammingTests, TestStringLikeConcept) {
-  EXPECT_TRUE(StringLikeT<string>);
-  EXPECT_TRUE(StringLikeT<string_view>);
-  EXPECT_TRUE(StringLikeT<const char*>);
-  auto* literal = "foo";
-  EXPECT_TRUE(StringLikeT<decltype(literal)>);
-  constexpr char compile_time[] = "bar";
-  EXPECT_TRUE(StringLikeT<decltype(compile_time)>);
+TEST(MetaprogrammingTests, TestStringLikeConcepts) {
   EXPECT_FALSE(StringLikeT<int>);
+
+  auto* literal = "foo";
+  constexpr char compile_time[] = "bar";
+
+  EXPECT_TRUE(StringLikeT<string>);
+  EXPECT_TRUE(StringLikeT<const char*>);
+  EXPECT_TRUE(StringLikeT<decltype(literal)>);
+  EXPECT_TRUE(StringLikeT<decltype(compile_time)>);
+  EXPECT_TRUE(StringLikeT<string_view>);
+
+  EXPECT_TRUE(NonViewStringT<string>);
+  EXPECT_TRUE(NonViewStringT<const char*>);
+  EXPECT_TRUE(NonViewStringT<decltype(literal)>);
+  EXPECT_TRUE(NonViewStringT<decltype(compile_time)>);
+  EXPECT_FALSE(NonViewStringT<string_view>);
+
+  EXPECT_FALSE(ViewStringT<string>);
+  EXPECT_FALSE(ViewStringT<const char*>);
+  EXPECT_FALSE(ViewStringT<decltype(literal)>);
+  EXPECT_FALSE(ViewStringT<decltype(compile_time)>);
+  EXPECT_TRUE(ViewStringT<string_view>);
 }
 
 TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {
