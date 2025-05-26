@@ -61,4 +61,11 @@ TEST(TupleObjectTests, OptionalTest) {
     const auto opt_dbl = jmg::try_get<OptDblFld>(const_obj);
     EXPECT_FALSE(pred(opt_dbl));
   }
+
+TEST(TupleObjectTests, TestConstructionFromRaw) {
+  using TestObject = Object<IntFld, DblFld>;
+  auto obj = TestObject(20010911, 42.0);
+  EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
+  EXPECT_DOUBLE_EQ(jmg::get<DblFld>(obj), 42.0);
+}
 }
