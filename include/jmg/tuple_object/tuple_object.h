@@ -153,8 +153,21 @@ public:
   decltype(auto) get() const {
     using FldType = typename FldT::type;
     using Rslt = ReturnTypeForAnyT<typename FldT::type>;
-    const Rslt rslt = std::get<typename FldT::type>(obj_);
-    return rslt;
+    if constexpr (std::is_reference_v<Rslt>) {
+      // TODO(bd) figure out why the const-ness of obj_ doesn't seem
+      // to apply to the result of std::get
+      const Rslt& rslt =
+        const_cast<const Rslt&>(std::get<typename FldT::type>(obj_));
+      static_assert(std::is_reference_v<decltype(rslt)>,
+                    "return type is not a reference as expected");
+      return static_cast<const Decay<Rslt>&>(rslt);
+    }
+    else {
+      const Rslt rslt = std::get<typename FldT::type>(obj_);
+      static_assert(!std::is_reference_v<decltype(rslt)>,
+                    "return type is not a value as expected");
+      return rslt;
+    }
   }
 
   /**
@@ -165,15 +178,6 @@ public:
     using FldType = typename FldT::type;
     // NOTE: actual type stored in the tuple is optional<FldT::type>
     using OptType = std::optional<FldType>;
-    using Intermediate = ReturnTypeForAnyT<FldType>;
-    if constexpr (std::is_reference_v<Intermediate>) {
-      // std::optional is not allowed for reference types, return a
-      // pointer instead
-      FldType* ptr = nullptr;
-      auto& ref = std::get<OptType>(obj_);
-      if (ref.has_value()) { ptr = &(*ref); }
-      return ptr;
-    }
     return std::get<OptType>(obj_);
   }
 
