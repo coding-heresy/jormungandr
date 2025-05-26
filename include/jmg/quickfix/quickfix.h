@@ -44,10 +44,7 @@
 #include "jmg/types.h"
 #include "jmg/util.h"
 
-namespace jmg
-{
-
-namespace quickfix
+namespace jmg::quickfix
 {
 
 constexpr auto kTimeStampFmt = TimePointFmt("%E4Y%m%d-%H:%M:%S");
@@ -210,5 +207,4 @@ private:
 };
 #endif
 
-} // namespace quickfix
-} // namespace jmg
+} // namespace jmg::quickfix

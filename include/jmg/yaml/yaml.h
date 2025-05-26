@@ -39,9 +39,7 @@
 #include "jmg/union.h"
 #include "jmg/util.h"
 
-namespace jmg
-{
-namespace yaml
+namespace jmg::yaml
 {
 
 template<typename... Fields>
@@ -114,5 +112,4 @@ struct ArrayTypeFactory {
 template<ObjectDefT Obj>
 using Array = meta::_t<detail::ArrayTypeFactory<Obj>>;
 
-} // namespace yaml
-} // namespace jmg
+} // namespace jmg::yaml

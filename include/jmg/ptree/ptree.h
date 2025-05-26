@@ -40,10 +40,7 @@
 #include "jmg/union.h"
 #include "jmg/util.h"
 
-namespace jmg
-{
-
-namespace ptree
+namespace jmg::ptree
 {
 
 namespace detail
@@ -226,8 +223,7 @@ struct Elements : FieldDef<ElementsArrayT<T>, kPlaceholder, IsRequired> {};
 using ElementsRequired = std::true_type;
 
 } // namespace xml
-} // namespace ptree
-} // namespace jmg
+} // namespace jmg::ptree
 
 #define JMG_XML_FIELD_DEF(field_name, str_name, field_type, is_required)       \
   struct field_name : jmg::FieldDef<field_type, str_name, is_required##_type>, \
