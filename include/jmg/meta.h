@@ -160,6 +160,23 @@ concept ScopedEnumT = detail::is_scoped_enum_v<Decay<T>>;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
+// concept for non-bool types
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept NonBoolT = !std::same_as<T, bool>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concepts for class and non-class types
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept ClassT = std::is_class_v<Decay<T>>;
+
+template<typename T>
+concept NonClassT = !ClassT<T>;
+
+////////////////////////////////////////////////////////////////////////////////
 // concepts for string-like types
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -227,22 +244,14 @@ concept NonViewStringT =
 template<typename T>
 concept ViewStringT = sameAsDecayed<std::string_view, T>();
 
-////////////////////////////////////////////////////////////////////////////////
-// concept for non-bool types
-////////////////////////////////////////////////////////////////////////////////
-
+/**
+ * concept for any class type that is not a string
+ *
+ * This is used to allow for special handling such as being able to
+ * return string_view for object fields containing strings
+ */
 template<typename T>
-concept NonBoolT = !std::same_as<T, bool>;
-
-////////////////////////////////////////////////////////////////////////////////
-// concepts for class and non-class types
-////////////////////////////////////////////////////////////////////////////////
-
-template<typename T>
-concept ClassT = std::is_class_v<Decay<T>>;
-
-template<typename T>
-concept NonClassT = !ClassT<T>;
+concept NonStringClassT = ClassT<T> && !StringLikeT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // always_false wrapper to defer evaluation of static_assert
@@ -322,6 +331,9 @@ using SameAsLambda =
 template<typename T, TypeListT Lst>
 using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
 } // namespace detail
+/**
+ * determine if a type is a member of a list
+ */
 template<typename T, TypeListT Lst>
 inline constexpr bool isMemberOfList() {
   return detail::IsMemberOf<Decay<T>, DecayAll<Lst>>{}();
@@ -343,10 +355,16 @@ template<typename T, TypeListT Lst>
 using CountMatches =
   meta::fold<Lst, std::integral_constant<size_t, 0>, CountMatchesLambda<T>>;
 } // namespace detail
+/**
+ * determine if a type occurs exactly once in a list
+ */
 template<typename T, TypeListT Lst>
 inline constexpr bool isUniqueMemberOfList() {
   return static_cast<size_t>(1) == detail::CountMatches<T, Lst>{};
 }
+/**
+ * count the number of times that a type appears in a list
+ */
 template<typename T, TypeListT Lst>
 inline constexpr bool entryCount() {
   return detail::CountMatches<T, Lst>{};

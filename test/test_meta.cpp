@@ -38,6 +38,7 @@
 #include <meta/meta.hpp>
 
 #include "jmg/meta.h"
+#include "jmg/types.h"
 
 using namespace jmg;
 using namespace std;
@@ -135,6 +136,10 @@ TEST(MetaprogrammingTests, TestStringLikeConcepts) {
   EXPECT_FALSE(ViewStringT<decltype(literal)>);
   EXPECT_FALSE(ViewStringT<decltype(compile_time)>);
   EXPECT_TRUE(ViewStringT<string_view>);
+
+  EXPECT_FALSE(NonStringClassT<string>);
+  EXPECT_FALSE(NonStringClassT<int>);
+  EXPECT_TRUE(NonStringClassT<BufferView>);
 }
 
 TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {
