@@ -152,7 +152,7 @@ struct ReturnTypeForSafe<T, U> {
 };
 } // namespace detail
 
-template<typename T>
+template<SafeT T>
 using ReturnTypeForSafeT =
   detail::ReturnTypeForSafe<T, typename T::value_type>::type;
 

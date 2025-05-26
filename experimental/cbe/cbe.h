@@ -65,6 +65,8 @@ namespace jmg
 namespace detail
 {
 size_t encode(BufferProxy tgt, const std::string_view src);
+// TODO(bd) this should support traditional and polymorphic allocator
+// flavors for std::basic_string
 std::tuple<std::string, size_t> decodeStr(BufferView src);
 } // namespace detail
 
