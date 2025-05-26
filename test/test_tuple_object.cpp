@@ -46,21 +46,34 @@ using OptDblFld = FieldDef<double, "dbl", Optional>;
 using StrFld = FieldDef<string, "str", Required>;
 using OptStrFld = FieldDef<string, "opt_str", Optional>;
 
-TEST(TupleObjectTests, GetTest) {
-  using TestObject = Object<IntFld, DblFld>;
-  auto obj = TestObject(make_tuple(20010911, 42.0));
+// safe types
+using Id32 = SafeId32<>;
+using Id64 = SafeId64<>;
+using SafeIdFld = FieldDef<Id32, "id", Required>;
+using OptSafeIdFld = FieldDef<Id64, "opt_id", Optional>;
+
+TEST(TupleObjectTests, TestGet) {
+  using TestObject = Object<IntFld, DblFld, SafeIdFld>;
+  auto obj = TestObject(make_tuple(20010911, 42.0, Id32(0)));
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
   EXPECT_DOUBLE_EQ(jmg::get<DblFld>(obj), 42.0);
+  EXPECT_EQ(jmg::get<SafeIdFld>(obj), Id32(0));
 }
 
-TEST(TupleObjectTests, OptionalTest) {
-  using TestObject = Object<IntFld, DblFld, OptDblFld>;
-  auto obj = TestObject(make_tuple(20010911, 42.0, nullopt));
+TEST(TupleObjectTests, TestTryGet) {
+  using TestObject = Object<IntFld, DblFld, OptDblFld, OptSafeIdFld>;
+  auto obj = TestObject(make_tuple(20010911, 42.0, nullopt, Id64(64)));
   {
     const auto& const_obj = obj;
     const auto opt_dbl = jmg::try_get<OptDblFld>(const_obj);
     EXPECT_FALSE(pred(opt_dbl));
   }
+  {
+    auto& opt_id = jmg::try_get<OptSafeIdFld>(obj);
+    EXPECT_TRUE(pred(opt_id));
+    EXPECT_EQ(*opt_id, Id64(64));
+  }
+}
 
 TEST(TupleObjectTests, TestConstructionFromRaw) {
   using TestObject = Object<IntFld, DblFld>;
