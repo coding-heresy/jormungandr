@@ -514,6 +514,23 @@ struct StrLiteral {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// detect if a type is a specialization of std::tuple
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename... Ts>
+struct IsTupleSelect : std::false_type {};
+template<typename... Ts>
+struct IsTupleSelect<std::tuple<Ts...>> : std::true_type {};
+} // namespace detail
+
+template<typename T>
+constexpr bool isTuple() {
+  return detail::IsTupleSelect<T>{};
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // convert from type list to tuple
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -530,6 +547,24 @@ struct Tuplize<meta::list<Ts...>> {
 
 template<typename... Ts>
 using Tuplize = typename detail::Tuplize<Ts...>::type;
+
+////////////////////////////////////////////////////////////////////////////////
+// extract the types in a tuple as a type list
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename... Ts>
+struct DeTuplize {};
+
+template<typename... Ts>
+struct DeTuplize<std::tuple<Ts...>> {
+  using type = meta::list<Ts...>;
+};
+} // namespace detail
+
+template<typename... Ts>
+using DeTuplize = typename detail::DeTuplize<Ts...>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
 // helper macro for final 'else' case of 'if constexpr' case analysis

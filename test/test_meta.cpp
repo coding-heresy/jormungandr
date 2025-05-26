@@ -34,6 +34,7 @@
 
 #include <iostream>
 #include <string>
+#include <tuple>
 
 #include <meta/meta.hpp>
 
@@ -269,6 +270,15 @@ TEST(MetaprogrammingTests, TestEnumConcepts) {
   EXPECT_FALSE(ScopedEnumT<decltype(enumFoo)>);
   EXPECT_FALSE(EnumT<decltype(scopedEnumFoo)>);
   EXPECT_TRUE(ScopedEnumT<decltype(scopedEnumFoo)>);
+}
+
+TEST(MetaprogrammingTests, TestTupleHandling) {
+  using TestTuple = tuple<int, float>;
+  EXPECT_TRUE(isTuple<TestTuple>());
+  EXPECT_FALSE(isTuple<int>());
+  using TestTypeList = meta::list<int, float>;
+  using Dbg = DeTuplize<TestTuple>;
+  EXPECT_TRUE((same_as<TestTypeList, DeTuplize<TestTuple>>));
 }
 
 using namespace std::literals::string_literals;
