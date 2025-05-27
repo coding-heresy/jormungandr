@@ -37,7 +37,7 @@
 #include "jmg/object.h"
 #include "jmg/safe_types.h"
 
-namespace jmg::tuple_object
+namespace jmg::native
 {
 
 namespace detail
@@ -46,7 +46,7 @@ using namespace meta::placeholders;
 
 // NOTE: a bunch of code to cleanly handle the case where std::nullopt
 // is passed for the value of a std::optional field when constructing
-// a tuple object
+// a native object
 
 ////////////////////
 // the FieldTypesMatch metafunction will return true under the
@@ -188,4 +188,4 @@ private:
   adapted_type obj_;
 };
 
-} // namespace jmg::tuple_object
+} // namespace jmg::native

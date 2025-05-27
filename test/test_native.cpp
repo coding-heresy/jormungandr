@@ -35,11 +35,11 @@
 #include <utility>
 
 #include "jmg/object.h"
-#include "jmg/tuple_object/tuple_object.h"
+#include "jmg/native/native.h"
 #include "jmg/util.h"
 
 using namespace jmg;
-using namespace jmg::tuple_object;
+//using namespace jmg::native;
 using namespace std;
 
 using IntFld = FieldDef<int, "int", Required>;
@@ -54,9 +54,9 @@ using Id64 = SafeId64<>;
 using SafeIdFld = FieldDef<Id32, "id", Required>;
 using OptSafeIdFld = FieldDef<Id64, "opt_id", Optional>;
 
-TEST(TupleObjectTests, TestReturnTypes) {
+TEST(NativeObjectTests, TestReturnTypes) {
   using TestObject =
-    Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld, OptSafeIdFld>;
+    native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld, OptSafeIdFld>;
 
 #define VALIDATE_GET_RETURN(field, expected)                                   \
   do {                                                                         \
@@ -98,8 +98,8 @@ TEST(TupleObjectTests, TestReturnTypes) {
 #undef VALIDATE_TRY_GET_RETURN
 }
 
-TEST(TupleObjectTests, TestGet) {
-  using TestObject = Object<IntFld, DblFld, StrFld, SafeIdFld>;
+TEST(NativeObjectTests, TestGet) {
+  using TestObject = native::Object<IntFld, DblFld, StrFld, SafeIdFld>;
   auto obj = TestObject(make_tuple(20010911, 42.0, "foo"s, Id32(0)));
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
   EXPECT_DOUBLE_EQ(jmg::get<DblFld>(obj), 42.0);
@@ -107,8 +107,8 @@ TEST(TupleObjectTests, TestGet) {
   EXPECT_EQ(jmg::get<SafeIdFld>(obj), Id32(0));
 }
 
-TEST(TupleObjectTests, TestTryGet) {
-  using TestObject = Object<IntFld, DblFld, OptDblFld, OptStrFld, OptSafeIdFld>;
+TEST(NativeObjectTests, TestTryGet) {
+  using TestObject = native::Object<IntFld, DblFld, OptDblFld, OptStrFld, OptSafeIdFld>;
   const auto obj =
     TestObject(make_tuple(20010911, 42.0, nullopt, "bar"s, Id64(64)));
   {
@@ -127,8 +127,8 @@ TEST(TupleObjectTests, TestTryGet) {
   }
 }
 
-TEST(TupleObjectTests, TestConstructionFromRaw) {
-  using TestObject = Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
+TEST(NativeObjectTests, TestConstructionFromRaw) {
+  using TestObject = native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
   auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, Id32(1));
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
   {
