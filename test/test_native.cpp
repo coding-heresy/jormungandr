@@ -34,12 +34,11 @@
 
 #include <utility>
 
-#include "jmg/object.h"
 #include "jmg/native/native.h"
+#include "jmg/object.h"
 #include "jmg/util.h"
 
 using namespace jmg;
-//using namespace jmg::native;
 using namespace std;
 
 using IntFld = FieldDef<int, "int", Required>;
@@ -108,7 +107,8 @@ TEST(NativeObjectTests, TestGet) {
 }
 
 TEST(NativeObjectTests, TestTryGet) {
-  using TestObject = native::Object<IntFld, DblFld, OptDblFld, OptStrFld, OptSafeIdFld>;
+  using TestObject =
+    native::Object<IntFld, DblFld, OptDblFld, OptStrFld, OptSafeIdFld>;
   const auto obj =
     TestObject(make_tuple(20010911, 42.0, nullopt, "bar"s, Id64(64)));
   {
@@ -128,7 +128,8 @@ TEST(NativeObjectTests, TestTryGet) {
 }
 
 TEST(NativeObjectTests, TestConstructionFromRaw) {
-  using TestObject = native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
+  using TestObject =
+    native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
   auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, Id32(1));
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
   {
