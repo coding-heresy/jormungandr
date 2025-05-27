@@ -277,7 +277,6 @@ TEST(MetaprogrammingTests, TestTupleHandling) {
   EXPECT_TRUE(isTuple<TestTuple>());
   EXPECT_FALSE(isTuple<int>());
   using TestTypeList = meta::list<int, float>;
-  using Dbg = DeTuplize<TestTuple>;
   EXPECT_TRUE((same_as<TestTypeList, DeTuplize<TestTuple>>));
 }
 
