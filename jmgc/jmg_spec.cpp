@@ -389,7 +389,7 @@ private:
 
   static constexpr string_view kEnum = "enum";
   static constexpr string_view kArray = "array";
-  static constexpr string_view kUnion = "array";
+  static constexpr string_view kUnion = "union";
   static constexpr string_view kKeyConcept = "key";
   static constexpr string_view kArithmeticConcept = "arithmetic";
 

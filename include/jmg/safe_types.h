@@ -116,7 +116,7 @@ JMG_NEW_SAFE_BASE_TYPE(SafeIdStr,
  * 'unwrap' a safe type by converting it into the associated unsafe
  * type
  */
-auto unsafe(SafeT auto safe) { return safe.value(); }
+constexpr auto unsafe(SafeT auto safe) { return safe.value(); }
 
 /**
  * metafunction that returns the unsafe type associated with a safe

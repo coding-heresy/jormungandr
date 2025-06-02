@@ -68,7 +68,7 @@ concept FieldOrGroupT = FieldDefT<T> || FieldGroupDefT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains the Fields typelist associated with an
-// Object to contain only fields or field groupds
+// Object to contain only fields or field groups
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace detail
@@ -101,7 +101,8 @@ template<typename T>
 struct FieldExpanderImpl {
   using type = meta::list<T>;
 };
-// TODO call recursively in case a field group contains another field group
+// TODO(bd) call recursively in case a field group contains another
+// field group
 template<typename... Ts>
 struct FieldExpanderImpl<FieldGroupDef<Ts...>> {
   using type = meta::list<Ts...>;
@@ -152,7 +153,9 @@ inline constexpr bool isMemberOfObject() {
 // definitions of get() and try_get()
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO figure out how to return string_view instead of string
+// TODO(bd) figure out how to return string_view instead of string
+
+// TODO(bd) allow calls vs non-const objects
 
 template<RequiredField Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj)
@@ -167,5 +170,7 @@ decltype(auto) try_get(const Obj& obj)
 {
   return obj.template try_get<Fld>();
 }
+
+// TODO(bd) add set() function template
 
 } // namespace jmg

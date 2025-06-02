@@ -181,6 +181,7 @@ public:
     return std::get<OptType>(obj_);
   }
 
+  // TODO(bd) replace these with set() member functions
   adapted_type& getWrapped() { return obj_; }
   const adapted_type& getWrapped() const { return obj_; }
 

@@ -38,7 +38,6 @@
 
 namespace jmg
 {
-
 namespace detail
 {
 /**
