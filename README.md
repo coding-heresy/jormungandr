@@ -8,6 +8,7 @@ Experimental library that seeks to express some new ideas.
     then it will run correctly.
   * While this goal is not attainable in general, the closer we can
     get, the better.
+  * c.f. the principle of _shift left_
 * Users should be heavily rewarded for becoming familiar with the code base.
   * Common/standard idioms are defined and used consistently
   * Standard abbreviations are defined and used consistently
@@ -63,6 +64,13 @@ libraries available which implement this functionality, so I chose
 and based my solution on it.
 
 ### Declaring a _Safe_ type
+
+**WARNING:** this implementation is currently affected by a
+long-standing bug in gcc where the compiler fails to ensure that all
+labmda constructs have different types, including the trivial lambda
+**[](){}**. This bug induces a requirement to use a macro to declare
+safe types but hopefully gcc will fix this problem and the macro can
+be removed to allow a simpler declaration.
 
 A _safe_ type is essentially a compile-time wrapper around another
 type that prevents intermixing values of the _safe_ type with the
