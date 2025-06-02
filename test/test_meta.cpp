@@ -260,6 +260,13 @@ TEST(MetaprogrammingTests, TestOptionalConcept) {
   EXPECT_TRUE(OptionalT<OptionalType>);
 }
 
+TEST(MetaprogrammingTests, TestRemoveOptional) {
+  using TestType = int;
+  EXPECT_TRUE((same_as<TestType, RemoveOptionalT<TestType>>));
+  using OptionalType = optional<int>;
+  EXPECT_TRUE((same_as<TestType, RemoveOptionalT<OptionalType>>));
+}
+
 TEST(MetaprogrammingTests, TestEnumConcepts) {
   enum Enum { kFoo, kBar };
   enum class ScopedEnum { kFoo, kBar };
