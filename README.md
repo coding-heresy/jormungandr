@@ -197,6 +197,9 @@ Python.
 
 ### TODO
 
+* A native internal encoding of objects based on **std::tuple** that
+  will hopefully be very performant due to operations mostly being
+  compile-time code wrapped around index-based **std::get**.
 * A _standard interface_ for stream-based processing of messages that
   is consistent with the handling of object representation
   * The modivation here is the SAX approach to XML handling, as
@@ -251,6 +254,9 @@ catalogued here. If you see an abbreviation whose meaning is not
 obvious, look in this section for a defintion. When contributing code,
 please use these abbreviations where appropriate.
 
+* rslt - result, typically used to name an automatic variable that
+  will return a value from a function so as to take advantage of named
+  return value optimization
 * cncy - currency
 * ctrl - control/controller
 * def  - definition
@@ -259,9 +265,6 @@ please use these abbreviations where appropriate.
 * msg  - message
 * px   - price
 * req  - request
-* rslt - result, typically used to name an automatic variable that
-  will return a value from a function so as to take advantage of named
-  return value optimization
 * rsp  - response
 * srvr - server
 * str  - string
@@ -295,3 +298,16 @@ discerned when reading code
   name expresses the intent that the function will perform some
   initialization action the first time it is called and will otherwise
   do nothing.
+
+# Ideas
+
+## Systematically handle currency values with proper base units that
+   avoid the need for floating point (i.e. use cents instead of
+   dollars as the base unit for USD prices). This idea is drawn from
+   boost.units although it probably won't be productive to try to
+   create another unit system for boost.units.
+
+## Systematically handle a multi-currency environment. Is there an
+   efficient way to tag the currency value (i.e. price) with currency
+   it is being expressed in? Would it make sense to use safe types to
+   encode the currency for a price into the type system?
