@@ -115,11 +115,13 @@ constexpr bool isAdaptedObject() {
  * class template for a standard interface object associated with a
  * raw tuple
  */
-template<FieldDefT... Fields>
-class Object : public ObjectDef<Fields...> {
+template<FieldDefT... Flds>
+class Object : public ObjectDef<Flds...> {
+  using base = ObjectDef<Flds...>;
+
 public:
-  using FieldList = meta::list<Fields...>;
-  using adapted_type = jmg::Tuplize<meta::transform<FieldList, Optionalize>>;
+  using Fields = typename base::Fields;
+  using adapted_type = jmg::Tuplize<meta::transform<Fields, Optionalize>>;
 
   Object() = default;
   template<typename... Args>
