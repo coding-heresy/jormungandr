@@ -30,12 +30,6 @@
  *
  */
 
-//!!!!!!!!!!!!!!!!!!!!
-#include <bitset>
-#include <iomanip>
-#include <iostream>
-//!!!!!!!!!!!!!!!!!!!!
-
 #include <cmath>
 #include <cstring>
 
@@ -50,7 +44,7 @@ using namespace std;
 
 namespace rng = std::ranges;
 
-namespace jmg
+namespace jmg::cbe
 {
 
 namespace
@@ -281,7 +275,7 @@ size_t encodeFlt(BufferProxy tgt, const T src) {
   else {
     // exponent is larger than 8 bits, encode it using the standard
     // encoding for the type equivalent to its size
-    idx += encode(tgt.subspan(idx), exp);
+    idx += impl::encode(tgt.subspan(idx), exp);
   }
 
   // encode the fraction using the standard encoding its equivalent
@@ -317,7 +311,7 @@ tuple<T, size_t> decodeFlt(BufferView src) {
     }
     // exponent is larger than 8 bits, decode it using the standard
     // encoding for the type equivalent to its size
-    const auto [raw, consumed] = decode<ExpType>(src);
+    const auto [raw, consumed] = impl::decode<ExpType>(src);
     idx += consumed;
     OctetsType rslt = static_cast<OctetsType>(raw);
     rslt <<= Masks<T>::kExpOffset;
@@ -357,7 +351,7 @@ tuple<T, size_t> decodeFlt(BufferView src) {
 namespace detail
 {
 
-size_t encode(BufferProxy tgt, const string_view src) {
+size_t encodeStr(BufferProxy tgt, const string_view src) {
   auto consumed = encodeInt(tgt.subspan(0), src.size());
   rng::copy(src, tgt.subspan(consumed).begin());
   return consumed + src.size();
@@ -376,18 +370,25 @@ tuple<string, size_t> decodeStr(BufferView src) {
 } // namespace detail
 
 ////////////////////////////////////////////////////////////////////////////////
-// dispatch based on type
+// dispatch based on type via encodePrimitive/decodePrimitive
 ////////////////////////////////////////////////////////////////////////////////
 
-template<ArithmeticT T>
-size_t encode(BufferProxy tgt, const T src) {
+namespace detail
+{
+template<typename T>
+size_t encodePrimitive(BufferProxy tgt, T src) {
   if constexpr (IntegralT<T>) { return encodeInt(tgt, src); }
   else if constexpr (FloatingPointT<T>) { return encodeFlt(tgt, src); }
+  else if constexpr (NonViewStringT<T>) {
+    return encodePrimitive(tgt, string_view(src));
+  }
+  else if constexpr (sameAsDecayed<std::string_view, T>) {
+    return encodeStr(tgt, src);
+  }
   else { JMG_NOT_EXHAUSTIVE(T); }
 }
-
-template<ArithmeticT T>
-tuple<T, size_t> decode(BufferView src) {
+template<typename T>
+std::tuple<T, size_t> decodePrimitive(BufferView src) {
   if constexpr (IntegralT<T>) {
     const auto [rslt, consumed, has_forced_sign_bit] = decodeInt<T>(src);
     // NOTE: has_forced_sign_bit should never be set when decoding an
@@ -398,16 +399,23 @@ tuple<T, size_t> decode(BufferView src) {
     return make_tuple(rslt, consumed);
   }
   else if constexpr (FloatingPointT<T>) { return decodeFlt<T>(src); }
+  // NOTE: decode must produce an owning string
+  else if constexpr (sameAsDecayed<string, T>) { return decodeStr(src); }
   else { JMG_NOT_EXHAUSTIVE(T); }
 }
+} // namespace detail
+
+////////////////////////////////////////////////////////////////////////////////
+// explicit instantiation/specialization
+////////////////////////////////////////////////////////////////////////////////
 
 // NOTE: there are only a limited set of possible specializations of
-// encode and decode for integral types, so just generate them all
+// encode and decode for primitive types, so just generate them all
 // here. This should reduce compile times
 
-#define INSTANTIATE(type)                          \
-  template size_t encode<type>(BufferProxy, type); \
-  template tuple<type, size_t> decode<type>(BufferView)
+#define INSTANTIATE(type)                                           \
+  template size_t detail::encodePrimitive<type>(BufferProxy, type); \
+  template tuple<type, size_t> detail::decodePrimitive<type>(BufferView)
 
 INSTANTIATE(int16_t);
 INSTANTIATE(uint16_t);
@@ -420,4 +428,12 @@ INSTANTIATE(double);
 
 #undef INSTANTIATE
 
-} // namespace jmg
+// TODO(bd) eliminate requirement for encoding o by-value string
+template size_t detail::encodePrimitive<string>(BufferProxy, string);
+template size_t detail::encodePrimitive<const string&>(BufferProxy,
+                                                       const string&);
+template size_t detail::encodePrimitive<string_view>(BufferProxy, string_view);
+// TODO(bd) instantiate encoding support for C-style strings?
+template tuple<string, size_t> detail::decodePrimitive<string>(BufferView);
+
+} // namespace jmg::cbe

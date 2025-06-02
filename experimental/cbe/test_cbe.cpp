@@ -30,18 +30,18 @@
  *
  */
 
-//!!!!!!!!!!
-#include <iostream>
-//!!!!!!!!!!
 #include <array>
 
 #include <gtest/gtest.h>
 
+#include "jmg/native/native.h"
 #include "jmg/random.h"
+#include "jmg/util.h"
 
 #include "cbe.h"
 
 using namespace jmg;
+using namespace jmg::cbe;
 using namespace std;
 
 namespace
@@ -108,12 +108,14 @@ using CheckTypeForT = detail::CheckTypeSelect<T>::type;
   do {                                                                  \
     const auto val = (arg);                                             \
     using Decayed = remove_cvref_t<decltype(val)>;                      \
-    std::array<uint8_t, 11> buffer = {0};                               \
-    const auto consumed_by_encoding = encode(buffer, (val));            \
+    array<uint8_t, 11> buffer = {0};                                    \
+    const auto consumed_by_encoding = cbe::impl::encode(buffer, (val)); \
     EXPECT_EQ(consumed_by_encoding, expected_consumed);                 \
     const auto [decoded, consumed_by_decoding] =                        \
-      decode<Decayed>(span(buffer));                                    \
-    if (FloatingPointT<Decayed>) { VERIFY_SAME_VALUE((val), decoded); } \
+      cbe::impl::decode<Decayed>(span(buffer));                         \
+    if constexpr (FloatingPointT<Decayed>) {                            \
+      VERIFY_SAME_VALUE((val), decoded);                                \
+    }                                                                   \
     else { EXPECT_EQ((val), decoded); }                                 \
     EXPECT_EQ(consumed_by_decoding, consumed_by_decoding);              \
   } while (0)
@@ -125,20 +127,16 @@ using CheckTypeForT = detail::CheckTypeSelect<T>::type;
   do {                                                                  \
     const auto val = (arg);                                             \
     using Decayed = remove_cvref_t<decltype(val)>;                      \
-    std::array<uint8_t, 11> buffer = {0};                               \
-    encode(buffer, (val));                                              \
-    const auto [decoded, _] = decode<Decayed>(buffer);                  \
+    array<uint8_t, 11> buffer = {0};                                    \
+    cbe::impl::encode(buffer, (val));                                   \
+    const auto [decoded, _] = cbe::impl::decode<Decayed>(buffer);       \
     if (FloatingPointT<Decayed>) { VERIFY_SAME_VALUE((val), decoded); } \
     else { EXPECT_EQ((val), decoded); }                                 \
   } while (0)
 
-#if 1
 TEST(CbeTest, TestUnsignedInts) {
   size_t expected_octets_consumed = 1;
-  {
-    const uint64_t zero_val = 0;
-    VERIFY_ENCODE_DECODE(zero_val, 1);
-  }
+  VERIFY_ENCODE_DECODE(0, 1);
   for (const auto raw_val : kOnesByByteSize) {
     VERIFY_ENCODE_DECODE(raw_val, expected_octets_consumed);
     ++expected_octets_consumed;
@@ -149,7 +147,6 @@ TEST(CbeTest, TestUnsignedInts) {
     }
   }
 }
-#endif
 
 TEST(CbeTest, TestSignedInts) {
   size_t expected_octets_consumed = 1;
@@ -197,8 +194,21 @@ TEST(CbeTest, TestFloat64) {
   VERIFY_ENCODE_DECODE(-numeric_limits<double>::infinity(), 3);
 }
 
+TEST(CbeTest, TestSafeTypes) {
+  using SafeId = SafeId32<>;
+  const auto id = SafeId(20010911);
+  array<uint8_t, 11> buffer = {0};
+  {
+    const auto consumed = cbe::impl::encode(buffer, id);
+    EXPECT_EQ(consumed, 4);
+  }
+  const auto [decoded, consumed] = cbe::impl::decode<SafeId>(span(buffer));
+  EXPECT_EQ(consumed, 4);
+  EXPECT_EQ(decoded, id);
+}
+
 TEST(CbeTest, TestBatchEncodeFollowedByDecode) {
-  std::array<uint8_t, 1024> buffer = {0};
+  array<uint8_t, 1024> buffer = {0};
   auto view = span(buffer);
   const uint32_t int32 = 20010911;
   const int64_t int64 = -20070625;
@@ -206,10 +216,10 @@ TEST(CbeTest, TestBatchEncodeFollowedByDecode) {
   const double flt64 = -1.0;
   {
     size_t idx = 0;
-#define DO_ENCODE(val)                                      \
-  do {                                                      \
-    const auto consumed = encode(view.subspan(idx), (val)); \
-    idx += consumed;                                        \
+#define DO_ENCODE(val)                                                 \
+  do {                                                                 \
+    const auto consumed = cbe::impl::encode(view.subspan(idx), (val)); \
+    idx += consumed;                                                   \
   } while (0)
 
     DO_ENCODE(int32);
@@ -222,12 +232,12 @@ TEST(CbeTest, TestBatchEncodeFollowedByDecode) {
   {
     size_t idx = 0;
     auto view = span(buffer);
-#define DO_DECODE_CHECK(val)                                    \
-  do {                                                          \
-    const auto [decoded, consumed] =                            \
-      decode<remove_cvref_t<decltype(val)>>(view.subspan(idx)); \
-    idx += consumed;                                            \
-    EXPECT_EQ((val), decoded);                                  \
+#define DO_DECODE_CHECK(val)                                               \
+  do {                                                                     \
+    const auto [decoded, consumed] =                                       \
+      cbe::impl::decode<remove_cvref_t<decltype(val)>>(view.subspan(idx)); \
+    idx += consumed;                                                       \
+    EXPECT_EQ((val), decoded);                                             \
   } while (0)
 
     DO_DECODE_CHECK(int32);
@@ -240,9 +250,35 @@ TEST(CbeTest, TestBatchEncodeFollowedByDecode) {
 }
 
 TEST(CbeTest, TestSingleString) {
-  std::array<uint8_t, 1024> buffer = {0};
+  array<uint8_t, 1024> buffer = {0};
   const auto str = "foo"s;
-  encode(span(buffer), str);
-  const auto [decoded, consumed] = decode<string>(span(buffer));
+  cbe::impl::encode(span(buffer), str);
+  const auto [decoded, consumed] = cbe::impl::decode<string>(span(buffer));
   EXPECT_EQ(str, decoded);
+}
+
+TEST(CbeTest, TestSerializerAndDeserializer) {
+  using IntFld = cbe::FieldDef<int, "int", Required, 0U /* kFldId */>;
+  using DblFld = cbe::FieldDef<double, "dbl", Required, 1U /* kFldId */>;
+  using StrFld = cbe::FieldDef<string, "str", Required, 2U /* kFldId */>;
+  // NOTE: intentionally skipping field ID 3
+  using OptFld = cbe::FieldDef<float, "opt", Optional, 4U /* kFldId */>;
+  using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld>;
+
+  const auto obj = TestObject(20010911, 42.0, "foo"s, nullopt);
+
+  array<uint8_t, 1024> buffer = {0};
+  auto serializer = cbe::Serializer<TestObject>(span(buffer));
+  serializer.serialize(obj);
+
+  auto serialized_data = span(buffer.begin(), serializer.consumed());
+  auto deserializer = Deserializer<TestObject>(serialized_data);
+  const auto deserialized = deserializer.deserialize();
+  EXPECT_EQ(20010911, jmg::get<IntFld>(deserialized));
+  EXPECT_EQ(42.0, jmg::get<DblFld>(deserialized));
+  EXPECT_EQ("foo"s, jmg::get<StrFld>(deserialized));
+  {
+    const auto val = jmg::try_get<OptFld>(deserialized);
+    EXPECT_FALSE(pred(val));
+  }
 }
