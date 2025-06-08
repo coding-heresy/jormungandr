@@ -183,6 +183,16 @@ public:
     return std::get<OptType>(obj_);
   }
 
+  /**
+   * delegate for jmg::set()
+   */
+  template<FieldDefT Fld>
+  void set(ArgTypeForT<Fld> arg) {
+    constexpr auto idx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<idx>(obj_);
+    entry = arg;
+  }
+
   // TODO(bd) replace these with set() member functions
   adapted_type& getWrapped() { return obj_; }
   const adapted_type& getWrapped() const { return obj_; }

@@ -390,6 +390,17 @@ inline constexpr bool entryCount() {
   return detail::CountMatches<T, Lst>{};
 }
 
+/**
+ * find the index of the first entry of a type in a list
+ */
+template<typename T, TypeListT Lst>
+inline constexpr size_t entryIdx() {
+  static_assert(meta::in<Lst, T>{}(),
+                "attempted to find the index of a type that is not present in the argument list");
+  using Tail = meta::find<Lst, T>;
+  return Lst::size() - Tail::size();
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // support code for using policies to configure class templates at
 // compile time

@@ -205,6 +205,18 @@ TEST(MetaprogrammingTests, TestIsMemberOfList) {
   }(15, Enum::kBar);
 }
 
+TEST(MetaprogrammingTests, TestEntryIdx) {
+  using TestList = meta::list<bool, uint8_t, uint16_t, uint32_t, uint64_t, float, double>;
+  size_t idx = 0;
+  EXPECT_EQ(idx++, (entryIdx<bool, TestList>()));
+  EXPECT_EQ(idx++, (entryIdx<uint8_t, TestList>()));
+  EXPECT_EQ(idx++, (entryIdx<uint16_t, TestList>()));
+  EXPECT_EQ(idx++, (entryIdx<uint32_t, TestList>()));
+  EXPECT_EQ(idx++, (entryIdx<uint64_t, TestList>()));
+  EXPECT_EQ(idx++, (entryIdx<float, TestList>()));
+  EXPECT_EQ(idx, (entryIdx<double, TestList>()));
+}
+
 TEST(MetaprogrammingTests, TestPolicyResolver) {
   struct Policy1Tag {};
   struct DefaultPolicy1 : Policy1Tag {};

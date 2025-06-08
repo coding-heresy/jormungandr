@@ -172,6 +172,12 @@ decltype(auto) try_get(const Obj& obj)
   return obj.template try_get<Fld>();
 }
 
-// TODO(bd) add set() function template
+
+template<FieldDefT Fld, ObjectDefT Obj>
+decltype(auto) set(Obj& obj, ArgTypeForT<Fld> arg)
+  requires(isMemberOfObject<Fld, Obj>())
+{
+  return obj.template set<Fld>(arg);
+}
 
 } // namespace jmg

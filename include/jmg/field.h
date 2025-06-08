@@ -136,6 +136,34 @@ using OptionalizedFldType =
 
 using Optionalize = meta::quote_trait<detail::OptionalizedFldType>;
 
+////////////////////////////////////////////////////////////////////////////////
+// type metafunction for calculating the correct argument type to use
+// when setting a value for a field
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+concept RequiredNonClass = !ClassT<typename T::type> && RequiredField<T>;
+template<FieldDefT T>
+struct ArgTypeFor {
+  using type = const T::type;
+};
+template<OptionalField T>
+struct ArgTypeFor<T> {
+  using type = const std::optional<typename T::type>&;
+};
+template<typename T>
+concept RequiredClass = ClassT<typename T::type> && RequiredField<T>;
+template<RequiredClass T>
+struct ArgTypeFor<T> {
+  using type = const T::type&;
+};
+} // namespace detail
+
+template<typename T>
+using ArgTypeForT = detail::ArgTypeFor<T>::type;
+
 /**
  * common field name constant for fields that have no string name
  */

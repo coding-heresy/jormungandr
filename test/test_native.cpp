@@ -127,6 +127,32 @@ TEST(NativeObjectTests, TestTryGet) {
   }
 }
 
+TEST(NativeObjectTests, TestSet) {
+  using TestObject =
+    native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
+  auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, Id32(1));
+  EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
+  {
+    auto val = jmg::try_get<OptDblFld>(obj);
+    EXPECT_TRUE(pred(val));
+    EXPECT_EQ(*val, 42.0);
+  }
+
+  jmg::set<IntFld>(obj, 20070625);
+  EXPECT_EQ(jmg::get<IntFld>(obj), 20070625);
+  jmg::set<OptDblFld>(obj, nullopt);
+  {
+    auto val = jmg::try_get<OptDblFld>(obj);
+    EXPECT_FALSE(pred(val));
+  }
+  jmg::set<OptDblFld>(obj, 1.0);
+  {
+    auto val = jmg::try_get<OptDblFld>(obj);
+    EXPECT_TRUE(pred(val));
+    EXPECT_EQ(*val, 1.0);
+  }
+}
+
 TEST(NativeObjectTests, TestConstructionFromRaw) {
   using TestObject =
     native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
