@@ -193,6 +193,16 @@ public:
     entry = arg;
   }
 
+  /**
+   * delegate for jmg::set() for rvalue reference
+   */
+  template<FieldDefT Fld>
+  void set(typename Fld::type&& arg) {
+    constexpr auto idx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<idx>(obj_);
+    entry = std::move(arg);
+  }
+
   // TODO(bd) replace these with set() member functions
   adapted_type& getWrapped() { return obj_; }
   const adapted_type& getWrapped() const { return obj_; }

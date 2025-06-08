@@ -156,8 +156,6 @@ inline constexpr bool isMemberOfObject() {
 
 // TODO(bd) figure out how to return string_view instead of string
 
-// TODO(bd) allow calls vs non-const objects
-
 template<RequiredField Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
@@ -172,12 +170,24 @@ decltype(auto) try_get(const Obj& obj)
   return obj.template try_get<Fld>();
 }
 
-
+/**
+ * version of set() that will copy
+ */
 template<FieldDefT Fld, ObjectDefT Obj>
-decltype(auto) set(Obj& obj, ArgTypeForT<Fld> arg)
+void set(Obj& obj, ArgTypeForT<Fld> arg)
   requires(isMemberOfObject<Fld, Obj>())
 {
-  return obj.template set<Fld>(arg);
+  obj.template set<Fld>(arg);
+}
+
+/**
+ * version of set() that will move
+ */
+template<FieldDefT Fld, ObjectDefT Obj>
+void set(Obj& obj, typename Fld::type&& arg)
+  requires(isMemberOfObject<Fld, Obj>() && ClassT<typename Fld::type>)
+{
+  obj.template set<Fld>(std::move(arg));
 }
 
 } // namespace jmg

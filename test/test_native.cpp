@@ -151,6 +151,20 @@ TEST(NativeObjectTests, TestSet) {
     EXPECT_TRUE(pred(val));
     EXPECT_EQ(*val, 1.0);
   }
+
+  jmg::set<StrFld>(obj, "bar"s);
+  EXPECT_EQ(jmg::get<StrFld>(obj), "bar"s);
+
+  const auto blub = "blub"s;
+  jmg::set<StrFld>(obj, blub);
+  EXPECT_EQ(jmg::get<StrFld>(obj), "blub"s);
+
+  jmg::set<OptStrFld>(obj, "something"s);
+  {
+    auto val = jmg::try_get<OptStrFld>(obj);
+    EXPECT_TRUE(pred(val));
+    EXPECT_EQ(*val, "something"s);
+  }
 }
 
 TEST(NativeObjectTests, TestConstructionFromRaw) {
