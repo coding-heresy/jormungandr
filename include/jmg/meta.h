@@ -375,6 +375,7 @@ template<typename T, TypeListT Lst>
 using CountMatches =
   meta::fold<Lst, std::integral_constant<size_t, 0>, CountMatchesLambda<T>>;
 } // namespace detail
+
 /**
  * determine if a type occurs exactly once in a list
  */
@@ -382,6 +383,7 @@ template<typename T, TypeListT Lst>
 inline constexpr bool isUniqueMemberOfList() {
   return static_cast<size_t>(1) == detail::CountMatches<T, Lst>{};
 }
+
 /**
  * count the number of times that a type appears in a list
  */

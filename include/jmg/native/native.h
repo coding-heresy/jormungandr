@@ -151,21 +151,21 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField FldT>
+  template<RequiredField Fld>
   decltype(auto) get() const {
-    using FldType = typename FldT::type;
-    using Rslt = ReturnTypeForAnyT<typename FldT::type>;
+    using FldType = typename Fld::type;
+    using Rslt = ReturnTypeForAnyT<typename Fld::type>;
     if constexpr (std::is_reference_v<Rslt>) {
       // TODO(bd) figure out why the const-ness of obj_ doesn't seem
       // to apply to the result of std::get
       const Rslt& rslt =
-        const_cast<const Rslt&>(std::get<typename FldT::type>(obj_));
+        const_cast<const Rslt&>(std::get<typename Fld::type>(obj_));
       static_assert(std::is_reference_v<decltype(rslt)>,
                     "return type is not a reference as expected");
       return static_cast<const Decay<Rslt>&>(rslt);
     }
     else {
-      const Rslt rslt = std::get<typename FldT::type>(obj_);
+      const Rslt rslt = std::get<typename Fld::type>(obj_);
       static_assert(!std::is_reference_v<decltype(rslt)>,
                     "return type is not a value as expected");
       return rslt;
@@ -175,10 +175,10 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField FldT>
+  template<OptionalField Fld>
   decltype(auto) try_get() const {
-    using FldType = typename FldT::type;
-    // NOTE: actual type stored in the tuple is optional<FldT::type>
+    using FldType = typename Fld::type;
+    // NOTE: actual type stored in the tuple is optional<Fld::type>
     using OptType = std::optional<FldType>;
     return std::get<OptType>(obj_);
   }

@@ -200,6 +200,7 @@ std::tuple<T, size_t> decodePrimitive(BufferView src);
 
 } // namespace detail
 
+// TODO(bd) see if this can be moved to the detail namespace
 namespace impl
 {
 template<typename T>
