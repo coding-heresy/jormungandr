@@ -78,6 +78,30 @@ public:
   static constexpr auto kFldId = kFieldId;
 };
 
+/**
+ * class template for string field definitions that are specific to
+ * CBE objects
+ *
+ * TODO(bd) use safe type instead of uint32_t for field ID?
+ */
+template<StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
+struct StringField
+  : public cbe::FieldDef<std::string, kName, IsRequired, kFieldId> {
+  using view_type = std::string_view;
+};
+
+/**
+ * class template for array field definitions that are specific to CBE
+ * objects
+ *
+ * TODO(bd) use safe type instead of uint32_t for field ID?
+ */
+template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
+struct ArrayField
+  : public cbe::FieldDef<std::vector<T>, kName, IsRequired, kFieldId> {
+  using view_type = std::span<T>;
+};
+
 namespace detail
 {
 // TODO(bd) use safe type instead of uint32_t for field ID?
@@ -171,10 +195,12 @@ public:
     return static_cast<const base*>(this)->template try_get<FldT>();
   }
 
-  // TODO(bd) replace these with set() member functions
-  adapted_type& getWrapped() { return static_cast<base*>(this)->getWrapped(); }
-  const adapted_type& getWrapped() const {
-    return static_cast<const base*>(this)->getWrapped();
+  /**
+   * delegate for jmg::set()
+   */
+  template<FieldDefT FldT, typename T>
+  void set(T val) {
+    return static_cast<base*>(this)->template set<FldT>(val);
   }
 };
 
@@ -311,10 +337,9 @@ class Deserializer {
     decoders[id] = [this](Obj& obj) {
       using Tgt = RemoveOptionalT<Decay<decltype(std::get<kFldIdx>(
         std::declval<typename Obj::adapted_type>()))>>;
-      auto& tgt = std::get<kFldIdx>(obj.getWrapped());
       const auto [decoded, consumed] = impl::decode<Tgt>(buffer_.subspan(idx_));
       idx_ += consumed;
-      tgt = decoded;
+      jmg::set<Fld>(obj, decoded);
     };
     if constexpr (kFldIdx + 1 < Fields::size()) {
       makeFieldDecoders<kFldIdx + 1>(decoders);

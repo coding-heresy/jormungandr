@@ -181,6 +181,28 @@ void set(Obj& obj, ArgTypeForT<Fld> arg)
 }
 
 /**
+ * version of set() that will copy from underlying type of viewable
+ * type
+ */
+template<ViewableFieldT Fld, ObjectDefT Obj>
+void set(Obj& obj, const typename Fld::type& arg)
+  requires(isMemberOfObject<Fld, Obj>())
+{
+  obj.template set<Fld>(arg);
+}
+
+/**
+ * special case of set() for string field (optional or required) that
+ * will copy from C-style string
+ */
+template<StringFieldT Fld, ObjectDefT Obj>
+void set(Obj& obj, const char* arg)
+  requires(isMemberOfObject<Fld, Obj>())
+{
+  obj.template set<Fld>(arg);
+}
+
+/**
  * version of set() that will move
  */
 template<FieldDefT Fld, ObjectDefT Obj>

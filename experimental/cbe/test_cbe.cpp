@@ -260,7 +260,7 @@ TEST(CbeTest, TestSingleString) {
 TEST(CbeTest, TestSerializerAndDeserializer) {
   using IntFld = cbe::FieldDef<int, "int", Required, 0U /* kFldId */>;
   using DblFld = cbe::FieldDef<double, "dbl", Required, 1U /* kFldId */>;
-  using StrFld = cbe::FieldDef<string, "str", Required, 2U /* kFldId */>;
+  using StrFld = cbe::StringField<"str", Required, 2U /* kFldId */>;
   // NOTE: intentionally skipping field ID 3
   using OptFld = cbe::FieldDef<float, "opt", Optional, 4U /* kFldId */>;
   using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld>;

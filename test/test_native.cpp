@@ -40,12 +40,14 @@
 
 using namespace jmg;
 using namespace std;
+using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 using IntFld = FieldDef<int, "int", Required>;
 using DblFld = FieldDef<double, "dbl", Required>;
 using OptDblFld = FieldDef<double, "dbl", Optional>;
-using StrFld = FieldDef<string, "str", Required>;
-using OptStrFld = FieldDef<string, "opt_str", Optional>;
+using StrFld = StringField<"str", Required>;
+using OptStrFld = StringField<"opt_str", Optional>;
 
 // safe types
 using Id32 = SafeId32<>;
@@ -77,10 +79,10 @@ TEST(NativeObjectTests, TestReturnTypes) {
   VALIDATE_TRY_GET_RETURN(OptDblFld, const optional<double>&);
 
   // class types return by const reference
-  VALIDATE_GET_RETURN(StrFld, const string&);
+  VALIDATE_GET_RETURN(StrFld, string_view);
 
   // optional class types return by const optional reference
-  VALIDATE_TRY_GET_RETURN(OptStrFld, const optional<string>&);
+  VALIDATE_TRY_GET_RETURN(OptStrFld, optional<string_view>);
 
   // safe types that wrap non-class types return by value
   using SafeIdFldGetReturn =
@@ -106,6 +108,13 @@ TEST(NativeObjectTests, TestGet) {
   EXPECT_EQ(jmg::get<SafeIdFld>(obj), Id32(0));
 }
 
+#define VALIDATE_SET_OPTIONAL(field, obj, expected) \
+  do {                                              \
+    auto val = jmg::try_get<field>(obj);            \
+    EXPECT_TRUE(pred(val));                         \
+    EXPECT_EQ(*val, expected);                      \
+  } while (0)
+
 TEST(NativeObjectTests, TestTryGet) {
   using TestObject =
     native::Object<IntFld, DblFld, OptDblFld, OptStrFld, OptSafeIdFld>;
@@ -115,16 +124,8 @@ TEST(NativeObjectTests, TestTryGet) {
     const auto& opt_dbl = jmg::try_get<OptDblFld>(obj);
     EXPECT_FALSE(pred(opt_dbl));
   }
-  {
-    const auto& opt_str = jmg::try_get<OptStrFld>(obj);
-    EXPECT_TRUE(pred(opt_str));
-    EXPECT_EQ(*opt_str, "bar"s);
-  }
-  {
-    const auto& opt_id = jmg::try_get<OptSafeIdFld>(obj);
-    EXPECT_TRUE(pred(opt_id));
-    EXPECT_EQ(*opt_id, Id64(64));
-  }
+  VALIDATE_SET_OPTIONAL(OptStrFld, obj, "bar"s);
+  VALIDATE_SET_OPTIONAL(OptSafeIdFld, obj, Id64(64));
 }
 
 TEST(NativeObjectTests, TestSet) {
@@ -132,11 +133,7 @@ TEST(NativeObjectTests, TestSet) {
     native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
   auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, Id32(1));
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
-  {
-    auto val = jmg::try_get<OptDblFld>(obj);
-    EXPECT_TRUE(pred(val));
-    EXPECT_EQ(*val, 42.0);
-  }
+  VALIDATE_SET_OPTIONAL(OptDblFld, obj, 42.0);
 
   jmg::set<IntFld>(obj, 20070625);
   EXPECT_EQ(jmg::get<IntFld>(obj), 20070625);
@@ -146,25 +143,46 @@ TEST(NativeObjectTests, TestSet) {
     EXPECT_FALSE(pred(val));
   }
   jmg::set<OptDblFld>(obj, 1.0);
-  {
-    auto val = jmg::try_get<OptDblFld>(obj);
-    EXPECT_TRUE(pred(val));
-    EXPECT_EQ(*val, 1.0);
-  }
+  VALIDATE_SET_OPTIONAL(OptDblFld, obj, 1.0);
 
+  ////////////////////
+  // numerous special cases for fields containing viewable types
+
+  // raw string works for required string field
   jmg::set<StrFld>(obj, "bar"s);
   EXPECT_EQ(jmg::get<StrFld>(obj), "bar"s);
 
+  // string from variable works for required string field
   const auto blub = "blub"s;
   jmg::set<StrFld>(obj, blub);
-  EXPECT_EQ(jmg::get<StrFld>(obj), "blub"s);
+  EXPECT_EQ(jmg::get<StrFld>(obj), "blub"sv);
 
+  // raw C-style string works for required string field
+  jmg::set<StrFld>(obj, "blab");
+  EXPECT_EQ(jmg::get<StrFld>(obj), "blab"sv);
+
+  // C-style string from variable works for required string field
+  const char* blob = "blob";
+  jmg::set<StrFld>(obj, blob);
+  EXPECT_EQ(jmg::get<StrFld>(obj), "blob"sv);
+
+  // raw string works for optional string field
   jmg::set<OptStrFld>(obj, "something"s);
-  {
-    auto val = jmg::try_get<OptStrFld>(obj);
-    EXPECT_TRUE(pred(val));
-    EXPECT_EQ(*val, "something"s);
-  }
+  VALIDATE_SET_OPTIONAL(OptStrFld, obj, "something"sv);
+
+  // string from variable works for optional string field
+  const auto something_else = "something else"s;
+  jmg::set<OptStrFld>(obj, something_else);
+  VALIDATE_SET_OPTIONAL(OptStrFld, obj, "something else"sv);
+
+  // raw C-style string works for optional string field
+  jmg::set<OptStrFld>(obj, "another_thing");
+  VALIDATE_SET_OPTIONAL(OptStrFld, obj, "another_thing"sv);
+
+  // C-style string from variable works for optional string field
+  const char* yet_another_thing = "yet another thing";
+  jmg::set<OptStrFld>(obj, yet_another_thing);
+  VALIDATE_SET_OPTIONAL(OptStrFld, obj, "yet another thing"sv);
 }
 
 TEST(NativeObjectTests, TestConstructionFromRaw) {
@@ -172,11 +190,7 @@ TEST(NativeObjectTests, TestConstructionFromRaw) {
     native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld>;
   auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, Id32(1));
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
-  {
-    const auto& opt_dbl = jmg::try_get<OptDblFld>(obj);
-    EXPECT_TRUE(pred(opt_dbl));
-    EXPECT_DOUBLE_EQ(*opt_dbl, 42.0);
-  }
+  VALIDATE_SET_OPTIONAL(OptDblFld, obj, 42.0);
   EXPECT_EQ(jmg::get<StrFld>(obj), "foo"s);
   {
     const auto& opt_str = jmg::try_get<OptStrFld>(obj);
@@ -184,3 +198,5 @@ TEST(NativeObjectTests, TestConstructionFromRaw) {
   }
   EXPECT_EQ(jmg::get<SafeIdFld>(obj), Id32(1));
 }
+
+#undef VALIDATE_SET_OPTIONAL

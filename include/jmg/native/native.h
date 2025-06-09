@@ -153,23 +153,13 @@ public:
    */
   template<RequiredField Fld>
   decltype(auto) get() const {
-    using FldType = typename Fld::type;
-    using Rslt = ReturnTypeForAnyT<typename Fld::type>;
-    if constexpr (std::is_reference_v<Rslt>) {
-      // TODO(bd) figure out why the const-ness of obj_ doesn't seem
-      // to apply to the result of std::get
-      const Rslt& rslt =
-        const_cast<const Rslt&>(std::get<typename Fld::type>(obj_));
-      static_assert(std::is_reference_v<decltype(rslt)>,
-                    "return type is not a reference as expected");
-      return static_cast<const Decay<Rslt>&>(rslt);
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    using Rslt = ReturnTypeForField<Fld>;
+    if constexpr (ViewableFieldT<Fld>) { return Rslt(std::get<kIdx>(obj_)); }
+    else if constexpr (std::is_reference_v<Rslt>) {
+      return static_cast<const Decay<Rslt>&>(std::get<kIdx>(obj_));
     }
-    else {
-      const Rslt rslt = std::get<typename Fld::type>(obj_);
-      static_assert(!std::is_reference_v<decltype(rslt)>,
-                    "return type is not a value as expected");
-      return rslt;
-    }
+    else { return Rslt(std::get<kIdx>(obj_)); }
   }
 
   /**
@@ -177,35 +167,85 @@ public:
    */
   template<OptionalField Fld>
   decltype(auto) try_get() const {
-    using FldType = typename Fld::type;
-    // NOTE: actual type stored in the tuple is optional<Fld::type>
-    using OptType = std::optional<FldType>;
-    return std::get<OptType>(obj_);
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    if constexpr (ViewableFieldT<Fld>) {
+      using ViewType = Fld::view_type;
+      using Rslt = ReturnTypeForField<Fld>;
+      const auto& val = std::get<kIdx>(obj_);
+      if (val) { return Rslt(ViewType(*val)); }
+      else { return Rslt(); }
+    }
+    else { return std::get<kIdx>(obj_); }
   }
 
   /**
-   * delegate for jmg::set()
+   * delegate for jmg::set() for non-viewable types
    */
-  template<FieldDefT Fld>
+  template<NonViewableFieldT Fld>
   void set(ArgTypeForT<Fld> arg) {
-    constexpr auto idx = entryIdx<Fld, typename base::Fields>();
-    auto& entry = std::get<idx>(obj_);
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
     entry = arg;
   }
 
   /**
-   * delegate for jmg::set() for rvalue reference
+   * delegate for jmg::set() for viewable types that takes the view
+   * type
    */
-  template<FieldDefT Fld>
+  template<ViewableFieldT Fld>
+  void set(ArgTypeForT<Fld> arg) {
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
+    // construct the owning type from the argument view type
+    using FldType = typename Fld::type;
+    entry = FldType(arg);
+  }
+
+  /**
+   * delegate for jmg::set() for viewable types that takes the owning
+   * type
+   */
+  template<ViewableFieldT Fld>
+  void set(const typename Fld::type& arg) {
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
+    // copy the owning type directly
+    entry = arg;
+  }
+
+  /**
+   * delegate for jmg::set() for string field that takes C-style
+   * string
+   */
+  template<StringFieldT Fld>
+  void set(const char* arg) {
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
+    entry = arg;
+  }
+
+  /**
+   * delegate for jmg::set() for rvalue reference of non-viewable
+   * types
+   */
+  template<NonViewableFieldT Fld>
   void set(typename Fld::type&& arg) {
-    constexpr auto idx = entryIdx<Fld, typename base::Fields>();
-    auto& entry = std::get<idx>(obj_);
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
     entry = std::move(arg);
   }
 
-  // TODO(bd) replace these with set() member functions
-  adapted_type& getWrapped() { return obj_; }
-  const adapted_type& getWrapped() const { return obj_; }
+  /**
+   * delegate for jmg::set() for rvalue reference of owning type for
+   * viewable types
+   */
+  template<ViewableFieldT Fld>
+  void set(typename Fld::type&& arg) {
+    using FldType = typename Fld::type;
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
+    entry = FldType(arg);
+  }
 
 private:
   adapted_type obj_;
