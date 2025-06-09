@@ -398,7 +398,8 @@ inline constexpr bool entryCount() {
 template<typename T, TypeListT Lst>
 inline constexpr size_t entryIdx() {
   static_assert(meta::in<Lst, T>{}(),
-                "attempted to find the index of a type that is not present in the argument list");
+                "attempted to find the index of a type that is not present in "
+                "the argument list");
   using Tail = meta::find<Lst, T>;
   return Lst::size() - Tail::size();
 }

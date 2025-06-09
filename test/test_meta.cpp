@@ -206,7 +206,8 @@ TEST(MetaprogrammingTests, TestIsMemberOfList) {
 }
 
 TEST(MetaprogrammingTests, TestEntryIdx) {
-  using TestList = meta::list<bool, uint8_t, uint16_t, uint32_t, uint64_t, float, double>;
+  using TestList =
+    meta::list<bool, uint8_t, uint16_t, uint32_t, uint64_t, float, double>;
   size_t idx = 0;
   EXPECT_EQ(idx++, (entryIdx<bool, TestList>()));
   EXPECT_EQ(idx++, (entryIdx<uint8_t, TestList>()));
