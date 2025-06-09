@@ -24,9 +24,91 @@ something akin to _domain-specific languages_ with powerful
 vocabularies to express solutions clearly and enable the reader of the
 code to quickly grasp its function
 
-## Documentation placeholders
-### Return Value Overloading
+# _Avant Garde_ techniques
+
+## Return Type Overloading
+
+Non-trivial type conversion is very messy in c++. There are multiple
+generations of conversion functions in the standard library that have
+incompatible interfaces, provide varying levels of performance and
+often require overspecification (especially via poor-quality
+techniques such as embedding the name of a type in the name of a
+function, e.g. `to_string`, which complicate generic programming
+unnecessarily). At some point, I stumbled across [a
+technique](https://artificial-mind.net/blog/2020/10/10/return-type-overloading)
+that produces (at least the illusion of) return type overloading that
+appealed to my desire for terse code. I decided to experiment with the
+approach despite the statement by its author that it should not be
+taken as "how to use return-type overloading in production" and
+ignoring the caveats about how this can go wrong. The result is a very
+terse interface consisting of a family of variadic function templates
+named `from`. The use of this is very simple: call `from` on a
+variable that should be converted to another type (typically, but not
+always, a string) and assign the result to another variable or pass it
+as a function argument. For example:
+
+```
+double dbl = jmg::from("0.5");
+
+void doSomethingWith(uint32_t value);
+// some time later...
+const auto strToConvert = "42"s;
+doSomethingWith(from(strToConvert));
+```
+
+The result is what one would expect from a plain reading of the code:
+the value is converted to the desired type without requiring explicit
+specification in the call (such as `from<int>(str)`). Trying to
+execute an unsupported conversion will fail to compile, as it
+should. There are some quirks here: it is one of the very few things
+that will cause me to depart from my usual _auto all the things_ style
+(since `auto val = from(str);` will fail to compile because there is
+no way to know what type to convert the value to), and passing the
+result of calling `from` to function templates will sometimes require
+the addition of `static_cast` to disambiguate the result.
+
+The following single-argument (to `from`) conversions are currently
+supported:
+
+* `std::string` to...
+  * string (to handle degenerate cases in generic code)
+  * numeric/arithmetic types
+* `std::string_view` or `const char*` to anything that `std::string`
+  can convert to
+* back and forth between various time point types
+  * `jmg::TimePoint` (AKA `absl::Time`)
+  * `time_t` (AKA _seconds since unix epoch_)
+  * `timeval` (`time_t` plus micros since second)
+  * `timespec` (`time_t` plus nanos since second)
+  * `boost::posix_time::ptime`
+* TODO
+  * `std::chrono::time_point` to other time point types
+  * `std::chrono::duration` to `jmg::Duration` (AKA `absl::Duration`)
+
+The addition of one or more arguments (format spec and optional time
+zone) will allow conversion between string and `jmg::TimePoint`, where
+the format spec is the same as per the time parsing/formatting support
+from `absl::Time` (which provides the underlying implementation).
+
+## Named Value Parameters
+
+OK, the name here is a bait-and-switch because it doesn't provide
+named value parameters for functions in the way that python does (go
+define a `struct` and use designated initializers if that's what
+you're after). Instead, the idea here is to allow the definition of
+variadic function templates that can take some or all of their
+parameters in any order and will figure out at compile time whether or
+not the call is correct (i.e. doesn't involve mutually exclusive
+parameters, is not missing some required parameters, etc). The
+technique depends on the types of the various parameters being
+distinct, with _safe_ types used to ensure this property. Under the
+hood, it's powered by a lamda, a fold expression, some metaprogramming
+and a generous helping of `if constexpr`.
+
+## Template Policy Framework
 TODO
+
+## Documentation placeholders
 ### Standard Interface for Objects
 TODO
 ### Command Line Parameter Handling
@@ -97,8 +179,6 @@ value using the _unsafe_ function so that it can be used to interact
 with other types where necessary. This facility should be used very
 sparingly, and the lifetime of the unwrapped value should be
 constrained as much as possible.
-
-### TODO document the _named parameter_ idiom
 
 ## Simple Server Framework
 
@@ -307,7 +387,7 @@ discerned when reading code
   initialization action the first time it is called and will otherwise
   do nothing.
 
-# Ideas
+# Interesting ideas that may be developed further
 
 ## Systematically handle currency values with proper base units that
    avoid the need for floating point (i.e. use cents instead of

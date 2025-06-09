@@ -20,6 +20,15 @@ serve as a test bed for some features of interest:
 
 # TODO list
 
+* Continue developing support for 'viewable' types
+  * Extend special handling techniques for string fields to array
+    field so that all 'viewable' types are handled the same
+  * Improve 'viewable' type handling to support 'pmr'
+  * Export 'viewable' type handling to other encodings
+* Add CBE/native support to jmgc.
+* Add support for sub-objects, with proper handling of references for
+  return values when getting vs owning values when decoding along with
+  const refs when encoding.
 * Rethink and rework buffer handling. The current implementation only
   works with fixed-size buffers represented using std::span, which
   will complicate things when encoding with sub-objects (do to the
@@ -28,20 +37,6 @@ serve as a test bed for some features of interest:
   combines `std::ranges::range` with requirements for `size()` and
   stateful `next()` member functions. `absl::cord` could form the
   basis for an initial implementation.
-* Add support for sub-objects, with proper handling of references for
-  return values when getting vs owning values when decoding along with
-  const refs when encoding.
-* Experiment with special tag types for specifying string and array
-  types. The goals here are:
-  * Allowing a mixture of view/proxy types and references when
-    encoding (and setting, when supported).
-  * Always returning view types when getting.
-  * Allowing an object to seamlessly use `pmr` internally when
-    constructed with an allocator.
-  * This approach could be exported to other encodings if successful.
-* Add a `jmg::set()` function in **include/jmg/object.h** and
-  prototype the implementation using `cbe::Object`.
-* Add CBE/native support to jmgc.
 * Experiment further with serialization/deserialization.
   * Create an interface for stream deserialization with externally
     accessible callbacks and experiment to determine whether this
@@ -61,3 +56,12 @@ serve as a test bed for some features of interest:
   much better results than simply treating it as an integer. It also
   makes sense to have a compiler flag that disables floating point
   compression.
+  * More thoughts on this: reversing the direction of scanning
+    mantissa octets does seem to make sense based on experimental
+    evidence, although more samples should be viewed
+  * There are extra bits available in the exponents to allow the
+    addition of another metadata bit that would indicate whether or
+    not the mantissa was compressed: if the bit is set, the mantissa
+    is compressed with stop-bit encoding and should require fewer
+    octets than the native encoding; otherwise, the mantissa octets
+    should be copied without change.
