@@ -34,6 +34,7 @@
  * compiler for Jormungandr field and message definitions
  */
 
+#include <array>
 #include <iostream>
 
 #include "jmg/cmdline.h"
@@ -45,10 +46,14 @@
 using namespace jmg;
 using namespace std;
 
+constexpr char kJmgYamlFlag[] = "JMG-YAML";
+constexpr char kFixFlag[] = "FIX";
+constexpr auto kSupportedFlags = array{kJmgYamlFlag, kFixFlag};
+
 using JmgFlag =
-  NamedParam<bool, "JMG", "file format is JMG, file type is YAML", Required>;
+  NamedParam<bool, kJmgYamlFlag, "file format is JMG, file type is YAML", Required>;
 using FixFlag = NamedParam<bool,
-                           "FIX",
+                           kFixFlag,
                            "file format is QuickFIX protocol, file type is XML",
                            Required>;
 using SrcFile =
