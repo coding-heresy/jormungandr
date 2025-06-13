@@ -197,6 +197,34 @@ template<typename T>
 concept NonClassT = !ClassT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// concepts for spans and vectors
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct IsSpan : std::false_type {};
+template<typename T>
+struct IsSpan<std::span<T>> : std::true_type {};
+template<typename T>
+struct IsVector : std::false_type {};
+template<typename... Ts>
+struct IsVector<std::vector<Ts...>> : std::true_type {};
+} // namespace detail
+
+/**
+ * concept for span
+ */
+template<typename T>
+concept SpanT = detail::IsSpan<Decay<T>>{}();
+
+/**
+ * concept for vector
+ */
+template<typename T>
+concept VectorT = detail::IsVector<Decay<T>>{}();
+
+////////////////////////////////////////////////////////////////////////////////
 // concepts for string-like types
 ////////////////////////////////////////////////////////////////////////////////
 

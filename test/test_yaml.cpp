@@ -39,7 +39,7 @@
 using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
-using testing::ElementsAre;
+using ::testing::ElementsAre;
 
 using Id32 = SafeId32<>;
 

@@ -32,7 +32,7 @@
 
 #include <array>
 
-#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include "jmg/native/native.h"
 #include "jmg/random.h"
@@ -43,6 +43,7 @@
 using namespace jmg;
 using namespace jmg::cbe;
 using namespace std;
+using ::testing::ElementsAreArray;
 
 namespace
 {
@@ -257,15 +258,27 @@ TEST(CbeTest, TestSingleString) {
   EXPECT_EQ(str, decoded);
 }
 
+TEST(CbeTest, TestArray) {
+  array<uint8_t, 1024> buffer = {0};
+  const auto vec = vector{1, 2, 3};
+  cbe::impl::encode(span(buffer), vec);
+  const auto [decoded, consumed] = cbe::impl::decode<vector<int>>(span(buffer));
+  EXPECT_THAT(decoded, ElementsAreArray(vec));
+}
+
 TEST(CbeTest, TestSerializerAndDeserializer) {
   using IntFld = cbe::FieldDef<int, "int", Required, 0U /* kFldId */>;
   using DblFld = cbe::FieldDef<double, "dbl", Required, 1U /* kFldId */>;
   using StrFld = cbe::StringField<"str", Required, 2U /* kFldId */>;
   // NOTE: intentionally skipping field ID 3
   using OptFld = cbe::FieldDef<float, "opt", Optional, 4U /* kFldId */>;
-  using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld>;
+  using ArrayFld =
+    cbe::ArrayField<unsigned, "unsigned_array", Required, 5U /* kFldId */>;
 
-  const auto obj = TestObject(20010911, 42.0, "foo"s, nullopt);
+  using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld, ArrayFld>;
+
+  const auto vec = vector{5U, 10U, 20U};
+  const auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, vec);
 
   array<uint8_t, 1024> buffer = {0};
   auto serializer = cbe::Serializer<TestObject>(span(buffer));
@@ -280,5 +293,9 @@ TEST(CbeTest, TestSerializerAndDeserializer) {
   {
     const auto val = jmg::try_get<OptFld>(deserialized);
     EXPECT_FALSE(pred(val));
+  }
+  {
+    const auto view = jmg::get<ArrayFld>(obj);
+    EXPECT_THAT(view, ElementsAreArray(vec));
   }
 }

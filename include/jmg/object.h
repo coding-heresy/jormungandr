@@ -212,4 +212,7 @@ void set(Obj& obj, typename Fld::type&& arg)
   obj.template set<Fld>(std::move(arg));
 }
 
+// TODO(bd) add special case to allow array fields to be set from
+// std::array?
+
 } // namespace jmg

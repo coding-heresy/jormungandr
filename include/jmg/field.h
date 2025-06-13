@@ -78,6 +78,7 @@ struct FieldDef : public detail::FieldDefTag {
 template<StrLiteral kName, TypeFlagT IsRequired>
 struct StringField : public FieldDef<std::string, kName, IsRequired> {
   using view_type = std::string_view;
+  using const_view_type = std::string_view;
 };
 
 /**
@@ -91,6 +92,7 @@ struct StringField : public FieldDef<std::string, kName, IsRequired> {
 template<typename T, StrLiteral kName, TypeFlagT IsRequired>
 struct ArrayField : public FieldDef<std::vector<T>, kName, IsRequired> {
   using view_type = std::span<T>;
+  using const_view_type = std::span<const T>;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -273,7 +275,7 @@ struct ArgTypeFor<T> {
 
 template<RequiredViewable T>
 struct ArgTypeFor<T> {
-  using type = const T::view_type;
+  using type = const T::const_view_type;
 };
 
 template<OptionalField T>
@@ -288,7 +290,7 @@ struct ReturnTypeForField {
 
 template<RequiredViewable T>
 struct ReturnTypeForField<T> {
-  using type = typename T::view_type;
+  using type = typename T::const_view_type;
 };
 
 template<OptionalNonViewable T>
@@ -296,7 +298,7 @@ struct ReturnTypeForField<T> : public ArgTypeFor<T> {};
 
 template<OptionalViewable T>
 struct ReturnTypeForField<T> {
-  using type = std::optional<typename T::view_type>;
+  using type = std::optional<typename T::const_view_type>;
 };
 
 } // namespace detail

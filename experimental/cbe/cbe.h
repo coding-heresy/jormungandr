@@ -50,7 +50,9 @@
  * characteristics
  */
 
+#include <algorithm>
 #include <exception>
+#include <ranges>
 #include <string_view>
 
 #include "jmg/meta.h"
@@ -229,15 +231,64 @@ std::tuple<T, size_t> decodePrimitive(BufferView src);
 // TODO(bd) see if this can be moved to the detail namespace
 namespace impl
 {
+
+template<typename T>
+size_t encode(BufferProxy, T);
+template<typename T>
+std::tuple<T, size_t> decode(BufferView);
+
+////////////////////////////////////////////////////////////////////////////////
+// encode/decode for arrays (AKA spans and vectors)
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T, typename... Ts>
+size_t encodeVec(BufferProxy tgt, const std::vector<T, Ts...> src) {
+  auto consumed = encode(tgt.subspan(0), src.size());
+  for (const auto& entry : src) {
+    consumed += impl::encode<T>(tgt.subspan(consumed), entry);
+  }
+  return consumed;
+}
+
+template<VectorT T>
+std::tuple<T, size_t> decodeVec(BufferView src) {
+  size_t total_consumed = 0;
+  T rslt;
+  const auto sz = [&] {
+    auto [sz, consumed] = decode<size_t>(src);
+    rslt.reserve(sz);
+    total_consumed += consumed;
+    return sz;
+  }();
+  std::ranges::transform(
+    std::views::iota(0U, sz), back_inserter(rslt), [&](const auto _) {
+      std::ignore = _;
+      auto [value, consumed] =
+        decode<typename T::value_type>(src.subspan(total_consumed));
+      total_consumed += consumed;
+      return value;
+    });
+  return std::make_tuple(std::move(rslt), total_consumed);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// generic encode/decode
+////////////////////////////////////////////////////////////////////////////////
+
 template<typename T>
 size_t encode(BufferProxy tgt, T src) {
   if constexpr (SafeT<T>) { return encode(tgt, unsafe(src)); }
-  if constexpr (OptionalT<T>) {
+  else if constexpr (OptionalT<T>) {
     // NOTE: std::optional<T> should be handled above this level
     static_assert(always_false<T>, "trying to encode std::optional");
   }
-  // TODO(bd) arrays and objects
+  else if constexpr (VectorT<T>) {
+    // NOTE: vectors must be handled here since encodeVec cannot be
+    // explicitly specialized
+    return encodeVec(tgt, src);
+  }
   else { return detail::encodePrimitive(tgt, src); }
+  // TODO(bd) objects
 }
 
 template<typename T>
@@ -246,12 +297,17 @@ std::tuple<T, size_t> decode(BufferView src) {
     const auto& [decoded, consumed] = decode<UnsafeTypeFromT<T>>(src);
     return std::make_tuple(T(decoded), consumed);
   }
-  if constexpr (OptionalT<T>) {
+  else if constexpr (OptionalT<T>) {
     // NOTE: std::optional<T> should be handled above this level
     static_assert(always_false<T>, "trying to decode std::optional");
   }
-  // TODO(bd) arrays and objects
+  else if constexpr (VectorT<T>) {
+    // NOTE: vectors must be handled here since decodeVec cannot be
+    // explicitly specialized
+    return decodeVec<T>(src);
+  }
   else { return detail::decodePrimitive<T>(src); }
+  // TODO(bd) objects
 }
 
 } // namespace impl
@@ -388,8 +444,8 @@ class Deserializer {
       }
       return rslt;
     }();
-    //////////
     // done setting up function scope static helper objects
+    //////////
 
     //////////
     // decoding logic
@@ -402,7 +458,7 @@ class Deserializer {
         return static_cast<size_t>(decoded);
       }();
       JMG_ENFORCE(
-        field_id < kMaxFieldId,
+        field_id <= kMaxFieldId,
         "decoded field ID ["
           << field_id
           << "] is not in the set of valid IDs for the type being decoded");

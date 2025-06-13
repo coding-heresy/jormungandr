@@ -169,7 +169,7 @@ public:
   decltype(auto) try_get() const {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     if constexpr (ViewableFieldT<Fld>) {
-      using ViewType = Fld::view_type;
+      using ViewType = Fld::const_view_type;
       using Rslt = ReturnTypeForField<Fld>;
       const auto& val = std::get<kIdx>(obj_);
       if (val) { return Rslt(ViewType(*val)); }
