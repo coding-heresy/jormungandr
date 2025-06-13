@@ -81,12 +81,25 @@ inline std::ostream& operator<<(std::ostream& strm, Octet arg) {
 // helper functions for dictionaries
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * retrieve the key from a dictionary value_type
+ */
 const auto& key_of(const auto& rec) { return std::get<0>(rec); }
 
+/**
+ * retrieve the value (AKA mapped_type) from a dictionary value_type
+ */
 const auto& value_of(const auto& rec) { return std::get<1>(rec); }
 
+/**
+ * retrieve the value (AKA mapped_type) from a dictionary value_type
+ */
 auto& value_of(auto& rec) { return std::get<1>(rec); }
 
+/**
+ * function template that emplaces a new item in a dictionary or
+ * throws an exception if the key already exists
+ */
 template<typename DictContainer, typename Key, typename... Vals>
 void always_emplace(std::string_view description,
                     DictContainer& dict,
@@ -97,6 +110,15 @@ void always_emplace(std::string_view description,
               "unsupported duplicate key [" << key << "] for " << description);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// misc helper functions
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * function template that is a simple wrapper around static_cast<bool>
+ * because I'm too lazy to type that much and I find the longer text
+ * too cluttered for easy reading
+ */
 template<typename T>
 bool pred(const T& val) {
   return static_cast<bool>(val);
