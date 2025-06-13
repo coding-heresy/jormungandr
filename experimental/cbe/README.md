@@ -21,14 +21,14 @@ serve as a test bed for some features of interest:
 # TODO list
 
 * Continue developing support for 'viewable' types
-  * Extend special handling techniques for string fields to array
-    field so that all 'viewable' types are handled the same
   * Improve 'viewable' type handling to support 'pmr'
   * Export 'viewable' type handling to other encodings
 * Add CBE/native support to jmgc.
 * Add support for sub-objects, with proper handling of references for
   return values when getting vs owning values when decoding along with
   const refs when encoding.
+* Add some metaprogramming to constrain fields to contain only
+  allowable types
 * Rethink and rework buffer handling. The current implementation only
   works with fixed-size buffers represented using std::span, which
   will complicate things when encoding with sub-objects (do to the
@@ -37,6 +37,9 @@ serve as a test bed for some features of interest:
   combines `std::ranges::range` with requirements for `size()` and
   stateful `next()` member functions. `absl::cord` could form the
   basis for an initial implementation.
+* Review google protobuf wire format to see how hard it would be to
+  modify CBE code to serialize and deserialize protobufs to
+  jmg::native objects.
 * Experiment further with serialization/deserialization.
   * Create an interface for stream deserialization with externally
     accessible callbacks and experiment to determine whether this

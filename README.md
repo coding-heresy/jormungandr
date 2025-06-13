@@ -389,13 +389,20 @@ discerned when reading code
 
 # Interesting ideas that may be developed further
 
-## Systematically handle currency values with proper base units that
-   avoid the need for floating point (i.e. use cents instead of
-   dollars as the base unit for USD prices). This idea is drawn from
-   boost.units although it probably won't be productive to try to
-   create another unit system for boost.units.
+## Systematically handle currency values with proper base units
 
-## Systematically handle a multi-currency environment. Is there an
-   efficient way to tag the currency value (i.e. price) with currency
-   it is being expressed in? Would it make sense to use safe types to
-   encode the currency for a price into the type system?
+The goal is to avoid the use of floating point for prices (i.e. use
+cents instead of dollars as the base unit for USD prices). This idea
+is drawn from boost.units although it probably won't be productive to
+try to create another unit system for boost.units.
+
+## Systematically handle a multi-currency environment.
+
+Is there an efficient way to tag the currency value (i.e. price) with
+currency it is being expressed in? Would it make sense to use safe
+types to encode the currency for a price into the type system?
+
+# Other overall TODO itmes
+
+* Rename the Abseil function names used in the library: function names
+  SHOULD NOT EVER begin with capital letters!!!
