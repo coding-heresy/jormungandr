@@ -45,13 +45,23 @@ using namespace std::string_literals;
 using namespace std::string_view_literals;
 using ::testing::ElementsAreArray;
 
+// numeric/arithmetic fields
 using IntFld = FieldDef<int, "int", Required>;
 using DblFld = FieldDef<double, "dbl", Required>;
 using OptDblFld = FieldDef<double, "dbl", Optional>;
+
+// string fields
 using StrFld = StringField<"str", Required>;
 using OptStrFld = StringField<"opt_str", Optional>;
+
+// array fields
 using ArrayFld = ArrayField<int, "int_array", Required>;
 using OptArrayFld = ArrayField<double, "int_array", Optional>;
+
+// object fields
+using SubObject = native::Object<IntFld, DblFld>;
+using SubObjFld = FieldDef<SubObject, "sub_obj", Required>;
+using OptSubObjFld = FieldDef<SubObject, "opt_sub_obj", Optional>;
 
 // safe types
 using Id32 = SafeId32<>;
@@ -63,8 +73,8 @@ namespace rng = std::ranges;
 
 TEST(NativeObjectTests, TestReturnTypes) {
   using TestObject =
-    native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld,
-                   OptSafeIdFld, ArrayFld, OptArrayFld>;
+    native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SubObjFld,
+                   OptSubObjFld, SafeIdFld, OptSafeIdFld, ArrayFld, OptArrayFld>;
 
 #define VALIDATE_GET_RETURN(field, expected)                                   \
   do {                                                                         \
@@ -82,20 +92,32 @@ TEST(NativeObjectTests, TestReturnTypes) {
   // non-class types return by value
   VALIDATE_GET_RETURN(IntFld, int);
 
-  // optional non-class types return by const optional reference
+  // optional non-class types return const optional ref
+  // TODO(bd) is this the correct return type?
   VALIDATE_TRY_GET_RETURN(OptDblFld, const optional<double>&);
 
-  // class types return by const reference
+  // string fields return string_view
   VALIDATE_GET_RETURN(StrFld, string_view);
 
-  // optional class types return by const optional reference
+  // optional string fields return by optional string_view
   VALIDATE_TRY_GET_RETURN(OptStrFld, optional<string_view>);
 
-  // class types return by const reference
-  VALIDATE_GET_RETURN(ArrayFld, span<const int>);
+  // object types return const ref
+  using SubObjGetReturn = decltype(jmg::get<SubObjFld>(declval<TestObject>()));
+  EXPECT_TRUE((sameAsDecayed<SubObject, SubObjGetReturn>()));
+  EXPECT_TRUE(is_reference_v<SubObjGetReturn>);
+  // TODO(bd) result should be ref to const
+  // EXPECT_TRUE(is_const_v<remove_cvref_t<SubObjGetReturn>>);
 
-  // optional class types return by const optional reference
-  VALIDATE_TRY_GET_RETURN(OptArrayFld, optional<span<const double>>);
+  using OptSubObjGetReturn =
+    decltype(jmg::try_get<OptSubObjFld>(declval<TestObject>()));
+  EXPECT_TRUE(is_pointer_v<OptSubObjGetReturn>);
+  {
+    using Deref = decltype(*declval<OptSubObjGetReturn>());
+    EXPECT_TRUE((decayedSameAs<SubObject, Deref>()));
+    // TODO(bd) result should be pointer to const
+    // EXPECT_TRUE(is_const_v<Deref>);
+  }
 
   // safe types that wrap non-class types return by value
   using SafeIdFldGetReturn =
@@ -108,18 +130,31 @@ TEST(NativeObjectTests, TestReturnTypes) {
   // optional reference
   VALIDATE_TRY_GET_RETURN(OptSafeIdFld, const optional<Id64>&);
 
+  // array types return span of const
+  VALIDATE_GET_RETURN(ArrayFld, span<const int>);
+
+  // optional array types return optional span of const
+  VALIDATE_TRY_GET_RETURN(OptArrayFld, optional<span<const double>>);
+
 #undef VALIDATE_GET_RETURN
 #undef VALIDATE_TRY_GET_RETURN
 }
 
 TEST(NativeObjectTests, TestGet) {
   using TestObject =
-    native::Object<IntFld, DblFld, StrFld, SafeIdFld, ArrayFld>;
+    native::Object<IntFld, DblFld, StrFld, SubObjFld, SafeIdFld, ArrayFld>;
   const auto vec = vector{2, 4, 6, 8};
-  auto obj = TestObject(make_tuple(20010911, 42.0, "foo"s, Id32(0), vec));
+  auto obj =
+    TestObject(make_tuple(20010911, 42.0, "foo"s,
+                          SubObject(make_tuple(20070625, -1.0)), Id32(0), vec));
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
   EXPECT_DOUBLE_EQ(jmg::get<DblFld>(obj), 42.0);
-  EXPECT_EQ(jmg::get<StrFld>(obj), "foo"s);
+  EXPECT_EQ(jmg::get<StrFld>(obj), "foo"sv);
+  {
+    const auto& sub_obj = jmg::get<SubObjFld>(obj);
+    EXPECT_EQ(jmg::get<IntFld>(sub_obj), 20070625);
+    EXPECT_EQ(jmg::get<DblFld>(sub_obj), -1.0);
+  }
   EXPECT_EQ(jmg::get<SafeIdFld>(obj), Id32(0));
   {
     const auto view = jmg::get<ArrayFld>(obj);
@@ -136,28 +171,40 @@ TEST(NativeObjectTests, TestGet) {
 
 TEST(NativeObjectTests, TestTryGet) {
   using TestObject = native::Object<IntFld, DblFld, OptDblFld, OptStrFld,
-                                    OptSafeIdFld, OptArrayFld>;
+                                    OptSubObjFld, OptSafeIdFld, OptArrayFld>;
   const auto vec = vector{2.0, 4.0, 6.0, 8.0};
-  const auto obj =
-    TestObject(make_tuple(20010911, 42.0, nullopt, "bar"s, Id64(64), vec));
+  const auto obj = TestObject(make_tuple(20010911, 42.0, nullopt, "bar"s,
+                                         SubObject(make_tuple(20070625, -1.0)),
+                                         Id64(64), vec));
   {
     const auto& opt_dbl = jmg::try_get<OptDblFld>(obj);
     EXPECT_FALSE(pred(opt_dbl));
   }
   VALIDATE_TRY_GET_OPTIONAL(OptStrFld, obj, "bar"s);
+  {
+    const auto* opt_sub_obj = jmg::try_get<OptSubObjFld>(obj);
+    EXPECT_TRUE(pred(opt_sub_obj));
+    EXPECT_EQ(jmg::get<IntFld>(*opt_sub_obj), 20070625);
+    EXPECT_EQ(jmg::get<DblFld>(*opt_sub_obj), -1.0);
+  }
   VALIDATE_TRY_GET_OPTIONAL(OptSafeIdFld, obj, Id64(64));
   {
     const auto view = jmg::try_get<OptArrayFld>(obj);
     EXPECT_TRUE(pred(view));
     EXPECT_THAT(*view, ElementsAreArray(vec));
   }
+
+  const auto other_obj = TestObject(make_tuple(20010911, 42.0, nullopt, "bar"s,
+                                               nullopt, Id64(64), vec));
+  const auto* opt_sub_obj = jmg::try_get<OptSubObjFld>(other_obj);
+  EXPECT_FALSE(pred(opt_sub_obj));
 }
 
 TEST(NativeObjectTests, TestSet) {
-  using TestObject =
-    native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SafeIdFld, ArrayFld>;
-  auto obj =
-    TestObject(20010911, 42.0, "foo"s, nullopt, Id32(1), vector<int>());
+  using TestObject = native::Object<IntFld, OptDblFld, StrFld, OptStrFld,
+                                    OptSubObjFld, SafeIdFld, ArrayFld>;
+  auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, nullopt, Id32(1),
+                        vector<int>());
   EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
   VALIDATE_TRY_GET_OPTIONAL(OptDblFld, obj, 42.0);
 
@@ -170,6 +217,17 @@ TEST(NativeObjectTests, TestSet) {
   }
   jmg::set<OptDblFld>(obj, 1.0);
   VALIDATE_TRY_GET_OPTIONAL(OptDblFld, obj, 1.0);
+  {
+    auto sub_obj = jmg::try_get<OptSubObjFld>(obj);
+    EXPECT_FALSE(pred(sub_obj));
+  }
+  jmg::set<OptSubObjFld>(obj, SubObject(make_tuple(20070625, -1.0)));
+  {
+    auto sub_obj = jmg::try_get<OptSubObjFld>(obj);
+    EXPECT_TRUE(pred(sub_obj));
+    EXPECT_EQ(jmg::get<IntFld>(*sub_obj), 20070625);
+    EXPECT_EQ(jmg::get<DblFld>(*sub_obj), -1.0);
+  }
 
   ////////////////////
   // numerous special cases for fields containing viewable types

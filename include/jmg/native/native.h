@@ -114,6 +114,8 @@ constexpr bool isAdaptedObject() {
 /**
  * class template for a standard interface object associated with a
  * raw tuple
+ *
+ * @todo(bd) apply more constraints to the allowable types for fields
  */
 template<FieldDefT... Flds>
 class Object : public ObjectDef<Flds...> {
@@ -173,7 +175,15 @@ public:
       using Rslt = ReturnTypeForField<Fld>;
       const auto& val = std::get<kIdx>(obj_);
       if (val) { return Rslt(ViewType(*val)); }
+      // NOTE: default constructed Rslt here returns a correctly typed version
+      // of std::nullopt
       else { return Rslt(); }
+    }
+    else if constexpr (ObjectDefT<typename Fld::type>) {
+      const auto& val = std::get<kIdx>(obj_);
+      // NOTE: optional object returns raw, non-owning pointer
+      if (val) { return &(*val); }
+      else { return static_cast<const typename Fld::type*>(nullptr); }
     }
     else { return std::get<kIdx>(obj_); }
   }
