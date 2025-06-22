@@ -33,6 +33,17 @@ cc_test(
 )
 
 cc_test(
+    name = 'test_field',
+    srcs = ['test_field.cpp'],
+    deps = [
+        '@com_google_googletest//:gtest_main',
+        '//:jmg',
+    ],
+    linkstatic = True,
+    size = 'small',
+)
+
+cc_test(
     name = 'test_file_util',
     srcs = ['test_file_util.cpp'],
     deps = [
@@ -176,7 +187,7 @@ genrule(
         'data/example.yaml',
     ],
     outs = ['jmg_example.h'],
-    cmd = '$(location //jmgc:jmgc) -JMG $(location data/example.yaml) > $@',
+    cmd = '$(location //jmgc:jmgc) -JMG-YAML $(location data/example.yaml) > $@',
 )
 
 cc_test(
