@@ -40,6 +40,7 @@
 using namespace jmg;
 using namespace std;
 using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 TEST(GeneralUtilitiesTest, TestStreamTupleOut) {
   const auto tp = make_tuple(20010911, 42.0, "foo"s);
@@ -72,4 +73,17 @@ TEST(GeneralUtilitiesTest, TestGetFromArgs) {
   EXPECT_EQ(20010911, getFromArgs<int>(int_val, dbl_val, str_val));
   EXPECT_EQ(20010911, getFromArgs<int>(dbl_val, str_val, int_val));
   EXPECT_EQ(20010911, getFromArgs<int>(str_val, int_val, dbl_val));
+}
+
+TEST(GeneralUtilitiesTest, TestAbseilRework) {
+  EXPECT_EQ("foobar"s, str_cat("foo"s, "bar"s));
+  {
+    auto str = "foo"s;
+    str_append(str, "bar"s);
+    EXPECT_EQ("foobar"s, str);
+  }
+  {
+    const auto strs = array{"foo"s, "bar"s};
+    EXPECT_EQ("foo,bar"s, str_join(strs, ","sv));
+  }
 }

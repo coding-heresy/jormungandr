@@ -36,7 +36,11 @@
  */
 
 #include <optional>
+#include <ranges>
 #include <tuple>
+
+#include <absl/strings/str_cat.h>
+#include <absl/strings/str_join.h>
 
 #include "meta.h"
 #include "preprocessor.h"
@@ -76,6 +80,36 @@ inline std::ostream& operator<<(std::ostream& strm, Octet arg) {
   strm.width(old_width);
   return strm;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// rework annoying Abseil function names
+//
+// function names SHOULD NOT begin with a capital letter!
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename Itr>
+std::string str_join(Itr start, Itr finish, const std::string_view separator) {
+  return absl::StrJoin(start, finish, separator);
+}
+
+template<std::ranges::range Rng>
+std::string str_join(const Rng& range, const std::string_view separator) {
+  return absl::StrJoin(range, separator);
+}
+
+// TODO(bd) add more absl::StrJoin overloads?
+
+template<typename... Args>
+std::string str_cat(Args&&... args) {
+  return absl::StrCat(std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+void str_append(std::string& tgt, Args&&... args) {
+  return absl::StrAppend(&tgt, std::forward<Args>(args)...);
+}
+
+// TODO(bd) add more?
 
 ////////////////////////////////////////////////////////////////////////////////
 // helper functions for dictionaries
