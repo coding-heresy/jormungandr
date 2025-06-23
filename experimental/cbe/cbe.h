@@ -220,6 +220,11 @@ concept CbeObjectDefT = ObjectDefT<T> && detail::IsCbeObjectDef<T>{}();
 namespace detail
 {
 
+constexpr auto kDecodingFailure =
+  std::string_view("decoding failure, remaining buffer is too small");
+constexpr auto kEncodingFailure =
+  std::string_view("encoding failure, remaining buffer is too small");
+
 template<typename T>
 size_t encodePrimitive(BufferProxy tgt, T src);
 
@@ -227,6 +232,12 @@ template<typename T>
 std::tuple<T, size_t> decodePrimitive(BufferView src);
 
 } // namespace detail
+
+template<CbeObjectDefT Obj>
+class Serializer;
+
+template<CbeObjectDefT Obj>
+class Deserializer;
 
 // TODO(bd) see if this can be moved to the detail namespace
 namespace impl
@@ -272,6 +283,41 @@ std::tuple<T, size_t> decodeVec(BufferView src) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// implementations of encode/decode for sub-objects
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+size_t encodeObj(BufferProxy tgt, const T& src) {
+  // always use 4 octets for size field, no compression
+  auto size_field = tgt.subspan(0, 4);
+  auto serializer = Serializer<T>(tgt.subspan(4));
+  serializer.serialize(src);
+  const auto consumed = serializer.consumed();
+  JMG_ENFORCE(consumed <= std::numeric_limits<uint32_t>::max(),
+              "attempted to serialize object whose serialized size of ["
+                << consumed << "] octets exceeds the maximum possible size of ["
+                << std::numeric_limits<uint32_t>::max() << "] octets");
+  const auto sz = static_cast<uint32_t>(consumed);
+  // NOTE: C-style cast
+  memcpy(size_field.data(), (uint8_t*)(&sz), 4);
+  return sz + 4;
+}
+
+template<CbeObjectDefT T>
+std::tuple<T, size_t> decodeObj(BufferView src) {
+  JMG_ENFORCE(src.size() > 4, detail::kDecodingFailure);
+  const auto sz = [&] {
+    uint32_t rslt;
+    memcpy(&rslt, src.data(), sizeof(rslt));
+    return rslt;
+  }();
+  JMG_ENFORCE(src.size() >= 4 + sz, detail::kDecodingFailure);
+  auto deserializer = Deserializer<T>(src.subspan(4, sz));
+  auto decoded = deserializer.deserialize();
+  return std::make_tuple(std::move(decoded), 4 + deserializer.consumed());
+}
+
+////////////////////////////////////////////////////////////////////////////////
 // generic encode/decode
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -287,8 +333,8 @@ size_t encode(BufferProxy tgt, T src) {
     // explicitly specialized
     return encodeVec(tgt, src);
   }
+  else if constexpr (CbeObjectDefT<T>) { return encodeObj(tgt, src); }
   else { return detail::encodePrimitive(tgt, src); }
-  // TODO(bd) objects
 }
 
 template<typename T>
@@ -306,8 +352,8 @@ std::tuple<T, size_t> decode(BufferView src) {
     // explicitly specialized
     return decodeVec<T>(src);
   }
+  else if constexpr (CbeObjectDefT<T>) { return decodeObj<T>(src); }
   else { return detail::decodePrimitive<T>(src); }
-  // TODO(bd) objects
 }
 
 } // namespace impl
@@ -333,8 +379,6 @@ class Serializer {
   // IDs are unique
   template<CbeFieldDefT Fld>
   void encodeField(const Obj& object) {
-    // get the field ID
-    // using Required = typename Fld::required;
     constexpr bool is_required_field = typename Fld::required{};
     if constexpr (is_required_field) {
       encodeValue<Fld>(jmg::get<Fld>(object));
@@ -480,7 +524,7 @@ class Deserializer {
   }
 
 public:
-  explicit Deserializer(BufferProxy buffer) : buffer_(buffer) {}
+  explicit Deserializer(BufferView buffer) : buffer_(buffer) {}
 
   /**
    * deserialize a single object from the buffer
@@ -497,7 +541,7 @@ private:
   bool isBufferEmpty() const { return idx_ >= buffer_.size(); }
 
   size_t idx_ = 0;
-  BufferProxy buffer_;
+  BufferView buffer_;
 };
 
 } // namespace jmg::cbe

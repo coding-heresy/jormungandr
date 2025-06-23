@@ -250,6 +250,9 @@ TEST(CbeTest, TestBatchEncodeFollowedByDecode) {
   }
 }
 
+// TODO(bd) add exhaustive tests to show that an exception is thrown if the
+// buffer is too short for encoding or decoding
+
 TEST(CbeTest, TestSingleString) {
   array<uint8_t, 1024> buffer = {0};
   const auto str = "foo"s;
@@ -266,6 +269,26 @@ TEST(CbeTest, TestArray) {
   EXPECT_THAT(decoded, ElementsAreArray(vec));
 }
 
+TEST(CbeTest, TestObj) {
+  array<uint8_t, 1024> buffer = {0};
+  using IntFld = cbe::FieldDef<int, "int", Required, 0U /* kFldId */>;
+  using SubObject = cbe::Object<IntFld>;
+  // NOTE: IntFld is in a different object than SubObjFld so kFldI can be the
+  // same for both
+  using SubObjFld =
+    cbe::FieldDef<SubObject, "sub_obj", Required, 0U /* kFldId */>;
+  using TestObject = cbe::Object<SubObjFld>;
+  const auto obj = TestObject(SubObject(20010911));
+  {
+    const auto consumed = cbe::impl::encode(span(buffer), obj);
+    EXPECT_EQ(14U, consumed);
+  }
+  const auto [decoded, consumed] = cbe::impl::decode<TestObject>(span(buffer));
+  EXPECT_EQ(14U, consumed);
+  const auto& sub_obj = jmg::get<SubObjFld>(decoded);
+  EXPECT_EQ(20010911, jmg::get<IntFld>(sub_obj));
+}
+
 TEST(CbeTest, TestSerializerAndDeserializer) {
   using IntFld = cbe::FieldDef<int, "int", Required, 0U /* kFldId */>;
   using DblFld = cbe::FieldDef<double, "dbl", Required, 1U /* kFldId */>;
@@ -275,10 +298,18 @@ TEST(CbeTest, TestSerializerAndDeserializer) {
   using ArrayFld =
     cbe::ArrayField<unsigned, "unsigned_array", Required, 5U /* kFldId */>;
 
-  using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld, ArrayFld>;
+  using SubObject = cbe::Object<IntFld, DblFld>;
+  using SubObjFld =
+    cbe::FieldDef<SubObject, "sub_obj", Required, 6U /* kFldId */>;
+  using OptSubObjFld =
+    cbe::FieldDef<SubObject, "sub_obj", Optional, 7U /* kFldId */>;
+
+  using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld, ArrayFld,
+                                 SubObjFld, OptSubObjFld>;
 
   const auto vec = vector{5U, 10U, 20U};
-  const auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, vec);
+  const auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, vec,
+                              SubObject(20070625, -1.0), nullopt);
 
   array<uint8_t, 1024> buffer = {0};
   auto serializer = cbe::Serializer<TestObject>(span(buffer));
@@ -295,7 +326,16 @@ TEST(CbeTest, TestSerializerAndDeserializer) {
     EXPECT_FALSE(pred(val));
   }
   {
-    const auto view = jmg::get<ArrayFld>(obj);
+    const auto view = jmg::get<ArrayFld>(deserialized);
     EXPECT_THAT(view, ElementsAreArray(vec));
+  }
+  {
+    const auto& sub_obj = jmg::get<SubObjFld>(deserialized);
+    EXPECT_EQ(20070625, jmg::get<IntFld>(sub_obj));
+    EXPECT_EQ(-1.0, jmg::get<DblFld>(sub_obj));
+  }
+  {
+    const auto* opt_sub_obj = jmg::try_get<OptSubObjFld>(deserialized);
+    EXPECT_FALSE(pred(opt_sub_obj));
   }
 }

@@ -140,12 +140,8 @@ size_t encodeInt(BufferProxy tgt,
   // generate stop-bit encoded version of value
   size_t idx = 0;
   while (val) {
-    JMG_ENFORCE(
-      idx < tgt.size(),
-      "target array/vector has ["
-        << tgt.size()
-        << "] octets remaining, which is not enough to encode the value ["
-        << src << "]");
+    JMG_ENFORCE(idx < tgt.size(), detail::kEncodingFailure
+                                    << " to encode the value [" << src << "]");
     uint8_t chunk = val & kMask;
     val >>= 7;
     if (!val) { chunk |= kStopBit; }
@@ -168,6 +164,7 @@ tuple<T, size_t, bool> decodeInt(BufferView src,
     rslt += val;
     ++counter;
     if (is_finished) { break; }
+    JMG_ENFORCE(counter < src.size(), detail::kDecodingFailure);
   }
   const bool is_sign_bit_set = rslt & 1;
   rslt >>= 1;
@@ -270,7 +267,8 @@ size_t encodeFlt(BufferProxy tgt, const T src) {
   if constexpr (sameAsDecayed<float, T>()) {
     // exponent is exactly 8 bits, no need for stop bit encoding
     tgt[idx] = static_cast<uint8_t>(exp);
-    idx += 1;
+    ++idx;
+    JMG_ENFORCE(idx < tgt.size(), detail::kEncodingFailure);
   }
   else {
     // exponent is larger than 8 bits, encode it using the standard
