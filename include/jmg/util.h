@@ -81,6 +81,20 @@ inline std::ostream& operator<<(std::ostream& strm, Octet arg) {
   return strm;
 }
 
+/**
+ * formatter to use with str_join
+ */
+struct OctetFmt {
+  void operator()(std::string* out, Octet arg) const {
+    // TODO(bd) probably could be much better than this but good enough for now...
+    std::ostringstream strm;
+    strm << arg;
+    out->append(strm.str());
+  }
+};
+
+static constexpr auto kOctetFmt = OctetFmt();
+
 ////////////////////////////////////////////////////////////////////////////////
 // rework annoying Abseil function names
 //
@@ -95,6 +109,13 @@ std::string str_join(Itr start, Itr finish, const std::string_view separator) {
 template<std::ranges::range Rng>
 std::string str_join(const Rng& range, const std::string_view separator) {
   return absl::StrJoin(range, separator);
+}
+
+template<std::ranges::range Rng, typename Fmt>
+std::string str_join(const Rng& range,
+                     const std::string_view separator,
+                     Fmt&& fmt) {
+  return absl::StrJoin(range, separator, std::forward<Fmt>(fmt));
 }
 
 // TODO(bd) add more absl::StrJoin overloads?

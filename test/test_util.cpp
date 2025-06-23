@@ -32,6 +32,7 @@
 
 #include <gtest/gtest.h>
 
+#include <ranges>
 #include <string>
 #include <tuple>
 
@@ -41,6 +42,8 @@ using namespace jmg;
 using namespace std;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+
+namespace vws = std::ranges::views;
 
 TEST(GeneralUtilitiesTest, TestStreamTupleOut) {
   const auto tp = make_tuple(20010911, 42.0, "foo"s);
@@ -86,4 +89,13 @@ TEST(GeneralUtilitiesTest, TestAbseilRework) {
     const auto strs = array{"foo"s, "bar"s};
     EXPECT_EQ("foo,bar"s, str_join(strs, ","sv));
   }
+}
+
+TEST(GeneralUtilitiesTest, TestOctetPrinting) {
+  const auto raw_octets = array<uint8_t, 5>{0, 1, 2, 3, 4};
+  const auto bitwise_octets_str =
+    str_join(raw_octets
+               | vws::transform([](const uint8_t arg) { return Octet(arg); }),
+             " "sv, kOctetFmt);
+  EXPECT_EQ("00000000 00000001 00000010 00000011 00000100"s, bitwise_octets_str);
 }
