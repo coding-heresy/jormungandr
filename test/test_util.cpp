@@ -46,10 +46,25 @@ using namespace std::string_view_literals;
 namespace vws = std::ranges::views;
 
 TEST(GeneralUtilitiesTest, TestStreamTupleOut) {
-  const auto tp = make_tuple(20010911, 42.0, "foo"s);
+  const auto tpl = make_tuple(20010911, 42.0, "foo"s);
   ostringstream strm;
-  strm << tp;
-  EXPECT_EQ("20010911, 42, foo"s, strm.str());
+  strm << tpl;
+  EXPECT_EQ("20010911,42,foo"s, strm.str());
+}
+
+TEST(GeneralUtilitiesTest, TestStreamOptionalOut) {
+  optional<int> val;
+  {
+    ostringstream strm;
+    strm << val;
+    EXPECT_EQ("<empty>"s, strm.str());
+  }
+  val = 20010911;
+  {
+    ostringstream strm;
+    strm << val;
+    EXPECT_EQ("20010911"s, strm.str());
+  }
 }
 
 TEST(GeneralUtilitiesTest, TestStreamOctetOut) {
@@ -65,6 +80,13 @@ TEST(GeneralUtilitiesTest, TestStreamOctetOut) {
     EXPECT_EQ(strm.str(), string(expected.data()));
     value <<= 1;
   }
+
+  const auto raw_octets = array<uint8_t, 5>{0, 1, 2, 3, 4};
+  const auto bitwise_octets_str =
+    str_join(raw_octets
+               | vws::transform([](const uint8_t arg) { return Octet(arg); }),
+             " "sv, kOctetFmt);
+  EXPECT_EQ("00000000 00000001 00000010 00000011 00000100"s, bitwise_octets_str);
 }
 
 TEST(GeneralUtilitiesTest, TestGetFromArgs) {
@@ -89,13 +111,4 @@ TEST(GeneralUtilitiesTest, TestAbseilRework) {
     const auto strs = array{"foo"s, "bar"s};
     EXPECT_EQ("foo,bar"s, str_join(strs, ","sv));
   }
-}
-
-TEST(GeneralUtilitiesTest, TestOctetPrinting) {
-  const auto raw_octets = array<uint8_t, 5>{0, 1, 2, 3, 4};
-  const auto bitwise_octets_str =
-    str_join(raw_octets
-               | vws::transform([](const uint8_t arg) { return Octet(arg); }),
-             " "sv, kOctetFmt);
-  EXPECT_EQ("00000000 00000001 00000010 00000011 00000100"s, bitwise_octets_str);
 }

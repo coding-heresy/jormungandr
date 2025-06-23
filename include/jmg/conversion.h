@@ -301,26 +301,4 @@ auto from(Src&& src, Extras&&... extras) {
 
 #undef DETAIL_ENFORCE_EMPTY_EXTRAS
 
-////////////////////////////////////////////////////////////////////////////////
-// string output helpers
-////////////////////////////////////////////////////////////////////////////////
-
-template<typename T>
-std::ostream& operator<<(std::ostream& strm, const std::optional<T> val) {
-  if (!val.has_value()) { strm << "<empty>"; }
-  else { strm << *val; }
-  return strm;
-}
-
-template<typename... Ts>
-std::ostream& operator<<(std::ostream& strm, const std::tuple<Ts...>& tpl) {
-  apply(
-    [&](const auto& arg, const auto&... args) {
-      strm << arg;
-      ((strm << "," << args), ...);
-    },
-    tpl);
-  return strm;
-}
-
 } // namespace jmg

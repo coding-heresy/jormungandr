@@ -194,29 +194,3 @@ TEST(ConversionTests, TestTimePointFromPosixTime) {
   const auto expected = kTimePoint;
   EXPECT_EQ(expected, actual);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// tests of streaming functions
-////////////////////////////////////////////////////////////////////////////////
-
-TEST(ConversionTests, TestOptionalStreamOutput) {
-  optional<int> val;
-  {
-    ostringstream strm;
-    strm << val;
-    EXPECT_EQ("<empty>"s, strm.str());
-  }
-  val = 20010911;
-  {
-    ostringstream strm;
-    strm << val;
-    EXPECT_EQ("20010911"s, strm.str());
-  }
-}
-
-TEST(ConversionTests, TestTupleStreamOutput) {
-  auto tpl = make_tuple(42.0, 20010911);
-  ostringstream strm;
-  strm << tpl;
-  EXPECT_EQ("42,20010911"s, strm.str());
-}

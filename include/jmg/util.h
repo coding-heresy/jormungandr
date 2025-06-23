@@ -53,18 +53,25 @@ namespace jmg
 // stream tuple values to output
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
-template<typename T, typename... Ts>
-void streamOutItems(std::ostream& strm, const T& first, const Ts&... rest) {
-  strm << first;
-  ((strm << ", " << rest), ...);
-}
-} // namespace detail
-
 template<typename... Ts>
-std::ostream& operator<<(std::ostream& strm, const std::tuple<Ts...>& arg) {
-  apply([&](auto&&... args) { detail::streamOutItems(strm, args...); }, arg);
+std::ostream& operator<<(std::ostream& strm, const std::tuple<Ts...>& tpl) {
+  apply(
+    [&](const auto& arg, const auto&... args) {
+      strm << arg;
+      ((strm << "," << args), ...);
+    },
+    tpl);
+  return strm;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// steam optionals to output
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+std::ostream& operator<<(std::ostream& strm, const std::optional<T> val) {
+  if (!val.has_value()) { strm << "<empty>"; }
+  else { strm << *val; }
   return strm;
 }
 
@@ -94,6 +101,8 @@ struct OctetFmt {
 };
 
 static constexpr auto kOctetFmt = OctetFmt();
+
+// TODO(bd) create a utility to print buffer contents as bitwise octets
 
 ////////////////////////////////////////////////////////////////////////////////
 // rework annoying Abseil function names
