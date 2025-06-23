@@ -39,6 +39,7 @@
 
 #include "jmg/cmdline.h"
 #include "jmg/meta.h"
+#include "jmg/util.h"
 
 #include "jmg_spec.h"
 #include "quickfix_spec.h"
@@ -49,6 +50,8 @@ using namespace std;
 constexpr char kJmgYamlFlag[] = "JMG-YAML";
 constexpr char kFixFlag[] = "FIX";
 constexpr auto kSupportedFlags = array{kJmgYamlFlag, kFixFlag};
+
+const auto kSupportedFlagsStr = str_join(kSupportedFlags, ", "sv);
 
 using JmgFlag =
   NamedParam<bool, kJmgYamlFlag, "file format is JMG, file type is YAML", Required>;
@@ -66,19 +69,22 @@ int main(const int argc, const char** argv) {
 
     if (jmg::get<FixFlag>(cmdline)) {
       // generate header file for FIX specification
-      JMG_ENFORCE_CMDLINE(
-        !jmg::get<JmgFlag>(cmdline),
-        cmdline.usage("at most one of [-JMG, -FIX] may be specified"));
+      JMG_ENFORCE_CMDLINE(!jmg::get<JmgFlag>(cmdline),
+                          cmdline.usage(str_cat("at most one of [",
+                                                kSupportedFlagsStr,
+                                                "] may be specified")));
       quickfix_spec::process(get<SrcFile>(cmdline));
     }
     else {
-      // must be -JMG
-      JMG_ENFORCE_CMDLINE(
-        jmg::get<JmgFlag>(cmdline),
-        cmdline.usage("at least one of [-JMG, -FIX] must be specified"));
-      JMG_ENFORCE_CMDLINE(
-        !jmg::get<FixFlag>(cmdline),
-        cmdline.usage("at most one of [-JMG, -FIX] may be specified"));
+      // must be -JMG-YAML
+      JMG_ENFORCE_CMDLINE(jmg::get<JmgFlag>(cmdline),
+                          cmdline.usage(str_cat("at least one of [",
+                                                kSupportedFlagsStr,
+                                                "] must be specified")));
+      JMG_ENFORCE_CMDLINE(!jmg::get<FixFlag>(cmdline),
+                          cmdline.usage(str_cat("at most one of [",
+                                                kSupportedFlagsStr,
+                                                "] may be specified")));
       jmg_spec::process(jmg::get<SrcFile>(cmdline));
     }
     return EXIT_SUCCESS;
