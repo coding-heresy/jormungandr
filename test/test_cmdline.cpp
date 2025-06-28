@@ -44,7 +44,7 @@ using PosnParam2 = PosnParam<string, "str", "a string positional param">;
 using OptPosnParam =
   PosnParam<string, "opt_str", "an optional string positional param", Optional>;
 using NamedParam1 = NamedParam<double, "dbl", "a double named param", Required>;
-using NamedParam2 = NamedParam<bool, "flag", "a flag", Required>;
+using NamedParam2 = NamedFlag<"flag", "a flag">;
 using NamedParam3 =
   NamedParam<unsigned, "opt_int", "an optional integer named parameter", Optional>;
 

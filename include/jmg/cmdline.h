@@ -107,6 +107,9 @@ struct NamedParam : public FieldDef<T, kName, IsRequired>,
                 "named boolean parameters must be required");
 };
 
+template<StrLiteral kName, StrLiteral kDesc>
+struct NamedFlag : public NamedParam<bool, kName, kDesc, Required> {};
+
 #undef PARAM_BOILERPLATE
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -125,6 +128,9 @@ struct IsNamedParam : std::false_type {};
 template<typename T, StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
 struct IsNamedParam<NamedParam<T, kName, kDesc, IsRequired>> : std::true_type {
 };
+// NOTE: a NamedFlag is a type of NamedParam
+template<StrLiteral kName, StrLiteral kDesc>
+struct IsNamedParam<NamedFlag<kName, kDesc>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
