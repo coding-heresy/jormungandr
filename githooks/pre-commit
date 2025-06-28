@@ -1,0 +1,66 @@
+#!/bin/bash
+
+# pre-commit hook
+
+# Formatting check currently supported for the following
+# languages/file types:
+#
+# - C/C++
+# - protobuf
+# - bazel (TBD)
+
+function get_file_type() {
+    local file=$1
+    # NOTE: formatting protobuf files using clang-format as well
+    echo ${file} | egrep -q '\.(H|h|hpp|hxx|C|c|cpp|cxx|cc|icc|inc|proto)$'
+    if [[ "$?" == "0" ]]; then
+        echo "CXX"
+        return 0
+    fi
+    echo ${file} | egrep -q '^(BUILD|WORKSPACE|MODULE.bazel)$|\.bzl$'
+    if [[ "$?" == "0" ]]; then
+        echo "BAZEL"
+        return 0
+    fi
+    echo "UNKNOWN"
+    return 0
+}
+
+# check if the commit is an initial commit
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+    AGAINST=HEAD
+else
+    # initial commit: diff against an empty tree object
+    AGAINST=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+fi
+
+# get the list of staged files
+STAGED_FILES=$(git diff --name-only --cached --diff-filter=AM)
+if [ -z "${STAGED_FILES}" ]; then
+    exit 0
+fi
+
+FORMAT_ERROR=0
+for FILE in ${STAGED_FILES}; do
+    FILE_TYPE=$(get_file_type ${FILE})
+    if [[ "${FILE_TYPE}" == "CXX" ]]; then
+        # this is a C or C++ file, use clang-format
+        DIFF=$(git clang-format --diff --staged "${AGAINST}" -- "${FILE}" -q)
+        if [ -n "${DIFF}" ]; then
+            echo "ERROR [${FILE}] is not correctly formatted"
+            FORMAT_ERROR=1
+        fi
+    fi
+    if [[ "${FILE_TYPE}" == "BAZEL" ]]; then
+        # TOOD(bd) figure out how to control the configuration for buildifier
+        echo "skipping bazel checks"
+    fi
+done
+
+if [ "${FORMAT_ERROR}" -eq 1 ]; then
+    echo "========== commit aborted due to formatting errors =========="
+    exit 1
+fi
+
+exit 0

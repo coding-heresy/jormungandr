@@ -2,6 +2,9 @@
 # use bzlmod
 common --enable_bzlmod
 
+# maybe install pre-commit hook and update workspace status
+common --workspace_status_command=./githooks/install-pre-commit-hook.sh
+
 # builds with C++23
 build --action_env=BAZEL_CXXOPTS="-std=c++23"
 
