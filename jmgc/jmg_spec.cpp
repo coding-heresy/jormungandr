@@ -30,7 +30,6 @@
  *
  */
 
-#include <absl/strings/str_join.h>
 #include <yaml-cpp/yaml.h>
 
 #include "jmg/file_util.h"
@@ -112,7 +111,7 @@ const Set<string> allowed_concepts = {"aritmetic"s, "key"s};
  * specified in the file to types used in field definitions
  */
 string correctedTypeName(const string_view type_name) {
-  if ("string" == type_name) { return absl::StrCat("std::", type_name); }
+  if ("string" == type_name) { return str_cat("std::", type_name); }
   return string(type_name.data(), type_name.size());
 }
 
@@ -331,14 +330,14 @@ public:
     cout << "////////////////////\n// groups\n\n";
     for (const auto& [name, fields] : groups_) {
       cout << "using " << name << " = jmg::FieldGroupDef<"
-           << absl::StrJoin(fields, ", ") << ">;\n\n";
+           << str_join(fields, ", ") << ">;\n\n";
     }
 
     // emit objects
     cout << "////////////////////\n// objects\n\n";
     for (const auto& [name, fields] : objects_) {
       cout << "using " << name << " = jmg::" << kNamespace << "::Object<"
-           << absl::StrJoin(fields, ", ") << ">;\n\n";
+           << str_join(fields, ", ") << ">;\n\n";
     }
 
     cout << "} // namespace " << package_ << "\n";
