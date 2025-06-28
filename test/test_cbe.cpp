@@ -34,11 +34,10 @@
 
 #include <gmock/gmock.h>
 
+#include "jmg/cbe/cbe.h"
 #include "jmg/native/native.h"
 #include "jmg/random.h"
 #include "jmg/util.h"
-
-#include "cbe/cbe.h"
 
 using namespace jmg;
 using namespace jmg::cbe;

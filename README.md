@@ -24,6 +24,43 @@ something akin to _domain-specific languages_ with powerful
 vocabularies to express solutions clearly and enable the reader of the
 code to quickly grasp its function
 
+## Glossary
+
+Jormungandr strives to be precise (or maybe pedantic) with its
+vocabulary, here are some terms that are used in the code and this
+documentation whose meaning may not be immediately obvious.
+
+* _owning type_ - a type that owns resources, e.g. `std::string`,
+  `std::vector`.
+* _view type_ - a facade over an owning type that provides lightweight
+  copy/by-value functionality along with a degree of type erasure when
+  compared to using references, e.g. `std::string_view`,
+  `std::span`. Additionally, Jormungandr tries to consistently present
+  _view types_ as not being able to modify the contents of the objects
+  that they view, although this consistency is still a work in
+  progress.
+* _proxy type_ - like a _view type_ but capable of modifying the contents
+  of the referenced object. As with _view types_, consistency is a
+  work in progress and some types purporting to be _view types_ are
+  actually _proxy types_, although there are no known cases of _proxy
+  types_ that cannot modify the referenced object.
+* _viewable type_ - somewhat synonymous with _owning type_ but focuses
+  on the fact that there is an existing associated _view type_, and
+  possibly _proxy type_.
+* _array type_ - basically any language or standard library type that
+  can be viewed/proxied with `std::span`:
+  * C-style array
+  * `std::vector`
+  * `std::array`
+* _string type_ - any type that can be viewed with `std::string_view`,
+  can also be viewed conceptually as a subset of _array types_:
+  * C-style string
+  * std::string
+
+* _range type_ - the set that contains both _array types_ and _string
+  types_. Conceptually isomorphic to the `std::ranges::range` concept
+  from c++20, although perhaps not exactly equivalent in practice.
+
 # _Avant Garde_ techniques
 
 ## Return Type Overloading
@@ -206,8 +243,6 @@ the server will cause it to be linked auatomatically against the
 library that declares the `main` function. A simple demo of this
 framework can seen in the file test/test_server_main.cpp.
 
-# Some longer-term goals
-
 ## _Standard Interface_ for _Objects_
 
 In this case, _objects_ can be thought of as hierarchical collections
@@ -242,7 +277,7 @@ style should be the same, and the code should look exactly (or almost
 exactly) the same in situations where the data has fields with the
 same semantics.
 
-The basic groundwork has been laid for handline read-only messages in
+The basic groundwork has been laid for handling read-only messages in
 the _standard interface_ style, and substantial work has been done on
 building the facade for FIX protocol as the first implementation,
 although it hasn't yet been used to wrap the QuickFIX interface
@@ -300,6 +335,96 @@ Python.
 * Develop a plugin architecture for **jmgc** to simplify adding
   support for new _standard interface_ wrappers and other IDLs?
 * Support for more encodings such as protobuf and JSON
+
+## **Native** Encoding
+
+### Internal Format
+
+Internally, **native** encoding of objects consists of `std::tuple`
+wrapped in an interface that supports the _standard interface_ verbs.
+
+Care has been taken to deal in _view_/_proxy_ types wherever
+appropriate and the hope is that coupling this approach with lots of
+opportunities for the compiler to find optimizations in templated code
+will produce high performance results.
+
+### Serialization Format
+
+The **native** encoding is paired with a serialization format named
+**Compressed Binary Encoding** (AKA **CBE**) that attempts to mix
+Google protobuf varint with FIX-FAST generic stop bit encoding and add
+in support for compressing floating point numbers. Difficult to say
+whether the floating point compression will have value because it
+mostly depends on how much precision is being stored in any given
+application, although having a lot of zeros will compress well. This
+will also serve as a test bed for some features of interest:
+
+* Supporting separate object-based and stream-based decoding
+  algorithms. These are analogous to DOM style vs SAX style parsing in
+  XML.
+
+* Using _view_/_proxy_ types wherever appropriate/possible.
+* Finding a way to integrate polymorphic memory allocators.
+
+* Handling _array types_ and _string types_ with the same code where
+  possible. Perhaps this will involve designing concepts that form a
+  proper hierarchy for _owning types_ as compared with _view_ or
+  _proxy_ types.
+
+#### TODO list for **CBE**
+
+* Add **CBE**/**native** support to **jmgc**.
+* Continue developing support for _viewable types_
+  * Improve _viewable type_ handling to support 'pmr'
+  * Export _viewable type_ handling to other encodings
+* Add exhaustive tests of cases where buffers are too small to encode
+  or have been truncated before decode
+* Add some metaprogramming to constrain fields to contain only
+  allowable types, especially which types are allowed to be in arrays
+* Rethink and rework buffer handling. The current implementation only
+  works with fixed-size buffers represented using `std::span`, which
+  will complicate things when encoding with sub-objects (due to the
+  need to prefix the length) and will prevent use of multiple buffers
+  where objects cross buffer boundaries. `absl::cord` could form the
+  basis for an initial implementation, but inspiration should be drawn
+  buffer implementations in the standard streaming libraries as well
+  as _boost.asio_ buffer handling.
+* Review google protobuf wire format to see how hard it would be to
+  modify CBE code to serialize and deserialize protobufs to
+  jmg::native objects.
+* Experiment further with serialization/deserialization.
+  * Create an interface for stream deserialization with externally
+    accessible callbacks and experiment to determine whether this
+    should be the basis for object deserialization or a separate mode.
+  * Does it make sense to enable flexibility by encoding a type
+    specifier into the field ID so that unkown fields can be cleanly
+    handled? Maybe this can be done with only 2 bits to minimize the
+    overhead for small messages.
+  * Maybe it should go the other way and use an presence map along
+    with explicit versioning and possibly support for forward/backward
+    compatibility and/or version negiotiation built into communication
+    channels
+  * Maybe implement the verbose, flexible approach (with embedded type
+    specifiers) and the rigid presence map and use these together with
+    the existing implementation to explore the performance tradeoffs.
+* Rethink floating point compaction: the current implementation isn't
+  very effective (e.g. the default encoding of 42.0 requires 10
+  octets) and this seems to indicate that perhaps specifically
+  encoding the mantissa in chunks from highest to lowest will produce
+  much better results than simply treating it as an integer. It also
+  makes sense to have a compiler flag that disables floating point
+  compression.
+  * More thoughts on this: reversing the direction of scanning
+    mantissa octets does seem to make sense based on experimental
+    evidence, although more samples should be viewed
+  * There are extra bits available in the exponents to allow the
+    addition of another metadata bit that would indicate whether or
+    not the mantissa was compressed: if the bit is set, the mantissa
+    is compressed with stop-bit encoding and should require fewer
+    octets than the native encoding; otherwise, the mantissa octets
+    should be copied without change.
+
+# Some longer-term goals
 
 ## High performance event processing
 

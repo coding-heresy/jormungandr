@@ -11,6 +11,15 @@ cc_test(
 )
 
 cc_test(
+    name = 'test_cbe',
+    srcs = ['test_cbe.cpp'],
+    deps = [
+        '@com_google_googletest//:gtest_main',
+        '//:jmg',
+    ],
+)
+
+cc_test(
     name = 'test_cmdline',
     srcs = ['test_cmdline.cpp'],
     deps = [
@@ -225,7 +234,6 @@ cc_test(
     defines = ['CBE_ENCODING_TEST'],
     deps = [
         '@com_google_googletest//:gtest_main',
-        '//experimental/cbe:cbe',
         '//:jmg',
     ],
     linkstatic = True,

@@ -19,12 +19,14 @@ cc_library(
         'include/jmg/union.h',
         'include/jmg/util.h',
         # object types
+        'include/jmg/cbe/cbe.h',
         'include/jmg/ptree/ptree.h',
         'include/jmg/quickfix/quickfix.h',
         'include/jmg/native/native.h',
         'include/jmg/yaml/yaml.h',
     ],
     srcs = [
+        'src/cbe.cpp',
         'src/server.cpp',
     ],
     includes = ['include'],

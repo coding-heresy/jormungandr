@@ -160,7 +160,7 @@ struct YamlEncodingPolicy {
  * Encoding"
  */
 struct CbeEncodingPolicy {
-  static constexpr auto kHeaderFile = "cbe/cbe.h"sv;
+  static constexpr auto kHeaderFile = "jmg/cbe/cbe.h"sv;
   static constexpr auto kNamespace = "cbe"sv;
   struct FieldData {
     uint32_t id;

@@ -35,10 +35,9 @@
 
 #include <algorithm>
 
+#include "jmg/cbe/cbe.h"
 #include "jmg/meta.h"
 #include "jmg/preprocessor.h"
-
-#include "cbe.h"
 
 using namespace std;
 
