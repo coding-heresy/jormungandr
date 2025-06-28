@@ -167,11 +167,20 @@ auto& value_of(auto& rec) { return std::get<1>(rec); }
 template<typename DictContainer, typename Key, typename... Vals>
 void always_emplace(std::string_view description,
                     DictContainer& dict,
-                    Key key,
-                    Vals... vals) {
+                    const Key& key,
+                    Vals&&... vals) {
   const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
   JMG_ENFORCE(inserted,
               "unsupported duplicate key [" << key << "] for " << description);
+}
+
+template<typename SetContainer, typename Value>
+void always_insert(std::string_view description,
+                   SetContainer& set_container,
+                   Value&& value) {
+  const auto [_, inserted] = set_container.insert(std::forward<Value>(value));
+  JMG_ENFORCE(inserted, "unsupported duplicate value [" << value << "] for "
+                                                        << description);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
