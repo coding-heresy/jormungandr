@@ -161,8 +161,8 @@ const auto& value_of(const auto& rec) { return std::get<1>(rec); }
 auto& value_of(auto& rec) { return std::get<1>(rec); }
 
 /**
- * function template that emplaces a new item in a dictionary or
- * throws an exception if the key already exists
+ * emplace a new item in a dictionary or throw an exception if the key already
+ * exists
  */
 template<typename DictContainer, typename Key, typename... Vals>
 void always_emplace(std::string_view description,
@@ -174,6 +174,9 @@ void always_emplace(std::string_view description,
               "unsupported duplicate key [" << key << "] for " << description);
 }
 
+/**
+ * emplace a new item in a set or throw an exception if the item already exists
+ */
 template<typename SetContainer, typename Value>
 void always_insert(std::string_view description,
                    SetContainer& set_container,
@@ -188,9 +191,10 @@ void always_insert(std::string_view description,
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * function template that is a simple wrapper around static_cast<bool>
- * because I'm too lazy to type that much and I find the longer text
- * too cluttered for easy reading
+ * predicate
+ *
+ * wrapper around static_cast<bool> because I'm too lazy to type that much and I
+ * find the longer text too cluttered for easy reading
  */
 template<typename T>
 bool pred(const T& val) {
@@ -202,8 +206,7 @@ bool pred(const T& val) {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * function template that retrieves a value of a specific type from a
- * parameter pack
+ * retrieve a value of a specific type from a parameter pack
  */
 template<typename Tgt, typename... Args>
 Tgt getFromArgs(Args&&... args) {
@@ -215,6 +218,10 @@ Tgt getFromArgs(Args&&... args) {
   return rslt;
 }
 
+/**
+ * try to retrieve a value of a specific type from a parameter pack, return
+ * nullopt if the value is not present
+ */
 template<typename Tgt, typename... Args>
 std::optional<Tgt> tryGetFromArgs(Args&&... args) {
   if constexpr (!isMemberOfList<Tgt, meta::list<Args...>>()) {
@@ -234,8 +241,8 @@ std::optional<Tgt> tryGetFromArgs(Args&&... args) {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * class template that automatically executes a cleanup action on
- * scope exit unless it is canceled
+ * automatically execute a cleanup action on scope exit unless the action is
+ * canceled
  *
  * shamelessly stolen from Google Abseil
  */

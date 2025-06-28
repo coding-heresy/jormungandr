@@ -61,8 +61,8 @@ namespace detail
  *
  * New conversions should be added to the static 'convert' function.
  *
- * TODO try to come up with a way to use customization point objects
- * to avoid having all of the conversions residing here
+ * TODO(bd) try to come up with a way to use customization point objects to
+ * avoid having all of the conversions residing here
  */
 template<typename Tgt, typename Src, typename... Extras>
 struct ConvertImpl {
@@ -172,8 +172,8 @@ private:
   /**
    * helper class for conversions between string and time point
    *
-   * Handles time zone and string format specifications provided as
-   * variadic arguments to the general conversion function.
+   * Handles time zone and string format specifications provided as variadic
+   * arguments to the general conversion function.
    */
   struct TimePointConversionSpec {
     explicit TimePointConversionSpec(Extras&&... extras) {
@@ -244,11 +244,11 @@ private:
 };
 
 /**
- * helper class that is the return value of the 'from' function which
- * will bind to the receiving type to select the correct conversion
+ * helper class that is the return value of the 'from' function which will bind
+ * to the receiving type to select the correct conversion
  *
- * Think of this class as a conduit that routes the arguments of the
- * 'from' function to the conversion code in ConvertImpl
+ * Think of this class as a conduit that routes the arguments of the 'from'
+ * function to the conversion code in ConvertImpl
  *
  * @warning don't try this at home ladies and gentlemen, we are
  *          trained professionals
@@ -283,8 +283,7 @@ private:
 } // namespace detail
 
 /**
- * convert from one type to another through the magic of return value
- * overloading
+ * convert from one type to another through the magic of return value overloading
  */
 template<typename Src, typename... Extras>
 auto from(Src&& src, Extras&&... extras) {
