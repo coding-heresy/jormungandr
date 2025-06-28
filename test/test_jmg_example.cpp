@@ -67,10 +67,41 @@ TEST(JmgExampleTests, TestGroups) {
   // TODO(bd) verify the fields that are in Address
 }
 
+TEST(JmgExampleTests, TestFields) {
+  EXPECT_TRUE(FieldDefT<Number>);
+  EXPECT_TRUE(RequiredField<Number>);
+  EXPECT_TRUE(RequiredField<Street>);
+  EXPECT_TRUE(OptionalField<Apartment>);
+  EXPECT_TRUE(RequiredField<City>);
+  EXPECT_TRUE(RequiredField<State>);
+  EXPECT_TRUE(RequiredField<Zip>);
+  EXPECT_TRUE(RequiredField<FirstName>);
+  EXPECT_TRUE(RequiredField<LastName>);
+  EXPECT_TRUE(OptionalField<MiddleName>);
+  EXPECT_TRUE(RequiredField<PersonAge>);
+  EXPECT_TRUE(RequiredField<Ints>);
+  EXPECT_TRUE(RequiredField<Reals>);
+#if defined(CBE_ENCODING_TEST)
+  // TODO(bd) fix these concepts to work correctly
+  // EXPECT_TRUE(StringFieldT<Street>);
+  // EXPECT_TRUE(StringFieldT<City>);
+  // EXPECT_TRUE(StringFieldT<State>);
+  // EXPECT_TRUE(StringFieldT<FirstName>);
+  // EXPECT_TRUE(StringFieldT<LastName>);
+  // EXPECT_TRUE(StringFieldT<MiddleName>);
+  // EXPECT_TRUE(ArrayFieldT<Ints>);
+  // EXPECT_TRUE(ArrayFieldT<Reals>);
+#endif
+}
+
 TEST(JmgExampleTests, TestObjects) {
   EXPECT_TRUE(ObjectDefT<Person>);
   EXPECT_TRUE((isMemberOfObject<FirstName, Person>()));
   EXPECT_TRUE((isMemberOfObject<LastName, Person>()));
   EXPECT_TRUE((isMemberOfObject<MiddleName, Person>()));
   EXPECT_TRUE((isMemberOfObject<PersonAge, Person>()));
+
+  EXPECT_TRUE(ObjectDefT<Numbers>);
+  EXPECT_TRUE((isMemberOfObject<Ints, Numbers>()));
+  EXPECT_TRUE((isMemberOfObject<Reals, Numbers>()));
 }

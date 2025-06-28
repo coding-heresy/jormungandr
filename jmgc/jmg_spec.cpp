@@ -171,6 +171,7 @@ struct CbeEncodingPolicy {
     const auto cbe_id = try_get<CbeId>(fld);
     JMG_ENFORCE(pred(cbe_id),
                 "field [" << get<Name>(fld) << "] is missing required CBE ID");
+    // TODO(bd) add code to check for duplicate field IDs?
     return FieldData{.id = *cbe_id};
   }
   template<typename T>
