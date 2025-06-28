@@ -30,6 +30,8 @@ Jormungandr strives to be precise (or maybe pedantic) with its
 vocabulary, here are some terms that are used in the code and this
 documentation whose meaning may not be immediately obvious.
 
+* _safe type_ - AKA "strongly-typed alias", see the section on _Safe
+  Types_ Framework under Subsystems for more information
 * _owning type_ - a type that owns resources, e.g. `std::string`,
   `std::vector`.
 * _view type_ - a facade over an owning type that provides lightweight
@@ -55,8 +57,7 @@ documentation whose meaning may not be immediately obvious.
 * _string type_ - any type that can be viewed with `std::string_view`,
   can also be viewed conceptually as a subset of _array types_:
   * C-style string
-  * std::string
-
+  * `std::string`
 * _range type_ - the set that contains both _array types_ and _string
   types_. Conceptually isomorphic to the `std::ranges::range` concept
   from c++20, although perhaps not exactly equivalent in practice.
@@ -138,7 +139,7 @@ parameters in any order and will figure out at compile time whether or
 not the call is correct (i.e. doesn't involve mutually exclusive
 parameters, is not missing some required parameters, etc). The
 technique depends on the types of the various parameters being
-distinct, with _safe_ types used to ensure this property. Under the
+distinct, with _safe types_ used to ensure this property. Under the
 hood, it's powered by a lamda, a fold expression, some metaprogramming
 and a generous helping of `if constexpr`.
 
@@ -146,14 +147,12 @@ and a generous helping of `if constexpr`.
 TODO
 
 ## Documentation placeholders
-### Standard Interface for Objects
-TODO
 ### Command Line Parameter Handling
 TODO
 
 # Subsystems
 
-## _Safe_ Types Framework
+## _Safe Types_ Framework
 
 I first had the idea for this when reading about the failure of [the
 Mars Climate Orbiter](https://en.wikipedia.org/wiki/Mars_Climate_Orbiter),
@@ -182,18 +181,18 @@ libraries available which implement this functionality, so I chose
 [what I found to be the best one](https://github.com/doom/strong_type)
 and based my solution on it.
 
-### Declaring a _Safe_ type
+### Declaring a _Safe type_
 
 **WARNING:** this implementation is currently affected by a
 long-standing bug in gcc where the compiler fails to ensure that all
 labmda constructs have different types, including the trivial lambda
-**[](){}**. This bug induces a requirement to use a macro to declare
+`[](){}`. This bug induces a requirement to use a macro to declare
 safe types but hopefully gcc will fix this problem and the macro can
 be removed to allow a simpler declaration.
 
-A _safe_ type is essentially a compile-time wrapper around another
-type that prevents intermixing values of the _safe_ type with the
-_wrapped_ type. In addition, a _safe_ type can declare that certain
+A _safe type_ is essentially a compile-time wrapper around another
+type that prevents intermixing values of the _safe type_ with the
+_wrapped_ type. In addition, a _safe type_ can declare that certain
 operations can be performed between values of the type, but any
 operations not declared _safe_ are forbidden by the compiler. Here is
 an example of declaring a _safe_ identifier that is represented as a
@@ -211,7 +210,7 @@ operators such as `operator<`, and `st::hashable` enables the use of
 to be used as the key type in ordered and unordered dictionaries. For
 the moment, you can check the documentation for the underlying library
 to see what other operations are available. The only other important
-aspect of _safe_ types is the ability to extract the _wrapped_ type
+aspect of _safe types_ is the ability to extract the _wrapped_ type
 value using the _unsafe_ function so that it can be used to interact
 with other types where necessary. This facility should be used very
 sparingly, and the lifetime of the unwrapped value should be
@@ -241,7 +240,7 @@ automatically. The last thing to remember is that adding
 `//:jmg_server_main` to the `deps` of the bazel `cc_binary` target for
 the server will cause it to be linked auatomatically against the
 library that declares the `main` function. A simple demo of this
-framework can seen in the file test/test_server_main.cpp.
+framework can seen in the file `test/test_server_main.cpp`.
 
 ## _Standard Interface_ for _Objects_
 
@@ -254,12 +253,13 @@ of key/value bindings. Many concepts can be viewed in this way:
 
 The first of these (command line paramters) has already been
 completely converted to the _standard interface_ style, mostly because I
-was deeply dissatisfied by the available options for solving these
-problems.
+was deeply dissatisfied by the available options for solving this
+problem.
 
 There is also support for accessing data from XML and YAML files using
 the _standard interface_ style, although it has not yet been used
-specifically for configuration files.
+specifically for configuration files. This will probably also be
+extended to JSON at some point as well.
 
 The third target, messages used for communication, is the most
 important. One of the most painful parts of writing code to
@@ -271,17 +271,26 @@ ability to switch between them. The goal of the _standard interface_
 is to present a facade on top of these interfaces to unify them into a
 single style of interaction with maximal (compile time) safety
 features and minimal runtime overhead. Whether data is encoded as
-protobuf or json, FIX protocol or rows from a database or any of the
+protobuf or JSON, FIX protocol or rows from a database or any of the
 numerous other encodings out there, the _standard interface_ coding
 style should be the same, and the code should look exactly (or almost
 exactly) the same in situations where the data has fields with the
 same semantics.
 
-The basic groundwork has been laid for handling read-only messages in
-the _standard interface_ style, and substantial work has been done on
-building the facade for FIX protocol as the first implementation,
-although it hasn't yet been used to wrap the QuickFIX interface
-(commonly used in the financial industry)
+The basic groundwork has been laid for handling messages in the
+_standard interface_ style, and substantial work has been done on
+processing the following formats:
+* FIX protocol - via the XML configuration format used by the QuickFIX
+  library (commonly used in the financial industry). Mostly proof on
+  concept that may eventually be extended to produce JMG object
+  wrappers for QuickFIX objects.
+* YAML - currently used as the basis for the IDL in which JMG object
+  specifications are written. All object access is currently
+  read-only.
+* CBE - encoding for **native** JMG objects that also serves as a
+  testbed for extending and reworking the _standard interface_, as
+  well as (eventually) for experiments related to performance of
+  binary encodings.
 
 ### Interface Definition Language
 
@@ -299,30 +308,36 @@ parser, and a compiler named **jmgc** that generates 'stubs'.
 
 #### jmgc - IDL compiler
 
-The compiler generates 'stub' definition header files from IDL
-specifications. It currently works for definitions written in the JMG
-language (although this is still very much a work in progress), and
-also has limited support for QuickFIX XML definitions (written as a
-proof of concept without much support or testing for intracting with
-actual FIX messages).
+The compiler generates definition header files from IDL specifications
+written as YAML files because that format is serviceable (if a bit
+clunky) and it avoids the need to write a parser.
 
-One experimental idea under consideration here is to have **jmgc**
-support generating specificiations in other IDLs where Jormungandr has
-support for wrapping their native objects. An example would be
-protobuf and the idea is to have _standard interface_ wrapper support
-for protobuf objects and **jmgc** support for generating .proto
-files. This would allow the source of ground truth for the system
-protocol to be JMG language and would be valuable even if Jormungandr
-has direct implementation of serialization and deserialization of
-protobuf wire format (under consideration) because protoc could still
-be used to generate the bindings for other languages such as Java or
-Python.
+**jmgc** currently
+works for definitions written in the JMG language (although this is
+still very much a work in progress), and also has limited support for
+QuickFIX XML definitions (written as a proof of concept without much
+support or testing for intracting with actual FIX messages).
+
+One idea under consideration here is to have **jmgc** support
+generating specifications in other IDLs where Jormungandr has support
+for wrapping their native objects. An example would be protobuf and
+the idea is to have _standard interface_ wrapper support for protobuf
+objects and **jmgc** support for generating `.proto` files. This would
+allow the source of ground truth for the system protocol to be JMG
+language and would be valuable even if Jormungandr has direct
+implementation of serialization and deserialization of protobuf wire
+format (under consideration) because protoc could still be used to
+generate the bindings for other languages such as Java or Python.
+
+At this point, **jmgc** generates the following types of wrappers:
+
+* FIX protocol object wrappers using specifications written in the XML
+  configuration files used by the QuickFIX library.
+* YAML object wrappers specified in the JMG language.
+* CBE object wrappers specified in the JMG language.
 
 ### TODO
 
-* A native internal encoding of objects based on **std::tuple** that
-  will hopefully be very performant due to operations mostly being
-  compile-time code wrapped around index-based **std::get**.
 * A _standard interface_ for stream-based processing of messages that
   is consistent with the handling of object representation
   * The modivation here is the SAX approach to XML handling, as
@@ -352,7 +367,7 @@ will produce high performance results.
 
 The **native** encoding is paired with a serialization format named
 **Compressed Binary Encoding** (AKA **CBE**) that attempts to mix
-Google protobuf varint with FIX-FAST generic stop bit encoding and add
+Google protobuf _varint_ with FIX-FAST generic stop bit encoding and add
 in support for compressing floating point numbers. Difficult to say
 whether the floating point compression will have value because it
 mostly depends on how much precision is being stored in any given
@@ -362,10 +377,8 @@ will also serve as a test bed for some features of interest:
 * Supporting separate object-based and stream-based decoding
   algorithms. These are analogous to DOM style vs SAX style parsing in
   XML.
-
 * Using _view_/_proxy_ types wherever appropriate/possible.
 * Finding a way to integrate polymorphic memory allocators.
-
 * Handling _array types_ and _string types_ with the same code where
   possible. Perhaps this will involve designing concepts that form a
   proper hierarchy for _owning types_ as compared with _view_ or
@@ -454,7 +467,7 @@ exceptions and additions as outlined here
 These may or may not be controversial but they have served me well.
 
 * If it can be **const** then it should be **const**
-* Impute semantic meaning to types using the _safe_ types framework
+* Impute semantic meaning to types using the _safe types_ framework
 * Use metaprogramming to make interfaces more robust
 * **Always** use exceptions, and rely on RAII for error handling
 
@@ -503,7 +516,6 @@ discerned when reading code
   return value of `false` indicates _non-success_, and is considered
   to be distinct from _failure_, which is communicated by exception in
   all cases.
-
 * maybe - function name prefix indicating that the function will
   attempt to perform an action but whether or not the action has
   actually been performed is irrelevant to subsequent program
