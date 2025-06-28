@@ -47,45 +47,56 @@
 using namespace jmg;
 using namespace std;
 
+constexpr char kJmgCbeFlag[] = "JMG-CBE";
 constexpr char kJmgYamlFlag[] = "JMG-YAML";
 constexpr char kFixFlag[] = "FIX";
-constexpr auto kSupportedFlags = array{kJmgYamlFlag, kFixFlag};
+constexpr auto kSupportedFlags = array{kJmgCbeFlag, kJmgYamlFlag, kFixFlag};
 
 const auto kSupportedFlagsStr = str_join(kSupportedFlags, ", "sv);
 
-using JmgFlag =
-  NamedParam<bool, kJmgYamlFlag, "file format is JMG, file type is YAML", Required>;
-using FixFlag = NamedParam<bool,
-                           kFixFlag,
-                           "file format is QuickFIX protocol, file type is XML",
-                           Required>;
+// TODO(bd) cmdline needs the concept of a union
+using JmgYamlFlag = NamedFlag<
+  kJmgYamlFlag,
+  "file format is JMG, file type is YAML, generated encoding is YAML">;
+using JmgCbeFlag =
+  NamedFlag<kJmgCbeFlag,
+            "file format is JMG, file type is YAML, generated encoding is CBE">;
+using FixFlag =
+  NamedFlag<kFixFlag, "file format is QuickFIX protocol, file type is XML">;
+
 using SrcFile =
   PosnParam<string, "src_file", "the file to read source definitions from">;
 
 int main(const int argc, const char** argv) {
   try {
-    using CmdLine = CmdLineArgs<JmgFlag, FixFlag, SrcFile>;
+    using CmdLine = CmdLineArgs<JmgYamlFlag, JmgCbeFlag, FixFlag, SrcFile>;
     const auto cmdline = CmdLine(argc, argv);
 
     if (jmg::get<FixFlag>(cmdline)) {
-      // generate header file for FIX specification
-      JMG_ENFORCE_CMDLINE(!jmg::get<JmgFlag>(cmdline),
+      JMG_ENFORCE_CMDLINE(!jmg::get<JmgYamlFlag>(cmdline)
+                            && !jmg::get<JmgCbeFlag>(cmdline),
                           cmdline.usage(str_cat("at most one of [",
                                                 kSupportedFlagsStr,
                                                 "] may be specified")));
+      // generate header file for FIX specification
       quickfix_spec::process(get<SrcFile>(cmdline));
+    }
+    else if (jmg::get<JmgCbeFlag>(cmdline)) {
+      JMG_ENFORCE_CMDLINE(!jmg::get<JmgYamlFlag>(cmdline),
+                          cmdline.usage(str_cat("at most one of [",
+                                                kSupportedFlagsStr,
+                                                "] may be specified")));
+      // generate header file for CBE specification
+      jmg_cbe_spec::process(jmg::get<SrcFile>(cmdline));
     }
     else {
       // must be -JMG-YAML
-      JMG_ENFORCE_CMDLINE(jmg::get<JmgFlag>(cmdline),
+      JMG_ENFORCE_CMDLINE(jmg::get<JmgYamlFlag>(cmdline),
                           cmdline.usage(str_cat("at least one of [",
                                                 kSupportedFlagsStr,
                                                 "] must be specified")));
-      JMG_ENFORCE_CMDLINE(!jmg::get<FixFlag>(cmdline),
-                          cmdline.usage(str_cat("at most one of [",
-                                                kSupportedFlagsStr,
-                                                "] may be specified")));
-      jmg_spec::process(jmg::get<SrcFile>(cmdline));
+      // generate header file for YAML specification
+      jmg_yml_spec::process(jmg::get<SrcFile>(cmdline));
     }
     return EXIT_SUCCESS;
   }

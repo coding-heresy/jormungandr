@@ -32,10 +32,19 @@
 
 #include <gtest/gtest.h>
 
-#include "test/jmg_example.h"
+#if defined(YAML_ENCODING_TEST)
+#include "test/jmg_yaml_example.h"
+#elif defined(CBE_ENCODING_TEST)
+#include "test/jmg_cbe_example.h"
+#else
+#error "unknown encoding type"
+#endif
 
 using namespace example;
 using namespace jmg;
+#if defined(CBE_ENCODING_TEST)
+using namespace jmg::cbe;
+#endif
 using namespace std;
 
 // NOTE: these test cases must be kept in sync with data/example.yaml

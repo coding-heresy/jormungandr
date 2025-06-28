@@ -33,9 +33,16 @@
 
 #include <string_view>
 
-namespace jmg_spec
+namespace jmg_yml_spec
 {
 
 void process(const std::string_view filePath);
 
-} // namespace jmg_spec
+} // namespace jmg_yml_spec
+
+namespace jmg_cbe_spec
+{
+
+void process(const std::string_view filePath);
+
+} // namespace jmg_cbe_spec

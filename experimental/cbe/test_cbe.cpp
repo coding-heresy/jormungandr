@@ -38,7 +38,7 @@
 #include "jmg/random.h"
 #include "jmg/util.h"
 
-#include "cbe.h"
+#include "cbe/cbe.h"
 
 using namespace jmg;
 using namespace jmg::cbe;

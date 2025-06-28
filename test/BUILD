@@ -180,24 +180,52 @@ cc_test(
 )
 
 genrule(
-    name = 'jmg_example_header',
+    name = 'jmg_yaml_example_header',
     visibility = ['//visibility:public'],
     srcs = [
         '//jmgc:jmgc',
         'data/example.yaml',
     ],
-    outs = ['jmg_example.h'],
+    outs = ['jmg_yaml_example.h'],
     cmd = '$(location //jmgc:jmgc) -JMG-YAML $(location data/example.yaml) > $@',
 )
 
 cc_test(
-    name = 'test_jmg_example',
+    name = 'test_jmg_yaml_example',
     srcs = [
-        ':jmg_example_header',
+        ':jmg_yaml_example_header',
         'test_jmg_example.cpp'
     ],
+    defines = ['YAML_ENCODING_TEST'],
     deps = [
         '@com_google_googletest//:gtest_main',
+        '//:jmg',
+    ],
+    linkstatic = True,
+    size = 'small',
+)
+
+genrule(
+    name = 'jmg_cbe_example_header',
+    visibility = ['//visibility:public'],
+    srcs = [
+        '//jmgc:jmgc',
+        'data/example.yaml',
+    ],
+    outs = ['jmg_cbe_example.h'],
+    cmd = '$(location //jmgc:jmgc) -JMG-CBE $(location data/example.yaml) > $@',
+)
+
+cc_test(
+    name = 'test_jmg_cbe_example',
+    srcs = [
+        ':jmg_cbe_example_header',
+        'test_jmg_example.cpp'
+    ],
+    defines = ['CBE_ENCODING_TEST'],
+    deps = [
+        '@com_google_googletest//:gtest_main',
+        '//experimental/cbe:cbe',
         '//:jmg',
     ],
     linkstatic = True,

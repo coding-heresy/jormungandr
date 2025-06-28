@@ -44,14 +44,20 @@ using namespace YAML;
 using namespace jmg;
 using namespace std;
 
+namespace vws = std::ranges::views;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Jormungandr field definitions at various levels
+//
+// NOTE: these fields effectively define the 'syntax' of a YAML file that
+// describes a legal definition of a set of Jormungandr/JMG objects
 ////////////////////////////////////////////////////////////////////////////////
 
 using Name = FieldDef<string, "name", Required>;
 using Type = FieldDef<string, "type", Required>;
 using SubType = FieldDef<string, "subtype", Optional>;
 using Concept = FieldDef<string, "concept", Optional>;
+using CbeId = FieldDef<uint32_t, "cbe_id", Optional>;
 using RequiredFlag = FieldDef<bool, "required", Optional>;
 
 // enumeration
@@ -66,7 +72,7 @@ using TypeDef =
   yaml::Object<Name, Type, SubType, Concept, EnumUlType, EnumValues>;
 
 // objects in the 'groups' and 'objects' sections
-using ObjGrpField = yaml::Object<Name, Type, SubType, RequiredFlag>;
+using ObjGrpField = yaml::Object<Name, Type, SubType, CbeId, RequiredFlag>;
 using ObjGrpFields = FieldDef<yaml::Array<ObjGrpField>, "fields", Required>;
 
 // objects in the 'groups' and 'objects' sections have a name and a
@@ -81,7 +87,116 @@ using Objects = FieldDef<yaml::Array<ObjGrp>, "objects", Required>;
 
 using Spec = yaml::Object<Package, Types, Groups, Objects>;
 
+////////////////////////////////////////////////////////////////////////////////
+// constants
+////////////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+
+const Set<string> primitive_types = {"array"s,              //
+                                     "double"s,   "float"s, //
+                                     "int8_t"s,   "int16_t"s,
+                                     "int32_t"s,  "int64_t"s, //
+                                     "uint8_t"s,  "uint16_t"s,
+                                     "uint32_t"s, "uint64_t"s, //
+                                     "string"s};
+
+const Set<string> allowed_enum_ul_types = {"uint8_t"s, "uint16_t"s, "uint32_t"s,
+                                           "uint64_t"s};
+
+const Set<string> allowed_concepts = {"aritmetic"s, "key"s};
+
+/**
+ * corrections that may be applied to convert the string values of types
+ * specified in the file to types used in field definitions
+ */
+string correctedTypeName(const string_view type_name) {
+  if ("string" == type_name) { return absl::StrCat("std::", type_name); }
+  return string(type_name.data(), type_name.size());
+}
+
+} // namespace
+
+////////////////////////////////////////////////////////////////////////////////
+// encoding generation policy types
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * policy for processing a YAML file or data stream
+ */
+struct YamlEncodingPolicy {
+  static constexpr auto kHeaderFile = "jmg/yaml/yaml.h"sv;
+  static constexpr auto kNamespace = "yaml"sv;
+  struct FieldData {};
+  template<typename T>
+  static FieldData processField(const T& fld) {
+    ignore = fld;
+    return FieldData();
+  }
+  template<typename T>
+  static string emitField(const string_view name, const T& field_def) {
+    string rslt = str_cat("using ", name, " = jmg::FieldDef<");
+    if ("array" == field_def.type_name) {
+      JMG_ENFORCE(field_def.sub_type_name.has_value(),
+                  "field [" << name << "] is an array but has no subtype");
+      str_append(rslt, "jmg::yaml::Array<",
+                 correctedTypeName(*(field_def.sub_type_name)), ">");
+    }
+    else { str_append(rslt, correctedTypeName(field_def.type_name)); }
+    str_append(rslt, ", \"", name, "\", ",
+               (field_def.required ? "jmg::Required"sv : "jmg::Optional"sv),
+               ">;\n\n");
+    return rslt;
+  }
+};
+
+/**
+ * policy for processing a file or data stream encoded in "Compressed Binary
+ * Encoding"
+ */
+struct CbeEncodingPolicy {
+  static constexpr auto kHeaderFile = "cbe/cbe.h"sv;
+  static constexpr auto kNamespace = "cbe"sv;
+  struct FieldData {
+    uint32_t id;
+  };
+  template<typename T>
+  static FieldData processField(const T& fld) {
+    const auto cbe_id = try_get<CbeId>(fld);
+    JMG_ENFORCE(pred(cbe_id),
+                "field [" << get<Name>(fld) << "] is missing required CBE ID");
+    return FieldData{.id = *cbe_id};
+  }
+  template<typename T>
+  static string emitField(const string_view name, const T& field_def) {
+    string rslt = str_cat("using ", name, " = ");
+    if ("string" == field_def.type_name) {
+      str_append(rslt, "jmg::cbe::StringField<");
+    }
+    else if ("array" == field_def.type_name) {
+      JMG_ENFORCE(field_def.sub_type_name.has_value(),
+                  "field [" << name << "] is an array but has no subtype");
+      str_append(rslt, "jmg::cbe::ArrayField<",
+                 correctedTypeName(*(field_def.sub_type_name)));
+    }
+    else { str_append(rslt, "jmg::cbe::FieldDef<", field_def.type_name, ", "); }
+    const auto id = field_def.extra_data.id;
+    str_append(rslt, "\"", name, "\", ",
+               (field_def.required ? "jmg::Required"sv : "jmg::Optional"sv));
+    str_append(rslt, ", ", id, "U /* kFldId */>;\n\n");
+    return rslt;
+  }
+};
+
+/**
+ * JMG definition processor and code emitter
+ */
+template<typename EncodingPolicy>
 class AllJmgDefs {
+  static constexpr auto kHeaderFile = EncodingPolicy::kHeaderFile;
+  static constexpr auto kNamespace = EncodingPolicy::kNamespace;
+
   struct DefEnumValue {
     string name;
     int64_t value;
@@ -101,6 +216,7 @@ class AllJmgDefs {
     string type_name;
     optional<string> sub_type_name;
     bool required;
+    typename EncodingPolicy::FieldData extra_data;
   };
 
   using StringLists = Dict<string, vector<string>>;
@@ -119,8 +235,10 @@ public:
           const auto cncpt = try_get<Concept>(def);
           JMG_ENFORCE(cncpt.has_value(),
                       "type alias must be associated with a concept");
-          always_emplace("type aliases", types_, def_name,
-                         StrongAlias(correctedTypeName(type_name), *cncpt));
+          types_.push_back(make_tuple(def_name,
+                                      StrongAlias(correctedTypeName(type_name),
+                                                  *cncpt)));
+          always_insert("known types", known_types_, def_name);
         }
         else if (kEnum == type_name) {
           const auto& enumerations = try_get<EnumValues>(def);
@@ -146,9 +264,10 @@ public:
                                                  .value =
                                                    jmg::get<EnumValue>(val)});
           }
-          always_emplace("enumerations", enums_, def_name,
-                         DefEnum{.ul_type = ul_type,
-                                 .values = std::move(def_values)});
+          enums_.push_back(make_tuple(def_name,
+                                      DefEnum{.ul_type = ul_type,
+                                              .values = std::move(def_values)}));
+          always_insert("enumerations", known_enums_, def_name);
         }
         else if (kArray == type_name) {
           // TODO(bd) support array aliases?
@@ -185,8 +304,7 @@ public:
             "//////////////\n";
     cout << "#pragma once\n\n";
     cout << "#include \"jmg/safe_types.h\"\n";
-    // TODO(bd) allow encodings other than yaml
-    cout << "#include \"jmg/yaml/yaml.h\"\n";
+    cout << "#include \"" << kHeaderFile << "\"\n";
     cout << "\nnamespace " << package_ << "\n{\n";
 
     // emit type aliases
@@ -213,8 +331,7 @@ public:
     // emit objects
     cout << "////////////////////\n// objects\n\n";
     for (const auto& [name, fields] : objects_) {
-      // TODO(bd) allow encodings other than yaml
-      cout << "using " << name << " = jmg::yaml::Object<"
+      cout << "using " << name << " = jmg::" << kNamespace << "::Object<"
            << absl::StrJoin(fields, ", ") << ">;\n\n";
     }
 
@@ -226,29 +343,25 @@ private:
   // member functions
   ////////////////////////////////////////////////////////////////////////////////
 
-  static string correctedTypeName(const string_view type_name) {
-    if ("string" == type_name) { return absl::StrCat("std::", type_name); }
-    return string(type_name.data(), type_name.size());
-  }
-
   /**
    * emit a single type
    */
   static void emitType(const string_view name, const StrongAlias& alias) {
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
-    cout << "using " << name << " = jmg::SafeType<" << alias.type_name << ", ";
+    cout << "using " << name << " = jmg::SafeType<";
 #else
-    cout << "JMG_NEW_SAFE_TYPE(" << name << "," << alias.type_name << ", ";
+    cout << "JMG_NEW_SAFE_TYPE(";
 #endif
     if (kKeyConcept == alias.cncpt) {
-      cout << "\n  st::equality_comparable," << "\n  st::hashable,"
-           << "\n  st::orderable";
+      cout
+        << "\n  " << name << "," << "\n  " << alias.type_name
+        << ",\n  st::equality_comparable,\n  st::hashable,\n  st::orderable\n";
     }
     else {
       JMG_ENFORCE(kArithmeticConcept == alias.cncpt,
                   "unsupported concept ["
                     << alias.cncpt << "] specified for type [" << name << "]");
-      cout << "st::arithmetic";
+      cout << name << "," << " " << alias.type_name << ", st::arithmetic";
     }
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
     cout << ">;\n\n";
@@ -277,29 +390,18 @@ private:
    * emit a single field
    */
   static void emitField(const string_view name, const DefField& field_def) {
-    cout << "using " << name << " = jmg::FieldDef<";
-    if ("array" == field_def.type_name) {
-      JMG_ENFORCE(field_def.sub_type_name.has_value(),
-                  "field [" << name << "] is an array but has no subtype");
-      // TODO(bd) allow encodings other than yaml
-      cout << "jmg::yaml::Array<"
-           << correctedTypeName(*(field_def.sub_type_name)) << ">";
-    }
-    else { cout << field_def.type_name; }
-    cout << ", \"" << name << "\", "
-         << (field_def.required ? "jmg::Required"sv : "jmg::Optional"sv)
-         << ">;\n\n";
+    cout << EncodingPolicy::emitField(name, field_def);
   }
 
   /**
    * verify that a newly declared field matches any existing field of
    * the same name
    */
-  void verify_field(const string_view fld_name,
-                    const string_view fld_type,
-                    const optional<string>& fld_sub_type,
-                    const bool fld_required,
-                    const DefField& entry) {
+  void verifyField(const string_view fld_name,
+                   const string_view fld_type,
+                   const optional<string>& fld_sub_type,
+                   const bool fld_required,
+                   const DefField& entry) {
     JMG_ENFORCE(fld_type == entry.type_name,
                 "mismatched type names found for field ["
                   << fld_name << "]: [" << fld_type << "] vs ["
@@ -326,11 +428,13 @@ private:
   /**
    * verify that a type or subtype of a field was previously declared
    */
-  void verify_field_type(const string_view fld_name,
-                         const string_view fld_type,
-                         StringLists internally_declared) {
-    JMG_ENFORCE((primitive_types.contains(fld_type) || types_.contains(fld_type)
-                 || enums_.contains(fld_type) || objects_.contains(fld_type)
+  void verifyFieldType(const string_view fld_name,
+                       const string_view fld_type,
+                       StringLists internally_declared) {
+    JMG_ENFORCE((primitive_types.contains(fld_type)
+                 || known_types_.contains(fld_type)
+                 || known_enums_.contains(fld_type)
+                 || objects_.contains(fld_type)
                  || internally_declared.contains(fld_type)),
                 "field [" << fld_name << "] has type (or subtype) [" << fld_type
                           << "] that was not previously declared");
@@ -350,6 +454,7 @@ private:
       vector<string> fields;
       fields.reserve(spec_fields.size());
       for (const auto& fld : spec_fields) {
+        const auto extra_data = EncodingPolicy::processField(fld);
         const auto field_name = get<Name>(fld);
         const auto field_type = get<Type>(fld);
         const auto field_sub_type = try_get<SubType>(fld);
@@ -358,23 +463,26 @@ private:
         const bool required =
           field_required.has_value() ? *field_required : true;
         // check if the field already exists
-        const auto& entry = fields_.find(field_name);
-        if (entry != fields_.end()) {
+        const auto& entry = fields_indices_.find(field_name);
+        if (entry != fields_indices_.end()) {
           // verify that the details match the existing field
-          verify_field(field_name, field_type, field_sub_type, required,
-                       value_of(*entry));
+          const auto& def = value_of(fields_.at(value_of(*entry)));
+          verifyField(field_name, field_type, field_sub_type, required, def);
         }
         else {
           // verify that types are valid
-          verify_field_type(field_name, field_type, rslt);
+          verifyFieldType(field_name, field_type, rslt);
           if (field_sub_type.has_value()) {
-            verify_field_type(field_name, *field_sub_type, rslt);
+            verifyFieldType(field_name, *field_sub_type, rslt);
           }
           // add the entry for this field
-          always_emplace("fields", fields_, field_name,
-                         DefField{.type_name = correctedTypeName(field_type),
-                                  .sub_type_name = field_sub_type,
-                                  .required = required});
+          const auto idx = fields_.size() + 1;
+          fields_.push_back(make_tuple(field_name,
+                                       DefField{.type_name = field_type,
+                                                .sub_type_name = field_sub_type,
+                                                .required = required,
+                                                .extra_data = extra_data}));
+          always_emplace("fields", fields_indices_, field_name, idx);
         }
         fields.push_back(std::move(field_name));
       }
@@ -393,37 +501,29 @@ private:
   static constexpr string_view kKeyConcept = "key";
   static constexpr string_view kArithmeticConcept = "arithmetic";
 
-  static const Set<string> primitive_types;
-  static const Set<string> allowed_enum_ul_types;
-  static const Set<string> allowed_concepts;
-
   ////////////////////////////////////////////////////////////////////////////////
   // data members
   ////////////////////////////////////////////////////////////////////////////////
 
   string package_;
-  Dict<string, StrongAlias> types_;
-  Dict<string, DefEnum> enums_;
-  Dict<string, DefField> fields_;
+
+  // types
+  vector<tuple<string, StrongAlias>> types_;
+  Set<string> known_types_;
+
+  // enums
+  vector<tuple<string, DefEnum>> enums_;
+  Set<string> known_enums_;
+
+  // fields
+  vector<tuple<string, DefField>> fields_;
+  Dict<string, size_t> fields_indices_;
+
   StringLists groups_;
   StringLists objects_;
 };
 
-const Set<string> AllJmgDefs::primitive_types = {"array"s,              //
-                                                 "double"s,   "float"s, //
-                                                 "int8_t"s,   "int16_t"s,
-                                                 "int32_t"s,  "int64_t"s, //
-                                                 "uint8_t"s,  "uint16_t"s,
-                                                 "uint32_t"s, "uint64_t"s, //
-                                                 "string"s};
-
-const Set<string> AllJmgDefs::allowed_enum_ul_types = {"uint8_t"s, "uint16_t"s,
-                                                       "uint32_t"s,
-                                                       "uint64_t"s};
-
-const Set<string> AllJmgDefs::allowed_concepts = {"aritmetic"s, "key"s};
-
-namespace jmg_spec
+namespace jmg_yml_spec
 {
 
 void process(const string_view filePath) {
@@ -434,8 +534,24 @@ void process(const string_view filePath) {
                    "specification");
   const auto yaml = LoadFile(string(filePath));
 
-  const auto defs = AllJmgDefs(Spec(yaml));
+  const auto defs = AllJmgDefs<YamlEncodingPolicy>(Spec(yaml));
   defs.emit();
 }
 
-} // namespace jmg_spec
+} // namespace jmg_yml_spec
+
+namespace jmg_cbe_spec
+{
+void process(const string_view filePath) {
+  JMG_ENFORCE(filePath.ends_with(".yml") || filePath.ends_with(".yaml"),
+              "encountered non-YAML file ["
+                << filePath
+                << "] when attempting to process a JMG "
+                   "specification");
+  const auto yaml = LoadFile(string(filePath));
+
+  const auto defs = AllJmgDefs<CbeEncodingPolicy>(Spec(yaml));
+  defs.emit();
+}
+
+} // namespace jmg_cbe_spec

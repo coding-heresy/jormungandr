@@ -27,37 +27,47 @@ groups:
     - name: "Number"
       type: "string"
       required: true
+      cbe_id: 10
     - name: "Street"
       type: "string"
       required: true
+      cbe_id: 11
     - name: "Apartment"
       type: "string"
       required: false
+      cbe_id: 12
     - name: "City"
       type: "string"
       required: true
+      cbe_id: 13
     - name: "State"
       type: "string"
       required: true
+      cbe_id: 14
     - name: "Zip"
       type: "string"
       required: true
+      cbe_id: 15
 objects:
   - name: "Person"
     fields:
       - name: "FirstName"
         type: "string"
+        cbe_id: 0
         required: true
       - name: "LastName"
         type: "string"
         required: true
+        cbe_id: 1
       - name: "MiddleName"
         type: "string"
         required: false
+        cbe_id: 2
       # TODO(bd) insert Address group here
       - name: "PersonAge"
         type: "Age"
         required: true
+        cbe_id: 3
   # TODO(bd) fix jmgc to handle dependencies in declarations
   #- name: "People"
   #  fields:
