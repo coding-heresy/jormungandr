@@ -74,3 +74,14 @@ objects:
   #    - name: "Values"
   #      type: "array"
   #      subtype: "Person"
+  #      cbe_id: 16
+  - name: "Numbers"
+    fields:
+      - name: "Ints"
+        type: "array"
+        subtype: "uint64_t"
+        cbe_id: 17
+      - name: "Reals"
+        type: "array"
+        subtype: "double"
+        cbe_id: 18

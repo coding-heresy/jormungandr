@@ -140,8 +140,13 @@ struct YamlEncodingPolicy {
     if ("array" == field_def.type_name) {
       JMG_ENFORCE(field_def.sub_type_name.has_value(),
                   "field [" << name << "] is an array but has no subtype");
-      str_append(rslt, "jmg::yaml::Array<",
-                 correctedTypeName(*(field_def.sub_type_name)), ">");
+      const auto sub_type = *(field_def.sub_type_name);
+      const auto corrected_sub_type = correctedTypeName(sub_type);
+      if (primitive_types.contains(sub_type)) {
+        // TODO(bd) rework YAML array types to work like CBE
+        str_append(rslt, "std::vector<", corrected_sub_type, ">");
+      }
+      else { str_append(rslt, "jmg::yaml::Array<", corrected_sub_type, ">"); }
     }
     else { str_append(rslt, correctedTypeName(field_def.type_name)); }
     str_append(rslt, ", \"", name, "\", ",
@@ -178,7 +183,7 @@ struct CbeEncodingPolicy {
       JMG_ENFORCE(field_def.sub_type_name.has_value(),
                   "field [" << name << "] is an array but has no subtype");
       str_append(rslt, "jmg::cbe::ArrayField<",
-                 correctedTypeName(*(field_def.sub_type_name)));
+                 correctedTypeName(*(field_def.sub_type_name)), ", ");
     }
     else { str_append(rslt, "jmg::cbe::FieldDef<", field_def.type_name, ", "); }
     const auto id = field_def.extra_data.id;

@@ -60,7 +60,7 @@ concept UnsafeT = (!st::is_strong_type_v<T>);
 // type aliases
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO(davisb) gcc/g++ does not correctly generate separate types for
+// TODO(bd) gcc/g++ does not correctly generate separate types for
 // the trivial anonymous lambda, so the following construct will not
 // work at least as of gcc 15.0
 #if !defined(__GNUG__)

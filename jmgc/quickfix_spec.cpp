@@ -68,7 +68,7 @@ constexpr string_view kFixTrailer = "trailer";
 constexpr string_view kFixComponents = "components";
 constexpr string_view kFixFields = "fields";
 // element names within header/trailer/message/fields elements
-// TODO(davisb) 'component' seems to be unused
+// TODO(bd) 'component' seems to be unused
 // constexpr string_view kFixComponent = "component";
 constexpr string_view kFixField = "field";
 constexpr string_view kFixGroup = "group";
