@@ -17,6 +17,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],
+    size = 'small',
 )
 
 cc_test(
@@ -197,6 +198,7 @@ cc_test(
         '//:jmg',
     ],
     tags = ['manual'],
+    size = 'small',
 )
 
 genrule(
