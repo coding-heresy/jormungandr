@@ -46,7 +46,7 @@ for FILE in ${STAGED_FILES}; do
     FILE_TYPE=$(get_file_type ${FILE})
     if [[ "${FILE_TYPE}" == "CXX" ]]; then
         # this is a C or C++ file, use clang-format
-        DIFF=$(git clang-format --diff --staged "${AGAINST}" -- "${FILE}" -q)
+        DIFF=$(git clang-format --diff --staged "${AGAINST}" -- "${FILE}" -q | egrep -v 'clang-format did not modify any files')
         if [ -n "${DIFF}" ]; then
             echo "ERROR [${FILE}] is not correctly formatted"
             FORMAT_ERROR=1
