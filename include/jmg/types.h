@@ -78,21 +78,11 @@ using TimeZone = absl::TimeZone;
 using Duration = absl::Duration;
 
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
-using TimePointFmt =
-  SafeType<std::string_view, st::equality_comparable, st::hashable, st::orderable>;
-using TimeZoneName =
-  SafeType<std::string_view, st::equality_comparable, st::hashable, st::orderable>;
+using TimePointFmt = SafeType<std::string_view, SafeType>;
+using TimeZoneName = SafeType<std::string_view, SafeIdType>;
 #else
-JMG_NEW_SAFE_TYPE(TimePointFmt,
-                  std::string_view,
-                  st::equality_comparable,
-                  st::hashable,
-                  st::orderable);
-JMG_NEW_SAFE_TYPE(TimeZoneName,
-                  std::string_view,
-                  st::equality_comparable,
-                  st::hashable,
-                  st::orderable);
+JMG_NEW_SAFE_TYPE(TimePointFmt, std::string_view, SafeIdType);
+JMG_NEW_SAFE_TYPE(TimeZoneName, std::string_view, SafeIdType);
 #endif
 
 // standard POSIX epoch is 1970-01-01
@@ -151,9 +141,14 @@ public:
 
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using Octet = SafeType<uint8_t, st::arithmetic>;
+using FileDescriptor = SafeType<int, SafeIdType>;
+using Port = SafeType<uint16_t, SafeIdType>;
 #else
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
+JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 #endif
+inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);
 
 using BufferView = std::span<const uint8_t, std::dynamic_extent>;
 using BufferProxy = std::span<uint8_t, std::dynamic_extent>;

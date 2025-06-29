@@ -78,6 +78,21 @@ using SafeType = st::type<T, decltype([] {}), Policies...>;
   using safe_type = ::st::type<unsafe_type, safe_type##_TAG_>
 #endif
 
+namespace detail
+{
+
+template<typename T>
+struct SafeIdType : st::traits::equality_comparable<T>,
+                    st::traits::hashable<T>,
+                    st::traits::orderable<T> {};
+
+} // namespace detail
+
+struct SafeIdType {
+  template<typename T>
+  using type = detail::SafeIdType<T>;
+};
+
 /**
  * prototype for an ID type, which must be equality_comparable, hashable
  * and orderable
@@ -171,8 +186,6 @@ struct ReturnTypeForAny<T> {
 template<typename T>
 using ReturnTypeForAnyT = detail::ReturnTypeForAny<T>::type;
 
-} // namespace jmg
-
 /**
  * overload of operator<< for safe types
  */
@@ -181,3 +194,5 @@ std::ostream& operator<<(std::ostream& strm, const T& val) {
   strm << jmg::unsafe(val);
   return strm;
 }
+
+} // namespace jmg
