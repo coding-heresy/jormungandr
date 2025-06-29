@@ -194,3 +194,12 @@ TEST(ConversionTests, TestTimePointFromPosixTime) {
   const auto expected = kTimePoint;
   EXPECT_EQ(expected, actual);
 }
+
+TEST(ConversionTests, TestTimePointFromChronoTime) {
+  using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
+  const auto chrono_tp =
+    ChronoTimePoint(std::chrono::seconds(kTimePointSeconds));
+  TimePoint actual = from(chrono_tp);
+  const auto expected = kTimePoint;
+  EXPECT_EQ(expected, actual);
+}

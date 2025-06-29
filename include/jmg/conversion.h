@@ -52,6 +52,63 @@
 namespace jmg
 {
 
+////////////////////////////////////////////////////////////////////////////////
+// concept for types convertible to/from TimePoint
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct TimePointT : std::false_type {};
+template<>
+struct TimePointT<TimePoint> : std::true_type {};
+template<>
+struct TimePointT<EpochSeconds> : std::true_type {};
+template<>
+struct TimePointT<timeval> : std::true_type {};
+template<>
+struct TimePointT<timespec> : std::true_type {};
+template<>
+struct TimePointT<boost::posix_time::ptime> : std::true_type {};
+template<typename T>
+struct TimePointT<std::chrono::time_point<T>> : std::true_type {};
+} // namespace detail
+
+template<typename T>
+concept TimePointT = detail::TimePointT<Decay<T>>{}();
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for types convertible to/from Duration
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct DurationT : std::false_type {};
+template<>
+struct DurationT<Duration> : std::true_type {};
+template<typename T>
+struct DurationT<std::chrono::duration<T>> : std::true_type {};
+} // namespace detail
+
+template<typename T>
+concept DurationT = detail::DurationT<Decay<T>>{}();
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for std::chrono::duration
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct StdChronoDurationT : std::false_type {};
+template<typename T>
+struct StdChronoDurationT<std::chrono::duration<T>> : std::true_type {};
+} // namespace detail
+
+template<typename T>
+concept StdChronoDurationT = detail::StdChronoDurationT<Decay<T>>{}();
+
 namespace detail
 {
 
@@ -68,6 +125,10 @@ template<typename Tgt, typename Src, typename... Extras>
 struct ConvertImpl {
   static Tgt convert(const Src src, Extras&&... extras) {
     using namespace boost::posix_time;
+    using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
+    ////////////////////////////////////////////////////////////
+    // this section converts from strings to other types
+    ////////////////////////////////////////////////////////////
     if constexpr (StringLikeT<std::remove_cvref_t<Src>>) {
       // conversions of strings to other types
 
@@ -102,6 +163,9 @@ struct ConvertImpl {
       }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
+    ////////////////////////////////////////////////////////////
+    // this section converts from TimePoint to other types
+    ////////////////////////////////////////////////////////////
     else if constexpr (sameAsDecayed<TimePoint, Src>()) {
       // conversion of TimePoint to other types or representations
 
@@ -126,16 +190,35 @@ struct ConvertImpl {
         static const auto kPtimeEpoch = from_time_t(0);
         return kPtimeEpoch + nanoseconds(absl::ToUnixNanos(src));
       }
-      // TODO convert TimePoint to std::chrono
+      // convert TimePoint to std::chrono::time_point<std::chrono::system_clock>
+      else if constexpr (std::same_as<ChronoTimePoint, Tgt>) {
+        return absl::ToChronoTime(src);
+      }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
+    ////////////////////////////////////////////////////////////
+    // this section converts from Duration to other types
+    ////////////////////////////////////////////////////////////
+    else if constexpr (sameAsDecayed<Duration, Src>()) {
+      // conversion of Duration to other types or representations
+      if constexpr (jmg::StdChronoDurationT<Tgt>) {
+        // TODO(bd) very naughty to use an internal Abseil namespace, but the
+        // alternative is very painful so I'll take the risk that this might
+        // break in the future
+        return absl::time_internal::ToChronoDuration<Tgt>(src);
+      }
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+    }
+    ////////////////////////////////////////////////////////////
+    // this section converts from external types to TimePoint
+    ////////////////////////////////////////////////////////////
     // convert from EpochSeconds to TimePoint
     else if constexpr (sameAsDecayed<EpochSeconds, Src>()) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from EpochSeconds must target TimePoint");
       return absl::FromTimeT(unsafe(src));
     }
-    // convert from timesval to TimePoint
+    // convert from timeval to TimePoint
     else if constexpr (sameAsDecayed<timeval, Src>()) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timeval must target TimePoint");
@@ -160,11 +243,25 @@ struct ConvertImpl {
       const auto since_epoch = src - kPtimeEpoch;
       return absl::FromUnixNanos(since_epoch.total_nanoseconds());
     }
-
-    // TODO convert from std::chrono::duration to Duration
-
-    // TODO convert from Duration to std::chrono::duration
-
+    // convert from std::chrono::time_point<std::chrono::system_clock> to TimePoint
+    else if constexpr (sameAsDecayed<ChronoTimePoint, Src>()) {
+      static_assert(
+        std::same_as<TimePoint, Tgt>,
+        "conversion from std::chrono::time_point must target TimePoint");
+      return absl::FromChrono(src);
+    }
+    ////////////////////////////////////////////////////////////
+    // this section converts from external types to Duration
+    ////////////////////////////////////////////////////////////
+    else if constexpr (jmg::StdChronoDurationT<Src>) {
+      static_assert(
+        std::same_as<Duration, Tgt>,
+        "conversion from std::chrono::duration must target Duration");
+      return absl::FromChrono(src);
+    }
+    ////////////////////////////////////////////////////////////
+    // unable to perform conversion
+    ////////////////////////////////////////////////////////////
     else { JMG_NOT_EXHAUSTIVE(Src); }
   }
 
@@ -231,6 +328,9 @@ private:
     return rslt;
   }
 
+  /**
+   * convert a time point to a string
+   */
   static std::string timePoint2Str(Src tp, Extras&&... extras) {
     const auto spec = TimePointConversionSpec(std::forward<Extras>(extras)...);
     const auto rslt = absl::FormatTime(spec.fmt, tp, spec.zone);
