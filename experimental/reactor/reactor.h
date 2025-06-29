@@ -1,0 +1,133 @@
+/** -*- mode: c++ -*-
+ *
+ * Copyright (C) 2025 Brian Davis
+ * All Rights Reserved
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Author: Brian Davis <brian8702@sbcglobal.net>
+ *
+ */
+#pragma once
+
+#include "jmg/preprocessor.h"
+#include "jmg/types.h"
+#include "jmg/util.h"
+
+#include "control_blocks.h"
+#include "fiber.h"
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// headers specific to the initial epoll implementation
+#include <sys/epoll.h>
+#include <unistd.h>
+
+#include <atomic>
+#include <chrono>
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+namespace jmg
+{
+
+/**
+ * commands that can be sent to the reactor thread from external threads
+ */
+enum class Cmd : uint8_t { kShutdown, kPost };
+
+class Reactor {
+public:
+  /**
+   * start the reactor, takes control of the thread that calls it
+   */
+  void start();
+
+  /**
+   * instruct the reactor to shut down, should not be called from fiber code
+   * executing in the reactor.
+   */
+  void shutdown();
+
+private:
+  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // epoll-specific
+  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  using EpollEvent = struct epoll_event;
+  using OptStrView = std::optional<std::string_view>;
+  using OptMillisec = std::optional<std::chrono::milliseconds>;
+
+  /**
+   * pass control from a fiber to the reactor scheduler when the fiber executes
+   * an async operation
+   */
+  void schedule(const OptMillisec timeout = std::nullopt);
+
+  /**
+   * perform some sketchy shenanigans to a allow a call to setcontext to execute
+   * a capturing lambda
+   */
+  static void trampoline(const intptr_t lambda_ptr_val);
+
+  /**
+   * store the current checkpoint directly into a context buffer
+   */
+  static void storeCheckpoint(ucontext_t& checkpoint,
+                              const OptStrView operation = std::nullopt);
+
+  /**
+   * store the current checkpoint into a fiber control block
+   */
+  static void storeCheckpoint(FiberCtrlBlock& block,
+                              const OptStrView operation = std::nullopt) {
+    storeCheckpoint(block.body.checkpoint, operation);
+  }
+
+  /**
+   * jump to the checkpoint stored in a context buffer
+   */
+  [[noreturn]] static void jumpTo(const ucontext_t& checkpoint,
+                                  const OptStrView tgt = std::nullopt);
+
+  [[noreturn]] void jumpTo(const FiberCtrlBlock& block,
+                           const OptStrView tgt = std::nullopt) {
+    jumpTo(block.body.checkpoint, tgt);
+  }
+
+  /**
+   * construct a context that can execute a capturing lamda
+   */
+  void initNewFiber(FiberCtrlBlock& block,
+                    FiberFcn& fcn,
+                    const OptStrView operation = std::nullopt,
+                    ucontext_t* returnTgt = nullptr);
+
+  FileDescriptor epoll_fd_ = kInvalidFileDescriptor;
+  FileDescriptor read_fd_ = kInvalidFileDescriptor;
+  FileDescriptor write_fd_ = kInvalidFileDescriptor;
+  FiberId active_fiber_id_;
+  FiberCtrl fiber_ctrl_;
+  ucontext_t shutdown_checkpoint_;
+  std::atomic<bool> is_shutdown_ = false;
+};
+
+} // namespace jmg
