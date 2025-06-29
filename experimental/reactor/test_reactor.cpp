@@ -35,6 +35,7 @@
 
 #include <gtest/gtest.h>
 
+#include "jmg/future.h"
 #include "jmg/util.h"
 
 #include "reactor.h"
@@ -44,7 +45,7 @@ using namespace std;
 
 TEST(ReactorTests, SmokeTest) {
   Reactor reactor;
-  promise<void> shutdown_signaller;
+  Promise<void> shutdown_signaller;
   thread reactor_worker([&] {
     try {
       reactor.start();
@@ -61,7 +62,7 @@ TEST(ReactorTests, SmokeTest) {
     this_thread::sleep_for(2s);
     reactor.shutdown();
     auto shutdown_barrier = shutdown_signaller.get_future();
-    get_future_value(shutdown_barrier, 2s, "shutdown barrier");
+    shutdown_barrier.get(2s, "shutdown barrier");
     reactor_worker.join();
   }
   JMG_SINK_ALL_EXCEPTIONS("top level")
