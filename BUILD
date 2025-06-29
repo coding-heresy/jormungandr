@@ -8,6 +8,7 @@ cc_library(
         'include/jmg/conversion.h',
         'include/jmg/field.h',
         'include/jmg/file_util.h',
+        'include/jmg/future.h',
         'include/jmg/meta.h',
         'include/jmg/object.h',
         'include/jmg/preprocessor.h',

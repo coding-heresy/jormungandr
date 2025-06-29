@@ -64,6 +64,17 @@ cc_test(
 )
 
 cc_test(
+    name = 'test_future',
+    srcs = ['test_future.cpp'],
+    deps = [
+        '@com_google_googletest//:gtest_main',
+        '//:jmg',
+    ],
+    linkstatic = True,
+    size = 'small',
+)
+
+cc_test(
     name = 'test_meta',
     srcs = ['test_meta.cpp'],
     deps = [
