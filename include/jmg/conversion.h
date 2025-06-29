@@ -87,8 +87,8 @@ template<typename T>
 struct DurationT : std::false_type {};
 template<>
 struct DurationT<Duration> : std::true_type {};
-template<typename T>
-struct DurationT<std::chrono::duration<T>> : std::true_type {};
+template<typename Rep, typename Period>
+struct DurationT<std::chrono::duration<Rep, Period>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
@@ -102,8 +102,9 @@ namespace detail
 {
 template<typename T>
 struct StdChronoDurationT : std::false_type {};
-template<typename T>
-struct StdChronoDurationT<std::chrono::duration<T>> : std::true_type {};
+template<typename Rep, typename Period>
+struct StdChronoDurationT<std::chrono::duration<Rep, Period>> : std::true_type {
+};
 } // namespace detail
 
 template<typename T>
@@ -130,6 +131,10 @@ struct ConvertImpl {
     // degenerate case: any type converts to itself
     ////////////////////////////////////////////////////////////
     if constexpr (decayedSameAs<Src, Tgt>()) { return src; }
+    else if constexpr (jmg::StdChronoDurationT<Src>
+                       && jmg::StdChronoDurationT<Tgt>) {
+      return std::chrono::duration_cast<Decay<Tgt>>(src);
+    }
     ////////////////////////////////////////////////////////////
     // this section converts from strings to other types
     ////////////////////////////////////////////////////////////

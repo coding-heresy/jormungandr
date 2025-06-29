@@ -42,6 +42,27 @@ using namespace std::chrono_literals;
 
 using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
+TEST(ConversionTests, TestConversionRelatedConcepts) {
+  // TimePointT
+  EXPECT_TRUE(TimePointT<TimePoint>);
+  EXPECT_TRUE(TimePointT<EpochSeconds>);
+  EXPECT_TRUE(TimePointT<timeval>);
+  EXPECT_TRUE(TimePointT<timespec>);
+  EXPECT_TRUE(TimePointT<boost::posix_time::ptime>);
+  EXPECT_TRUE(TimePointT<std::chrono::time_point<std::chrono::system_clock>>);
+  EXPECT_FALSE(TimePointT<int>);
+  // DurationT
+  EXPECT_TRUE(DurationT<std::chrono::nanoseconds>);
+  EXPECT_TRUE(DurationT<std::chrono::seconds>);
+  EXPECT_TRUE(DurationT<Duration>);
+  EXPECT_FALSE(DurationT<int>);
+  // StdChronoDurationT
+  EXPECT_TRUE(StdChronoDurationT<std::chrono::nanoseconds>);
+  EXPECT_TRUE(StdChronoDurationT<std::chrono::seconds>);
+  EXPECT_FALSE(StdChronoDurationT<Duration>);
+  EXPECT_FALSE(StdChronoDurationT<int>);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // tests of 'from' function
 ////////////////////////////////////////////////////////////////////////////////
@@ -237,4 +258,9 @@ TEST(ConversionTests, TestChronoDurationFromDuration) {
   std::chrono::seconds actual = from(kDuration);
   const auto expected = 42s;
   EXPECT_EQ(expected, actual);
+}
+
+TEST(ConversionTests, TestChronoDurationFromChronoDuration) {
+  std::chrono::milliseconds ms = from(42s);
+  EXPECT_EQ(42000, ms.count());
 }
