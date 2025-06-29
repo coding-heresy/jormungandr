@@ -24,7 +24,7 @@ something akin to _domain-specific languages_ with powerful
 vocabularies to express solutions clearly and enable the reader of the
 code to quickly grasp its function
 
-## Glossary
+# Glossary
 
 Jormungandr strives to be precise (or maybe pedantic) with its
 vocabulary, here are some terms that are used in the code and this
@@ -145,9 +145,10 @@ supported:
   * `timeval` (`time_t` plus micros since second)
   * `timespec` (`time_t` plus nanos since second)
   * `boost::posix_time::ptime`
-* TODO
-  * `std::chrono::time_point` to other time point types
-  * `std::chrono::duration` to `jmg::Duration` (AKA `absl::Duration`)
+  * `std::chrono::time_point<std::chrono::system_clock>`
+* back and forth between various time duration types
+  * `jmg::Duration` (AKA `absl::Duration`)
+  * `std::chrono::duration`
 
 The addition of one or more arguments (format spec and optional time
 zone) will allow conversion between string and `jmg::TimePoint`, where
@@ -170,11 +171,13 @@ hood, it's powered by a lamda, a fold expression, some metaprogramming
 and a generous helping of `if constexpr`.
 
 ## Template Policy Framework
-TODO
+
+**TODO**
 
 ## Documentation placeholders
 ### Command Line Parameter Handling
-TODO
+
+**TODO**
 
 # Subsystems
 
@@ -621,5 +624,5 @@ types to encode the currency for a price into the type system?
 
 # Other overall TODO itmes
 
-* Rename the Abseil function names used in the library: function names
-  SHOULD NOT EVER begin with capital letters!!!
+* Add test cases for code that should fail to compile using
+  `cc_build_error` rules from `rules_build_error`
