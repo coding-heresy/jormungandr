@@ -61,6 +61,32 @@ documentation whose meaning may not be immediately obvious.
 * _range type_ - the set that contains both _array types_ and _string
   types_. Conceptually isomorphic to the `std::ranges::range` concept
   from c++20, although perhaps not exactly equivalent in practice.
+* _dictionary_ - here's one thing python got right: using the name
+  _dictionary_ instead of _map_ for collections of `(key, value)`
+  bindings. _dictionary_ is consistent with the nomenclature used by
+  theorists and allows _map_ to refer to what is currently called
+  _transform_, and I strongly prefer _map_/_reduce_ to
+  _transform_/_accumulate_.
+  * The go-to _dictionary_ container class template in Jormungandr is
+    called `Dict`. This is (currently) an alias for
+    `absl::flat_hash_map` so the interface is highly consistent with
+    `std::unordered_map` and I don't expect that to change (i.e the
+    implementation that `Dict` is aliased to might change at some
+    point but it would never be backed by a structure whose interfaces
+    depart substantially from `std::unordered_map`; those would likely
+    not be aliased unless the original names were exceptionally
+    obnoxious).
+  * For _dictionary_ containers that require ordered traversal, the
+    appropriate class template is called `OrderedDict`, which is
+    (again, currently) backed by `absl::btree_map`.
+  * As an aside, there are also `Set` and `OrderedSet` aliases with
+    characteristics predictable by analogy to `Dict` and `OrderedDict`
+* _RPC_ - AKA _Remote Procedure Call_ this term encompasses any
+  interaction with a remote host in which each outgoing request is
+  expected to receive a finite set of responses. This covers
+  activities defined using a diverse set of protocols including HTTP
+  and ODBC as exemplars of internet protocols and database protocols,
+  respectively.
 
 # _Avant Garde_ techniques
 
@@ -470,6 +496,60 @@ These may or may not be controversial but they have served me well.
 * Impute semantic meaning to types using the _safe types_ framework
 * Use metaprogramming to make interfaces more robust
 * **Always** use exceptions, and rely on RAII for error handling
+
+## Helpers
+
+There are a few helper functions used in the code to simplify certain
+awkward interactions that regularly occur when using standard library
+functions and classes:
+* key_of - get the `key_type` from the `value_type` object stored in a
+  dictionary
+* value_of - get the `mapped_type` from the `value_type` object stored
+  in a dictionary
+* always_emplace - calls `try_emplace` on a dictionary and throws an
+  exception if the insertion wasn't successful (i.e. the key is a
+  duplicate of one that already exists in the dictionary)
+* always_insert - calls `insert` on a set and throws an exception if
+  the insertion wasn't successful (i.e. the item is a duplicate of one
+  that already exists in the set)
+
+## Idioms
+
+There are some idioms that are used regularly in Jormungandr code but
+are less common or non-existent in other codebases.
+* _ENFORCE_ macros - there is a series of macros that simplify various
+  situations where the failure of a predicate should lead to an
+  exception being thrown. Some examples are as follows:
+  * `JMG_ENFORCE` - first argument is a `true`/`false` predicate and
+    the second is a streamed string that supplies an error message. If
+    the predicate fails, the string is used to construct an instance
+    of `std::runtime_error`, which is then thrown
+  * `JMG_SYSTEM` - the solution for the annoying POSIX interface where
+    many functions return an `int` that is set to `-1` on failure, with
+    `errno` being set to provide more information. `JMG_SYSTEM` is
+    very similar to `JMG_ENFORCE` but the result of the function call
+    is compared vs `-1` internally and there is embedded to to
+    automatically extract `error` and use it, along with the supplied
+    message, to throw an instance of `std::system_error`. There are
+    also several variants of this to handle other common patterns of
+    POSIX failure reporting bone-headedness.
+* _Immediately Invoked Lambda Expression_ (IIFE) - in this idiom, an
+  unnamed lambda is defined and immediately executed, with its result
+  assigned to a variable or passed as a function argument. The purpose
+  here is to preserve `const`-ness of automatic variables and
+  generally reduce the clutter of extraneous variables in situations
+  where using a scope does not suffice.
+* _Store And Forward_ POSIX calls - an idiom layered on top of the
+  POSIX-specific _ENFORCE_ macros where an _Immediately Invoked Lambda
+  Expression_ that captures some previously declared variables by
+  reference is used as the function argument to the _ENFORCE_ macro to
+  handle the situations where the return value is useful in the
+  non-failure case. (e.g. `open` which returns `-1` on error and the
+  file descriptor associated with the opened resource otherwise). In
+  this idiom, the return value is stored to a captured reference,
+  whose value is also returned from the lambda, which allows the macro
+  to do its work while leaving the value available for later use if no
+  failure is detected.
 
 ## Standard abbreviations
 
