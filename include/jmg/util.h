@@ -35,6 +35,7 @@
  * general purpose utilities
  */
 
+#include <future>
 #include <optional>
 #include <ranges>
 #include <tuple>
@@ -159,6 +160,20 @@ const auto& value_of(const auto& rec) { return std::get<1>(rec); }
  * retrieve the value (AKA mapped_type) from a dictionary value_type
  */
 auto& value_of(auto& rec) { return std::get<1>(rec); }
+
+/**
+ * retrieve the value of a future or throw exception if the specified timeout
+ * period has passed without the data becoming available
+ */
+template<typename T, typename Timeout>
+decltype(auto) get_future_value(std::future<T>& ftr,
+                                Timeout timeout,
+                                const std::string_view description) {
+  const auto status = ftr.wait_for(timeout);
+  JMG_ENFORCE(std::future_status::timeout != status,
+              "timed out waiting for " << description);
+  return ftr.get();
+}
 
 /**
  * emplace a new item in a dictionary or throw an exception if the key already
