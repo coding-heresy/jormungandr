@@ -174,6 +174,19 @@
 #define JMG_TEST_UNREACHED EXPECT_TRUE(false)
 
 ////////////////////////////////////////////////////////////////////////////////
+// helper macros for sinking exceptions
+////////////////////////////////////////////////////////////////////////////////
+
+#define JMG_SINK_ALL_EXCEPTIONS(location)                                   \
+  catch (const std::exception& e) {                                         \
+    cout << "caught exception at " << location << ": " << e.what() << endl; \
+  }                                                                         \
+  catch (...) {                                                             \
+    cout << "caught exception of type [" << current_exception_type_name()   \
+         << "] at " << location << endl;                                    \
+  }
+
+////////////////////////////////////////////////////////////////////////////////
 // helper macros for commonly used declarations
 ////////////////////////////////////////////////////////////////////////////////
 
