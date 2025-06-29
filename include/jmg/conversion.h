@@ -127,9 +127,13 @@ struct ConvertImpl {
     using namespace boost::posix_time;
     using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
     ////////////////////////////////////////////////////////////
+    // degenerate case: any type converts to itself
+    ////////////////////////////////////////////////////////////
+    if constexpr (decayedSameAs<Src, Tgt>()) { return src; }
+    ////////////////////////////////////////////////////////////
     // this section converts from strings to other types
     ////////////////////////////////////////////////////////////
-    if constexpr (StringLikeT<std::remove_cvref_t<Src>>) {
+    else if constexpr (StringLikeT<std::remove_cvref_t<Src>>) {
       // conversions of strings to other types
 
       // convert string-like type to itself

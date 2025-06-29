@@ -37,7 +37,10 @@
 using namespace boost::posix_time;
 using namespace jmg;
 using namespace std;
-using namespace std::literals::string_literals;
+using namespace std::string_literals;
+using namespace std::chrono_literals;
+
+using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // tests of 'from' function
@@ -138,6 +141,9 @@ const auto kTimePoint = []() -> TimePoint {
 const auto kTimePointSeconds = time_t(1000213200);
 const auto kEpochSeconds = EpochSeconds(kTimePointSeconds);
 
+////////////////////
+// conversions from TimePoint
+
 TEST(ConversionTests, TestEpochSecondsFromTimePoint) {
   EpochSeconds actual = from(kTimePoint);
   const auto expected = kEpochSeconds;
@@ -165,6 +171,19 @@ TEST(ConversionTests, TestPosixTimeFromTimePoint) {
   const auto expected = from_time_t(kTimePointSeconds);
   EXPECT_EQ(expected, actual);
 }
+
+TEST(ConversionTests, TestChronoTimePointFromTimePoint) {
+  ChronoTimePoint chrono_tp = from(kTimePoint);
+  const auto actual =
+    EpochSeconds(std::chrono::duration_cast<std::chrono::seconds>(
+                   chrono_tp.time_since_epoch())
+                   .count());
+  const auto expected = kEpochSeconds;
+  EXPECT_EQ(expected, actual);
+}
+
+////////////////////
+// conversions to TimePoint
 
 TEST(ConversionTests, TestTimePointFromEpochSeconds) {
   TimePoint actual = from(kEpochSeconds);
@@ -195,11 +214,27 @@ TEST(ConversionTests, TestTimePointFromPosixTime) {
   EXPECT_EQ(expected, actual);
 }
 
-TEST(ConversionTests, TestTimePointFromChronoTime) {
-  using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
+TEST(ConversionTests, TestTimePointFromChronoTimePoint) {
   const auto chrono_tp =
     ChronoTimePoint(std::chrono::seconds(kTimePointSeconds));
   TimePoint actual = from(chrono_tp);
   const auto expected = kTimePoint;
+  EXPECT_EQ(expected, actual);
+}
+
+////////////////////
+// conversions between various time durations
+
+const auto kDuration = absl::Seconds(42);
+
+TEST(ConversionTests, TestDurationFromChronoDuration) {
+  Duration actual = from(42s);
+  const auto expected = kDuration;
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(ConversionTests, TestChronoDurationFromDuration) {
+  std::chrono::seconds actual = from(kDuration);
+  const auto expected = 42s;
   EXPECT_EQ(expected, actual);
 }
