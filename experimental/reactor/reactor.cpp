@@ -124,9 +124,9 @@ void Reactor::shutdown() {
     "unable to send shutdown command to reactor");
   JMG_ENFORCE(sizeof(kShutdownCmd) == write_sz,
               "unexpected condition, there was no failure reported when "
-              "sending the shutdown command to the reactor but ["
-                << write_sz << "] bytes were written instead of the expected ["
-                << sizeof(kShutdownCmd) << "]");
+              "sending the shutdown command to the reactor but [",
+              write_sz, "] bytes were written instead of the expected [",
+              sizeof(kShutdownCmd), "]");
 }
 
 void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
@@ -150,10 +150,9 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
   JMG_ENFORCE(pred(ready_fds_sz) || pred(timeout),
               "unexpected condition: epoll_wait returned no events but there "
               "was no timeout originally set");
-  JMG_ENFORCE(1 == ready_fds_sz,
-              "unexpected condition, epoll_wait returned ["
-                << ready_fds_sz
-                << "] but should have returned [1] if there was no timeout");
+  JMG_ENFORCE(1 == ready_fds_sz, "unexpected condition, epoll_wait returned [",
+              ready_fds_sz,
+              "] but should have returned [1] if there was no timeout");
   if (event.data.fd == unsafe(read_fd_)) {
     // TODO(bd) how many to read here?
     uint8_t buffer[256];
@@ -187,8 +186,8 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
     }
   }
   JMG_THROW_EXCEPTION(runtime_error,
-                      "unexpected event on unknown file descriptor ["
-                        << event.data.fd << "]");
+                      "unexpected event on unknown file descriptor [",
+                      event.data.fd, "]");
 }
 
 void Reactor::trampoline(const intptr_t lambda_ptr_val) {
@@ -200,18 +199,25 @@ void Reactor::trampoline(const intptr_t lambda_ptr_val) {
 
 void Reactor::storeCheckpoint(ucontext_t& checkpoint,
                               const OptStrView operation) {
-  auto msg = "unable to "s;
-  str_append(msg, operation ? *operation : "store checkpoint"sv);
-  JMG_SYSTEM(::getcontext(&checkpoint), msg);
+  JMG_SYSTEM(::getcontext(&checkpoint), "unable to ",
+             operation ? *operation : "store checkpoint"sv);
 }
 
 void Reactor::jumpTo(const ucontext_t& checkpoint, const OptStrView tgt) {
   auto msg = "unable to jump to "s;
-  str_append(msg, tgt ? *tgt : "target checkpoint"sv);
-  const auto rslt = ::setcontext(&checkpoint);
-  JMG_ENFORCE(rslt == -1,
-              str_cat(msg, ", setcontext returned with a value other than -1"));
-  JMG_THROW_SYSTEM_ERROR(msg);
+  str_append(msg, (tgt ? *tgt : "target checkpoint"sv));
+  // store and forward
+  int rslt;
+  JMG_SYSTEM(
+    [&] {
+      rslt = ::setcontext(&checkpoint);
+      return rslt;
+    }(),
+    "unable to jump to ", (tgt ? *tgt : "target checkpoint"sv));
+  JMG_ENFORCE(rslt == -1, "unable to jump to ",
+              (tgt ? *tgt : "target checkpoint"sv),
+              ", setcontext returned with a value other than -1");
+  JMG_THROW_SYSTEM_ERROR("unreachable");
 }
 
 void Reactor::initNewFiber(FiberCtrlBlock& block,

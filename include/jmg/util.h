@@ -41,6 +41,7 @@
 #include <tuple>
 
 #include <absl/strings/str_cat.h>
+#include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
 
 #include "meta.h"
@@ -171,8 +172,8 @@ void always_emplace(std::string_view description,
                     const Key& key,
                     Vals&&... vals) {
   const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
-  JMG_ENFORCE(inserted,
-              "unsupported duplicate key [" << key << "] for " << description);
+  JMG_ENFORCE(inserted, "unsupported duplicate key [", key, "] for ",
+              description);
 }
 
 /**
@@ -183,8 +184,8 @@ void always_insert(std::string_view description,
                    SetContainer& set_container,
                    Value&& value) {
   const auto [_, inserted] = set_container.insert(std::forward<Value>(value));
-  JMG_ENFORCE(inserted, "unsupported duplicate value [" << value << "] for "
-                                                        << description);
+  JMG_ENFORCE(inserted, "unsupported duplicate value [", value, "] for ",
+              description);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

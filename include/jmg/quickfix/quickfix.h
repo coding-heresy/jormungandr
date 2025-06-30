@@ -130,22 +130,16 @@ public:
           // jump to the next field
           start = stop + 1;
           auto pos = msg.find(kFieldSplitter, start);
-          JMG_ENFORCE(pos != std::string::npos,
-                      "length field with tag ["
-                        << tag
-                        << "] was followed by data with no splitter "
-                           "'='");
+          JMG_ENFORCE(pos != std::string::npos, "length field with tag [", tag,
+                      "] was followed by data with no splitter '='");
           const unsigned checkTag = from(msg.substr(start, pos));
-          JMG_ENFORCE(checkTag == pairedTag,
-                      "unpaired tag ["
-                        << checkTag << "] followed length field with tag ["
-                        << tag << "] instead of expected paired tag ["
-                        << pairedTag << "]");
+          JMG_ENFORCE(checkTag == pairedTag, "unpaired tag [", checkTag,
+                      "] followed length field with tag [", tag,
+                      "] instead of expected paired tag [", pairedTag, "]");
           stop = pos + nextSz;
-          JMG_ENFORCE(stop < msg.size(),
-                      "raw data field with tag ["
-                        << pairedTag << "] had length [" << nextSz
-                        << "] that was too long for the message");
+          JMG_ENFORCE(stop < msg.size(), "raw data field with tag [", pairedTag,
+                      "] had length [", nextSz,
+                      "] that was too long for the message");
           // overwrite the length tag so that only the raw data field
           // is stored in the dictionary
           tag = pairedTag;
@@ -154,8 +148,7 @@ public:
       // store the data in the dictionary
       const auto [entry, inserted] =
         fields_.try_emplace(tag, msg.substr(pos + 1, stop - pos - 1));
-      JMG_ENFORCE(inserted,
-                  "encountered duplicate tag [" << tag << "] in message");
+      JMG_ENFORCE(inserted, "encountered duplicate tag [", tag, "] in message");
 
       if (msg.size() == stop) {
         // last character of the message should be a field delimiter
@@ -174,10 +167,10 @@ public:
   typename Fld::type get() const {
     using Type = typename Fld::type;
     const auto entry = fields_.find(Fld::kFixTag);
-    JMG_ENFORCE(fields_.end() != entry, "message had no value for required "
-                                        "FIX field ["
-                                          << Fld::name << "] (" << Fld::kFixTag
-                                          << ")");
+    JMG_ENFORCE(fields_.end() != entry,
+                "message had no value for required "
+                "FIX field [",
+                Fld::name, "] (", Fld::kFixTag, ")");
     const auto& str = value_of(*entry);
     if constexpr (std::same_as<Type, std::string>) { return std::string(str); }
     else {

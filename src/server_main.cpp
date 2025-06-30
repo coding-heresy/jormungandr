@@ -63,8 +63,8 @@ sigset_t makeSigSet(const std::array<int, kSz>& signals) {
   sigset_t rslt;
   JMG_SYSTEM(sigemptyset(&rslt), "failed to clear signal set object");
   for (const auto sig : signals) {
-    JMG_SYSTEM(sigaddset(&rslt, sig),
-               "failed to add signal [" << sig << "] to signal set");
+    JMG_SYSTEM(sigaddset(&rslt, sig), "failed to add signal [", sig,
+               "] to signal set");
   }
   return rslt;
 }

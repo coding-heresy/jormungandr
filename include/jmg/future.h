@@ -79,9 +79,8 @@ public:
       }
       else { return ftr_.wait_for(from(timeout)); }
     }();
-    JMG_ENFORCE(std::future_status::timeout != status,
-                "timed out waiting for "
-                  << (description ? *description : "future"sv));
+    JMG_ENFORCE(std::future_status::timeout != status, "timed out waiting for ",
+                (description ? *description : "future"sv));
     return ftr_.get();
   }
 
@@ -117,9 +116,8 @@ public:
       }
       else { return ftr_.wait_for(from(timeout)); }
     }();
-    JMG_ENFORCE(std::future_status::timeout != status,
-                "timed out waiting for "
-                  << (description ? *description : "future"sv));
+    JMG_ENFORCE(std::future_status::timeout != status, "timed out waiting for ",
+                (description ? *description : "future"sv));
     ftr_.get();
   }
 

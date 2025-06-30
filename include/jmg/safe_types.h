@@ -31,6 +31,8 @@
  */
 #pragma once
 
+#include <absl/strings/str_cat.h>
+#include <absl/strings/str_format.h>
 #include <st/st.hpp>
 
 #include "jmg/meta.h"
@@ -193,6 +195,14 @@ template<jmg::SafeT T>
 std::ostream& operator<<(std::ostream& strm, const T& val) {
   strm << jmg::unsafe(val);
   return strm;
+}
+
+/**
+ * custom formatting of safe types for Abseil string functions
+ */
+template<typename Sink, jmg::SafeT T>
+void AbslStringify(Sink& sink, const T& val) {
+  sink.Append(absl::StrCat(unsafe(val)));
 }
 
 } // namespace jmg

@@ -137,8 +137,8 @@ struct YamlEncodingPolicy {
   static string emitField(const string_view name, const T& field_def) {
     string rslt = str_cat("using ", name, " = jmg::FieldDef<");
     if ("array" == field_def.type_name) {
-      JMG_ENFORCE(field_def.sub_type_name.has_value(),
-                  "field [" << name << "] is an array but has no subtype");
+      JMG_ENFORCE(field_def.sub_type_name.has_value(), "field [", name,
+                  "] is an array but has no subtype");
       const auto sub_type = *(field_def.sub_type_name);
       const auto corrected_sub_type = correctedTypeName(sub_type);
       if (primitive_types.contains(sub_type)) {
@@ -168,8 +168,8 @@ struct CbeEncodingPolicy {
   template<typename T>
   static FieldData processField(const T& fld) {
     const auto cbe_id = try_get<CbeId>(fld);
-    JMG_ENFORCE(pred(cbe_id),
-                "field [" << get<Name>(fld) << "] is missing required CBE ID");
+    JMG_ENFORCE(pred(cbe_id), "field [", get<Name>(fld),
+                "] is missing required CBE ID");
     // TODO(bd) add code to check for duplicate field IDs?
     return FieldData{.id = *cbe_id};
   }
@@ -180,8 +180,8 @@ struct CbeEncodingPolicy {
       str_append(rslt, "jmg::cbe::StringField<");
     }
     else if ("array" == field_def.type_name) {
-      JMG_ENFORCE(field_def.sub_type_name.has_value(),
-                  "field [" << name << "] is an array but has no subtype");
+      JMG_ENFORCE(field_def.sub_type_name.has_value(), "field [", name,
+                  "] is an array but has no subtype");
       str_append(rslt, "jmg::cbe::ArrayField<",
                  correctedTypeName(*(field_def.sub_type_name)), ", ");
     }
@@ -252,10 +252,9 @@ public:
             "enum definition must be associated with enumerated values");
           const auto& ul_type = try_get<EnumUlType>(def);
           if (ul_type.has_value()) {
-            JMG_ENFORCE(
-              allowed_enum_ul_types.contains(*ul_type),
-              "type [" << *ul_type
-                       << "] not allowed as underlying type for enumeration");
+            JMG_ENFORCE(allowed_enum_ul_types.contains(*ul_type), "type [",
+                        *ul_type,
+                        "] not allowed as underlying type for enumeration");
             // TODO(bd) list the allowed types?
           }
           vector<DefEnumValue> def_values;
@@ -279,10 +278,8 @@ public:
           JMG_ENFORCE(false, "array definition not yet supported");
         }
         else {
-          JMG_ENFORCE(kUnion == type_name, "unsupported type name ["
-                                             << type_name
-                                             << "] for type definition ["
-                                             << def_name << "]");
+          JMG_ENFORCE(kUnion == type_name, "unsupported type name [", type_name,
+                      "] for type definition [", def_name, "]");
           // TODO(bd) support union definitions?
           JMG_ENFORCE(false, "union definition not yet supported");
         }
@@ -363,9 +360,8 @@ private:
         << ",\n  st::equality_comparable,\n  st::hashable,\n  st::orderable\n";
     }
     else {
-      JMG_ENFORCE(kArithmeticConcept == alias.cncpt,
-                  "unsupported concept ["
-                    << alias.cncpt << "] specified for type [" << name << "]");
+      JMG_ENFORCE(kArithmeticConcept == alias.cncpt, "unsupported concept [",
+                  alias.cncpt, "] specified for type [", name, "]");
       cout << name << "," << " " << alias.type_name << ", st::arithmetic";
     }
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
@@ -408,26 +404,20 @@ private:
                    const bool fld_required,
                    const DefField& entry) {
     JMG_ENFORCE(fld_type == entry.type_name,
-                "mismatched type names found for field ["
-                  << fld_name << "]: [" << fld_type << "] vs ["
-                  << entry.type_name << "]");
+                "mismatched type names found for field [", fld_name, "]: [",
+                fld_type, "] vs [", entry.type_name, "]");
     if (fld_sub_type.has_value()) {
-      JMG_ENFORCE(entry.sub_type_name.has_value(),
-                  "field [" << fld_name
-                            << "] incorrectly redefined to have subtype ["
-                            << *fld_sub_type << "]");
+      JMG_ENFORCE(entry.sub_type_name.has_value(), "field [", fld_name,
+                  "] incorrectly redefined to have subtype [", *fld_sub_type,
+                  "]");
     }
     else {
-      JMG_ENFORCE((!entry.sub_type_name.has_value()),
-                  "field ["
-                    << fld_name
-                    << "] incorrectly redefined to remove existing subtype");
+      JMG_ENFORCE((!entry.sub_type_name.has_value()), "field [", fld_name,
+                  "] incorrectly redefined to remove existing subtype");
     }
     JMG_ENFORCE(
-      fld_required == entry.required,
-      "field ["
-        << fld_name
-        << "] incorrectly redefined to reverse polarity of 'required' flag");
+      fld_required == entry.required, "field [", fld_name,
+      "] incorrectly redefined to reverse polarity of 'required' flag");
   }
 
   /**
@@ -441,8 +431,8 @@ private:
                  || known_enums_.contains(fld_type)
                  || objects_.contains(fld_type)
                  || internally_declared.contains(fld_type)),
-                "field [" << fld_name << "] has type (or subtype) [" << fld_type
-                          << "] that was not previously declared");
+                "field [", fld_name, "] has type (or subtype) [", fld_type,
+                "] that was not previously declared");
   }
 
   /**
@@ -533,10 +523,8 @@ namespace jmg_yml_spec
 
 void process(const string_view filePath) {
   JMG_ENFORCE(filePath.ends_with(".yml") || filePath.ends_with(".yaml"),
-              "encountered non-YAML file ["
-                << filePath
-                << "] when attempting to process a JMG "
-                   "specification");
+              "encountered non-YAML file [", filePath,
+              "] when attempting to process a JMG specification");
   const auto yaml = LoadFile(string(filePath));
 
   const auto defs = AllJmgDefs<YamlEncodingPolicy>(Spec(yaml));
@@ -549,10 +537,8 @@ namespace jmg_cbe_spec
 {
 void process(const string_view filePath) {
   JMG_ENFORCE(filePath.ends_with(".yml") || filePath.ends_with(".yaml"),
-              "encountered non-YAML file ["
-                << filePath
-                << "] when attempting to process a JMG "
-                   "specification");
+              "encountered non-YAML file [", filePath,
+              "] when attempting to process a JMG specification");
   const auto yaml = LoadFile(string(filePath));
 
   const auto defs = AllJmgDefs<CbeEncodingPolicy>(Spec(yaml));

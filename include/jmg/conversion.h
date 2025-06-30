@@ -159,11 +159,9 @@ struct ConvertImpl {
         auto rslt = Tgt();
         const auto [_, err] =
           std::from_chars(src.data(), src.data() + src.size(), rslt);
-        JMG_ENFORCE(std::errc() == err,
-                    "unable to convert string value ["
-                      << src << "] to integral value of type ["
-                      << type_name_for<Tgt>()
-                      << "]: " << std::make_error_code(err).message());
+        JMG_ENFORCE(std::errc() == err, "unable to convert string value [", src,
+                    "] to integral value of type [", type_name_for<Tgt>(),
+                    "]: ", std::make_error_code(err).message());
         return rslt;
       }
       // convert string-like type to time point
@@ -329,11 +327,8 @@ private:
     std::string errMsg;
     TimePoint rslt;
     JMG_ENFORCE(absl::ParseTime(spec.fmt, str, spec.zone, &rslt, &errMsg),
-                "unable to parse string value [" << str
-                                                 << "] as time point "
-                                                    "using format ["
-                                                 << spec.fmt
-                                                 << "]: " << errMsg);
+                "unable to parse string value [", str,
+                "] as time point using format [", spec.fmt, "]: ", errMsg);
     return rslt;
   }
 
@@ -345,9 +340,10 @@ private:
     const auto rslt = absl::FormatTime(spec.fmt, tp, spec.zone);
     // quick sanity check since Abseil can't be trusted to do the
     // right thing and throw an exception...
-    JMG_ENFORCE(!rslt.empty(), "unable to generate string value for time "
-                               "point using format ["
-                                 << spec.fmt << "]");
+    JMG_ENFORCE(!rslt.empty(),
+                "unable to generate string value for time "
+                "point using format [",
+                spec.fmt, "]");
     return rslt;
   }
 };

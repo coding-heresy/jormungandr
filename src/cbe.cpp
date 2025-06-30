@@ -139,8 +139,8 @@ size_t encodeInt(BufferProxy tgt,
   // generate stop-bit encoded version of value
   size_t idx = 0;
   while (val) {
-    JMG_ENFORCE(idx < tgt.size(), detail::kEncodingFailure
-                                    << " to encode the value [" << src << "]");
+    JMG_ENFORCE(idx < tgt.size(), detail::kEncodingFailure,
+                " to encode the value [", src, "]");
     uint8_t chunk = val & kMask;
     val >>= 7;
     if (!val) { chunk |= kStopBit; }

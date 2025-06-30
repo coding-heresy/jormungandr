@@ -109,9 +109,9 @@ public:
     {
       const auto tmpPath = std::filesystem::temp_directory_path() /= "XXXXXX";
       JMG_ENFORCE(tmpPath.native().size() < 1024,
-                  "unable to create temporary file, intended file base name ["
-                    << tmpPath.native()
-                    << "] was longer than internal limit value [1024]");
+                  "unable to create temporary file, intended file base name [",
+                  tmpPath.native(),
+                  "] was longer than internal limit value [1024]");
       tmpPath.native().copy(fileName, tmpPath.native().size());
     }
     // TODO(bd) add another macro for POSIX functions returning file

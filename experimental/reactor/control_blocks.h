@@ -135,11 +135,11 @@ public:
    * release the block with the given ID to the free list
    */
   void release(const Id id) {
-    JMG_ENFORCE_USING(std::logic_error, id < next_never_used_,
-                      "ID [" << id << "] was never allocated");
+    JMG_ENFORCE_USING(std::logic_error, id < next_never_used_, "ID [", id,
+                      "] was never allocated");
     auto& block = getBlock(id);
     JMG_ENFORCE_USING(std::logic_error, block.link == kMax,
-                      "double release of ID [" << id << "]");
+                      "double release of ID [", id, "]");
 
     // push the block onto the free stack
     block.link = free_;

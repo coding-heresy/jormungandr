@@ -294,9 +294,9 @@ size_t encodeObj(BufferProxy tgt, const T& src) {
   serializer.serialize(src);
   const auto consumed = serializer.consumed();
   JMG_ENFORCE(consumed <= std::numeric_limits<uint32_t>::max(),
-              "attempted to serialize object whose serialized size of ["
-                << consumed << "] octets exceeds the maximum possible size of ["
-                << std::numeric_limits<uint32_t>::max() << "] octets");
+              "attempted to serialize object whose serialized size of [",
+              consumed, "] octets exceeds the maximum possible size of [",
+              std::numeric_limits<uint32_t>::max(), "] octets");
   const auto sz = static_cast<uint32_t>(consumed);
   // NOTE: C-style cast
   memcpy(size_field.data(), (uint8_t*)(&sz), 4);
@@ -502,25 +502,21 @@ class Deserializer {
         return static_cast<size_t>(decoded);
       }();
       JMG_ENFORCE(
-        field_id <= kMaxFieldId,
-        "decoded field ID ["
-          << field_id
-          << "] is not in the set of valid IDs for the type being decoded");
+        field_id <= kMaxFieldId, "decoded field ID [", field_id,
+        "] is not in the set of valid IDs for the type being decoded");
       JMG_ENFORCE(!isBufferEmpty(), "ran out of data after deserializing field "
                                     "ID and before deserializing type");
       auto& decoder = kFieldDecoders[field_id];
       JMG_ENFORCE(
-        pred(decoder),
-        "decoded field ID ["
-          << field_id
-          << "] is not in the set of valid IDs for the type being decoded");
+        pred(decoder), "decoded field ID [", field_id,
+        "] is not in the set of valid IDs for the type being decoded");
       (*decoder)(object);
       if (kRequiredFields[field_id]) { ++required_fields_deserialized; }
     }
     JMG_ENFORCE(required_fields_deserialized == kRequiredCount,
-                "ran out of data after deserializing only ["
-                  << required_fields_deserialized << "] of [" << kRequiredCount
-                  << "] required fields");
+                "ran out of data after deserializing only [",
+                required_fields_deserialized, "] of [", kRequiredCount,
+                "] required fields");
   }
 
 public:

@@ -38,6 +38,7 @@
 #include "jmg/meta.h"
 #include "jmg/safe_types.h"
 #include "jmg/types.h"
+#include "jmg/util.h"
 
 using namespace jmg;
 using namespace std;
@@ -152,4 +153,9 @@ TEST(SafeTypeTests, ReturnTypeForAnyTest) {
   EXPECT_FALSE(is_reference_v<ReturnTypeForInt64>);
   using ReturnTypeForRawStr = ReturnTypeForAnyT<string>;
   EXPECT_TRUE(is_reference_v<ReturnTypeForRawStr>);
+}
+
+TEST(SafeTypeTests, StringConversionTest) {
+  const auto id = TestId32(42);
+  EXPECT_EQ("42"s, str_cat(id));
 }

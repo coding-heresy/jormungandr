@@ -43,11 +43,9 @@ namespace jmg
 
 boost::property_tree::ptree loadXmlData(const string_view filePath,
                                         const string_view description) {
-  JMG_ENFORCE(filePath.ends_with(".xml"),
-              "encountered non-XML file ["
-                << filePath
-                << "] when attempting to process a specification for "
-                << description);
+  JMG_ENFORCE(filePath.ends_with(".xml"), "encountered non-XML file [",
+              filePath, "] when attempting to process a specification for ",
+              description);
   auto strm = open_file<ifstream>(filePath);
   boost::property_tree::ptree rslt;
   read_xml(strm, rslt);

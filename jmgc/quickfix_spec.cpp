@@ -157,8 +157,8 @@ using AllXmlElements = xml::ElementsArrayT<TopLevelElement>;
  */
 [[maybe_unused]] bool isRequired(const string_view val) {
   if (val == "Y") { return true; }
-  JMG_ENFORCE(val == "N",
-              "unexpected value '" << val << "' for 'required' attribute");
+  JMG_ENFORCE(val == "N", "unexpected value '", val,
+              "' for 'required' attribute");
   return false;
 }
 
@@ -194,13 +194,11 @@ public:
     for (const auto& msg :
          jmg::get<FixDefinition>(msgsElement).template as<FixMsgDefs>()) {
       const auto& tag = jmg::get<ptree::xml::ElementTag>(msg);
-      JMG_ENFORCE(kFixMsg == tag, "unexpected XML tag ["
-                                    << tag
-                                    << "] on element in [messages] section");
+      JMG_ENFORCE(kFixMsg == tag, "unexpected XML tag [", tag,
+                  "] on element in [messages] section");
       const auto& name = jmg::get<FixMsgName>(msg);
       const auto [_, inserted] = names.insert(name);
-      JMG_ENFORCE(inserted,
-                  "encountered duplicate message name [" << name << "]");
+      JMG_ENFORCE(inserted, "encountered duplicate message name [", name, "]");
       msgs_.push_back(processFieldDeclarations(name, jmg::get<MsgFields>(msg)));
     }
   }
@@ -225,22 +223,19 @@ public:
       else { enumType = EnumType::kChar; }
     }
     else {
-      JMG_ENFORCE("INT" == fieldType,
-                  "unexpected type ["
-                    << fieldType << "] associated with field [" << fieldName
-                    << "] that is an enumeration");
+      JMG_ENFORCE("INT" == fieldType, "unexpected type [", fieldType,
+                  "] associated with field [", fieldName,
+                  "] that is an enumeration");
     }
     auto [entry, inserted] = enums_.insert({fieldName, {}});
-    JMG_ENFORCE(inserted,
-                "duplicate enumerations for field [" << fieldName << "]");
+    JMG_ENFORCE(inserted, "duplicate enumerations for field [", fieldName, "]");
     std::get<0>(value_of(*entry)) = enumType;
     auto& values = std::get<1>(value_of(*entry));
     for (const auto& enumVal : enumValues) {
       const auto& tag = jmg::get<ptree::xml::ElementTag>(enumVal);
-      JMG_ENFORCE(kEnumValue == tag,
-                  "unexpected XML tag ["
-                    << tag << "] on element in enumeration values for field ["
-                    << fieldName << "]");
+      JMG_ENFORCE(kEnumValue == tag, "unexpected XML tag [", tag,
+                  "] on element in enumeration values for field [", fieldName,
+                  "]");
       const auto& rawValue = jmg::get<EnumValue>(enumVal);
       ostringstream value;
       if (EnumType::kInt != enumType) { value << delim; }
@@ -260,16 +255,14 @@ public:
     for (const auto& field :
          jmg::get<FixDefinition>(fieldsElement).template as<FixFieldDefs>()) {
       const auto& tag = jmg::get<ptree::xml::ElementTag>(field);
-      JMG_ENFORCE(kFixField == tag, "unexpected XML tag ["
-                                      << tag
-                                      << "] on element in [fields] section");
+      JMG_ENFORCE(kFixField == tag, "unexpected XML tag [", tag,
+                  "] on element in [fields] section");
       // process number/name/type and add basic entry to the
       // dictionary of fields
       const auto& fieldName = jmg::get<FixFieldName>(field);
       const int fixTag = stoi(jmg::get<FixFieldTag>(field));
-      JMG_ENFORCE(fixTag >= 0, "got negative FIX tag ["
-                                 << fixTag << "] for field named [" << fieldName
-                                 << "]");
+      JMG_ENFORCE(fixTag >= 0, "got negative FIX tag [", fixTag,
+                  "] for field named [", fieldName, "]");
       const auto& fieldType = jmg::get<FixFieldType>(field);
       // handle any associated enumeration, which may update the type
       string effectiveType = fieldType;
@@ -279,8 +272,8 @@ public:
         fields_.try_emplace(fieldName,
                             FieldSpec{.tag = static_cast<unsigned>(fixTag),
                                       .type = effectiveType});
-      JMG_ENFORCE(inserted, "duplicate definitions for field ["
-                              << fieldName << "] in [fields] section");
+      JMG_ENFORCE(inserted, "duplicate definitions for field [", fieldName,
+                  "] in [fields] section");
     }
   }
 
@@ -334,18 +327,15 @@ public:
         // find the data field that this LENGTH field corresponds to
         const auto matchName = [&]() {
           if (name.ends_with("Len")) { return name.substr(0, name.size() - 3); }
-          JMG_ENFORCE(name.ends_with("Length"),
-                      "encountered bad named ["
-                        << name
-                        << "] for LENGTH field, should have suffix "
-                           "'Len' or 'Length'");
+          JMG_ENFORCE(
+            name.ends_with("Length"), "encountered bad named [", name,
+            "] for LENGTH field, should have suffix 'Len' or 'Length'");
           return name.substr(0, name.size() - 6);
         }();
         const auto match = fields_.find(matchName);
-        JMG_ENFORCE(match != fields_.end(),
-                    "matching name ["
-                      << matchName << "] for length field [" << name
-                      << "] was not found in field definitions");
+        JMG_ENFORCE(match != fields_.end(), "matching name [", matchName,
+                    "] for length field [", name,
+                    "] was not found in field definitions");
         if (!firstMatch) { firstMatch = true; }
         else { cout << ","; }
         cout << "\n  {" << spec.tag << "," << value_of(*match).tag << "}";
@@ -400,10 +390,8 @@ private:
              << name << "]\n";
         continue;
       }
-      JMG_ENFORCE(kFixField == fieldTag,
-                  "unexpected XML tag ["
-                    << fieldTag
-                    << "] on element of message or group fields declarations");
+      JMG_ENFORCE(kFixField == fieldTag, "unexpected XML tag [", fieldTag,
+                  "] on element of message or group fields declarations");
       msg.fields.emplace_back(jmg::get<FixFieldName>(field),
                               isRequired(jmg::get<RequiredFlag>(field)));
     }
@@ -415,8 +403,8 @@ private:
 
     // look up field spec using name
     const auto spec_entry = fields_.find(fld.name);
-    JMG_ENFORCE(fields_.end() != spec_entry,
-                "unknown message field name [" << fld.name << "]");
+    JMG_ENFORCE(fields_.end() != spec_entry, "unknown message field name [",
+                fld.name, "]");
     const auto& spec = value_of(*spec_entry);
 
     // emit the field type
@@ -426,7 +414,7 @@ private:
       // enumeration
       const auto entry = kTypeTranslation_.find(spec.type);
       JMG_ENFORCE(kTypeTranslation_.end() != entry,
-                  "unknown FIX protocol type [" << spec.type << "]");
+                  "unknown FIX protocol type [", spec.type, "]");
       cout << value_of(*entry);
     }
     else { cout << key_of(*enumEntry) << kEnumTypeSuffix; }
@@ -448,9 +436,8 @@ private:
     string rslt;
     rslt.reserve(2 * msg.name.size());
     auto entry = msg.name.begin();
-    JMG_ENFORCE(isupper(*entry),
-                "message name ["
-                  << msg.name << "] does not start with an uppercase letter");
+    JMG_ENFORCE(isupper(*entry), "message name [", msg.name,
+                "] does not start with an uppercase letter");
     rslt.push_back(tolower(*entry));
     ++entry;
     for (; entry != msg.name.end(); ++entry) {
@@ -539,15 +526,16 @@ void process(const string_view filePath) {
   const auto data = loadXmlData(filePath, "quickfix"sv);
 
   const AllXmlElements allElements{data};
-  JMG_ENFORCE(1 == allElements.size(), "quickfix XML spec should have a single "
-                                       "top-level element but actually has ["
-                                         << data.size() << "]");
+  JMG_ENFORCE(1 == allElements.size(),
+              "quickfix XML spec should have a single "
+              "top-level element but actually has [",
+              data.size(), "]");
 
   auto allFixDefs = *(allElements.begin());
   JMG_ENFORCE(kTopLevelTag == jmg::get<ptree::xml::ElementTag>(allFixDefs),
               "quickfix XML spec top-level element should have name [fix] but "
-              "actually has ["
-                << jmg::get<ptree::xml::ElementTag>(allFixDefs) << "]");
+              "actually has [",
+              jmg::get<ptree::xml::ElementTag>(allFixDefs), "]");
 
   AllFixDefs fixDefs;
   for (const auto& elem : jmg::get<FixDefinitions>(allFixDefs)) {

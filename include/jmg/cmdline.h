@@ -40,6 +40,7 @@
 #include "jmg/object.h"
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
+#include "jmg/util.h"
 
 namespace jmg
 {
@@ -150,13 +151,11 @@ JMG_DEFINE_RUNTIME_EXCEPTION(CmdLineError);
  * macro for enforcing some predicate about a command line parse by
  * throwing CmdLineError with embedded usage
  */
-#define JMG_ENFORCE_CMDLINE(predicate, msg) \
-  do {                                      \
-    if (JMG_UNLIKELY(!(predicate))) {       \
-      std::ostringstream what;              \
-      what << msg;                          \
-      throw CmdLineError(what.str());       \
-    }                                       \
+#define JMG_ENFORCE_CMDLINE(predicate, ...)     \
+  do {                                          \
+    if (JMG_UNLIKELY(!(predicate))) {           \
+      throw CmdLineError(str_cat(__VA_ARGS__)); \
+    }                                           \
   } while (0)
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -182,11 +181,10 @@ public:
       auto processParam = [&]<typename T>() {
         using ValueType = typename T::type;
         JMG_ENFORCE_USING(std::logic_error, args.size() == matches.size(),
-                          "internal error, size of arguments span ["
-                            << args.size()
-                            << "] does not match size of matching "
-                               "flags span ["
-                            << matches.size() << "]");
+                          "internal error, size of arguments span [",
+                          args.size(),
+                          "] does not match size of matching flags span [",
+                          matches.size(), "]");
         constexpr auto param_idx = meta::find_index<ParamList, T>{}();
         const auto is_required = RequiredField<T>;
         if constexpr (NamedParamT<T>) {
@@ -201,8 +199,8 @@ public:
             // parameter was not found
             if constexpr (!std::same_as<typename T::type, bool>) {
               JMG_ENFORCE_CMDLINE(!is_required,
-                                  "unable to find required named argument ["
-                                    << T::name << "]");
+                                  "unable to find required named argument [",
+                                  T::name, "]");
             }
             // parameter is not required or parameter type was
             // boolean, no further action (because boolean/flag
@@ -210,8 +208,8 @@ public:
             return;
           }
           const auto arg_idx = std::distance(args.begin(), entry);
-          JMG_ENFORCE_CMDLINE(!matches[arg_idx],
-                              "multiple matches for value [" << T::name << "]");
+          JMG_ENFORCE_CMDLINE(!matches[arg_idx], "multiple matches for value [",
+                              T::name, "]");
           matches[arg_idx] = true;
 
           {
@@ -222,8 +220,8 @@ public:
               const auto check_dups =
                 std::find_if(next, args.end(), matchNamedParam);
               JMG_ENFORCE_CMDLINE(check_dups == args.end(),
-                                  "multiple matches for named argument ["
-                                    << T::name << "]");
+                                  "multiple matches for named argument [",
+                                  T::name, "]");
             }
           }
 
@@ -237,16 +235,12 @@ public:
             // other other types of named parameters will consume the next
             // entry in the argument span
             JMG_ENFORCE_CMDLINE(
-              (arg_idx + 1) < args.size(),
-              "named argument ["
-                << T::name
-                << "] is the last argument and is missing its required value");
-            JMG_ENFORCE_CMDLINE(!matches[arg_idx + 1],
-                                "value ["
-                                  << args[arg_idx + 1]
-                                  << "] for named argument [" << T::name
-                                  << "] was previously consumed for some other "
-                                     "parameter");
+              (arg_idx + 1) < args.size(), "named argument [", T::name,
+              "] is the last argument and is missing its required value");
+            JMG_ENFORCE_CMDLINE(
+              !matches[arg_idx + 1], "value [", args[arg_idx + 1],
+              "] for named argument [", T::name,
+              "] was previously consumed for some other parameter");
             matches[arg_idx + 1] = true;
 
             if constexpr (std::same_as<ValueType, std::string>) {
@@ -266,8 +260,8 @@ public:
             std::ranges::find_if(matches, [](const bool val) { return !val; });
           if (entry == matches.end()) {
             JMG_ENFORCE_CMDLINE(!is_required,
-                                "unable to find required positional argument ["
-                                  << T::name << "]");
+                                "unable to find required positional argument [",
+                                T::name, "]");
             // parameter is not required, no further action
             return;
           }
@@ -288,10 +282,9 @@ public:
       (processParam.template operator()<Params>(), ...);
 
       const auto unmatched = std::ranges::find(matches, false);
-      JMG_ENFORCE_CMDLINE(matches.end() == unmatched,
-                          "command line argument ["
-                            << args[std::distance(matches.begin(), unmatched)]
-                            << "] did not match any declared parameter");
+      JMG_ENFORCE_CMDLINE(matches.end() == unmatched, "command line argument [",
+                          args[std::distance(matches.begin(), unmatched)],
+                          "] did not match any declared parameter");
     }
     // append the usage information to the error message of all
     // exceptions
