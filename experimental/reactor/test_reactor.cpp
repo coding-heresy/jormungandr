@@ -59,7 +59,7 @@ TEST(ReactorTests, SmokeTest) {
     // reactor starts at idle and is then instructed to perform work
 
     // wait until the reactor is actually running before shutting down
-    this_thread::sleep_for(2s);
+    this_thread::sleep_for(100ms);
     reactor.shutdown();
     auto shutdown_barrier = shutdown_signaller.get_future();
     shutdown_barrier.get(2s, "shutdown barrier");

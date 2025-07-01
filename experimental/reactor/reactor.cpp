@@ -30,6 +30,8 @@
  *
  */
 
+#include <cstdint>
+
 #include "reactor.h"
 
 //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -75,41 +77,37 @@ void Reactor::start() {
              "unable to configure epoll to monitor the file descriptor for "
              "reading incoming control messages");
 
-  bool was_started = false;
-
-  // store the shutdown checkpoint
-  storeCheckpoint(shutdown_checkpoint_, "store shutdown checkpoint");
-
-  if (was_started) {
-    // second return from getcontext, the reactor should be shut down at this point
-
-    // TODO(bd) perform cleanup?
-
-    // TODO(bd) sanity check the final state to ensure that all fibers are
-    // inactive?
-
-    // return control to the thread that started the reactor
-    return;
-  }
-
-  // first return from getcontext, allocate the first fiber and jump to it
-
-  // mark the reactor as having been started so the second return can exit
-  was_started = true;
-
-  const auto [id, block] = fiber_ctrl_.getOrAllocate();
-  block.body.state = FiberState::kActive;
-  active_fiber_id_ = id;
-
   auto initiator = FiberFcn([this] {
     // TODO(bd) any required initialization here before executing the scheduler
     schedule();
   });
 
-  initNewFiber(block, initiator, "set up initial reactor fiber",
-               &shutdown_checkpoint_);
+  volatile bool was_started = false;
 
-  jumpTo(block, "initial reactor fiber");
+  // store the shutdown checkpoint
+  saveChkpt(shutdown_chkpt_, "store shutdown checkpoint");
+
+  if (!was_started) {
+    // first return from getcontext, allocate the first fiber and jump to it
+
+    // mark the reactor as having been started so the second return can exit
+    was_started = true;
+
+    auto [id, fcb] = fiber_ctrl_.getOrAllocate();
+    fcb.body.state = FiberState::kActive;
+    active_fiber_id_ = id;
+
+    initFbr(fcb, initiator, "set up initial reactor fiber", &shutdown_chkpt_);
+    jumpTo(fcb, "initial reactor fiber");
+  }
+  // second return from getcontext, the reactor should be shut down at this point
+
+  // TODO(bd) perform cleanup?
+
+  // TODO(bd) sanity check the final state to ensure that all fibers are
+  // inactive?
+
+  // return control to the thread that started the reactor
 }
 
 void Reactor::shutdown() {
@@ -197,20 +195,19 @@ void Reactor::trampoline(const intptr_t lambda_ptr_val) {
   (*lambda_ptr)();
 }
 
-void Reactor::storeCheckpoint(ucontext_t& checkpoint,
-                              const OptStrView operation) {
-  JMG_SYSTEM(::getcontext(&checkpoint), "unable to ",
+void Reactor::saveChkpt(ucontext_t& chkpt, const OptStrView operation) {
+  JMG_SYSTEM(::getcontext(&chkpt), "unable to ",
              operation ? *operation : "store checkpoint"sv);
 }
 
-void Reactor::jumpTo(const ucontext_t& checkpoint, const OptStrView tgt) {
+void Reactor::jumpTo(FiberCtrlBlock& fcb, const OptStrView tgt) {
   auto msg = "unable to jump to "s;
   str_append(msg, (tgt ? *tgt : "target checkpoint"sv));
   // store and forward
   int rslt;
   JMG_SYSTEM(
     [&] {
-      rslt = ::setcontext(&checkpoint);
+      rslt = ::setcontext(&(fcb.body.chkpt));
       return rslt;
     }(),
     "unable to jump to ", (tgt ? *tgt : "target checkpoint"sv));
@@ -220,25 +217,21 @@ void Reactor::jumpTo(const ucontext_t& checkpoint, const OptStrView tgt) {
   JMG_THROW_SYSTEM_ERROR("unreachable");
 }
 
-void Reactor::initNewFiber(FiberCtrlBlock& block,
-                           FiberFcn& fcn,
-                           const OptStrView operation,
-                           ucontext_t* returnTgt) {
+void Reactor::initFbr(FiberCtrlBlock& fcb,
+                      FiberFcn& fcn,
+                      const OptStrView operation,
+                      ucontext_t* return_tgt) {
   // for whatever reason, you need to store the current checkpoint using
   // getcontext and then modify it to point to the fiber function
-  storeCheckpoint(block, operation);
-
+  saveChkpt(fcb, operation);
   // point the updated context at the resources controlled by the provided fiber
   // control block
-  auto& chkpt_stack = block.body.checkpoint.uc_stack;
-  // TODO(bd) use variable size segmented stacks
-  chkpt_stack.ss_sp = block.body.stack;
-  chkpt_stack.ss_size = sizeof(block.body.stack);
-  block.body.checkpoint.uc_link = returnTgt;
+  fcb.body.chkpt.uc_link = return_tgt;
+  fcb.body.chkpt.uc_stack.ss_sp = fcb.body.stack.data();
+  fcb.body.chkpt.uc_stack.ss_size = fcb.body.stack.size();
 
   // update the previously stored checkpoint to cause it to jump to the provided
   // fiber function
-
   // NOTE: this is extremely sketchy.
   //
   // For reference, makecontext is a variadic
@@ -247,7 +240,7 @@ void Reactor::initNewFiber(FiberCtrlBlock& block,
   // match the argument count. The C-style cast of the trampoline function is
   // required by the interface so there's no way around the sketchiness, but
   // that doesn't mean that I'm happy about it
-  ::makecontext(&(block.body.checkpoint), (void (*)())trampoline, 1 /* argc */,
+  ::makecontext(&(fcb.body.chkpt), (void (*)())trampoline, 1 /* argc */,
                 reinterpret_cast<intptr_t>(&fcn));
 }
 

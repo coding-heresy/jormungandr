@@ -563,25 +563,27 @@ catalogued here. If you see an abbreviation whose meaning is not
 obvious, look in this section for a defintion. When contributing code,
 please use these abbreviations where appropriate.
 
-* rslt - result, typically used to name an automatic variable that
+* rslt  - result, typically used to name an automatic variable that
   will return a value from a function so as to take advantage of named
   return value optimization
-* cncy - currency
-* ctrl - control/controller
-* def  - definition
-* fbr  - fiber
-* fld  - field
-* msg  - message
-* px   - price
-* req  - request
-* rsp  - response
-* srvr - server
-* str  - string
-* strm - stream
-* svc  - service
-* sz   - size/length/count
-* tp   - time point
-* ts   - timestamp
+* chkpt - checkpoint
+* cncy  - currency
+* ctrl  - control/controller
+* ctxt  - context
+* def   - definition
+* fbr   - fiber
+* fld   - field
+* msg   - message
+* px    - price
+* req   - request
+* rsp   - response
+* srvr  - server
+* str   - string
+* strm  - stream
+* svc   - service
+* sz    - size/length/count
+* tp    - time point
+* ts    - timestamp
 
 ## Some other naming standards
 

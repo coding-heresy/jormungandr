@@ -31,6 +31,8 @@
  */
 #pragma once
 
+#include <array>
+
 #include <ucontext.h>
 
 #include "control_blocks.h"
@@ -45,8 +47,8 @@ using FiberId = CtrlBlockId;
 // TODO(bd) support variable size segmented stacks
 static constexpr size_t kStackSz = 16384;
 struct FiberCtrlBlockBody {
-  ucontext_t checkpoint;
-  char stack[kStackSz];
+  ucontext_t chkpt;
+  std::array<uint8_t, kStackSz> stack;
   FiberState state;
 };
 using FiberFcn = std::function<void(void)>;

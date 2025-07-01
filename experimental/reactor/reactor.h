@@ -71,10 +71,10 @@ public:
 private:
   //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   // epoll-specific
-  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   using EpollEvent = struct epoll_event;
-  using OptStrView = std::optional<std::string_view>;
   using OptMillisec = std::optional<std::chrono::milliseconds>;
+  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  using OptStrView = std::optional<std::string_view>;
 
   /**
    * pass control from a fiber to the reactor scheduler when the fiber executes
@@ -91,42 +91,40 @@ private:
   /**
    * store the current checkpoint directly into a context buffer
    */
-  static void storeCheckpoint(ucontext_t& checkpoint,
-                              const OptStrView operation = std::nullopt);
+  static void saveChkpt(ucontext_t& chkpt,
+                        const OptStrView operation = std::nullopt);
 
   /**
    * store the current checkpoint into a fiber control block
    */
-  static void storeCheckpoint(FiberCtrlBlock& block,
-                              const OptStrView operation = std::nullopt) {
-    storeCheckpoint(block.body.checkpoint, operation);
+  static void saveChkpt(FiberCtrlBlock& fcb,
+                        const OptStrView operation = std::nullopt) {
+    saveChkpt(fcb.body.chkpt, operation);
   }
 
   /**
-   * jump to the checkpoint stored in a context buffer
+   * jump to the checkpoint stored in a fiber control block
+   *
+   * @warning the actual call to setcontext should never be placed in a separate
+   * function inside this one because it will smash the stack for some reason
    */
-  [[noreturn]] static void jumpTo(const ucontext_t& checkpoint,
-                                  const OptStrView tgt = std::nullopt);
-
-  [[noreturn]] void jumpTo(const FiberCtrlBlock& block,
-                           const OptStrView tgt = std::nullopt) {
-    jumpTo(block.body.checkpoint, tgt);
-  }
+  [[noreturn]] void jumpTo(FiberCtrlBlock& fcb,
+                           const OptStrView tgt = std::nullopt);
 
   /**
    * construct a context that can execute a capturing lamda
    */
-  void initNewFiber(FiberCtrlBlock& block,
-                    FiberFcn& fcn,
-                    const OptStrView operation = std::nullopt,
-                    ucontext_t* returnTgt = nullptr);
+  void initFbr(FiberCtrlBlock& fcb,
+               FiberFcn& fcn,
+               const OptStrView operation = std::nullopt,
+               ucontext_t* returnTgt = nullptr);
 
   FileDescriptor epoll_fd_ = kInvalidFileDescriptor;
   FileDescriptor read_fd_ = kInvalidFileDescriptor;
   FileDescriptor write_fd_ = kInvalidFileDescriptor;
   FiberId active_fiber_id_;
   FiberCtrl fiber_ctrl_;
-  ucontext_t shutdown_checkpoint_;
+  ucontext_t shutdown_chkpt_;
   std::atomic<bool> is_shutdown_ = false;
 };
 
