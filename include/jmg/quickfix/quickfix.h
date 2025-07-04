@@ -93,14 +93,13 @@ private:
 #else
 
 template<typename T>
-concept HasFixTag =
-  requires(T) { std::same_as<decltype(T::kFixTag), uint32_t>; };
+concept FixTagT = requires(T) { std::same_as<decltype(T::kFixTag), uint32_t>; };
 
 template<typename T>
-concept RequiredFixFieldT = RequiredField<T> && HasFixTag<T>;
+concept RequiredFixFieldT = RequiredField<T> && FixTagT<T>;
 
 template<typename T>
-concept OptionalFixFieldT = OptionalField<T> && HasFixTag<T>;
+concept OptionalFixFieldT = OptionalField<T> && FixTagT<T>;
 
 /**
  * quick and dirty implementation of FIX message object used for
