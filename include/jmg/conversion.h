@@ -59,26 +59,12 @@ using UringDuration = struct __kernel_timespec;
 // concept for types convertible to/from TimePoint
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
 template<typename T>
-struct TimePointT : std::false_type {};
-template<>
-struct TimePointT<TimePoint> : std::true_type {};
-template<>
-struct TimePointT<EpochSeconds> : std::true_type {};
-template<>
-struct TimePointT<timeval> : std::true_type {};
-template<>
-struct TimePointT<timespec> : std::true_type {};
-template<>
-struct TimePointT<boost::posix_time::ptime> : std::true_type {};
-template<typename T>
-struct TimePointT<std::chrono::time_point<T>> : std::true_type {};
-} // namespace detail
-
-template<typename T>
-concept TimePointT = detail::TimePointT<Decay<T>>{}();
+concept TimePointT =
+  SameAsDecayedT<TimePoint, T> || SameAsDecayedT<EpochSeconds, T>
+  || SameAsDecayedT<::timeval, T> || SameAsDecayedT<::timespec, T>
+  || SameAsDecayedT<boost::posix_time::ptime, T>
+  || TemplateSpecializationOfT<T, std::chrono::time_point>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for types convertible to/from Duration
@@ -189,11 +175,11 @@ struct ConvertImpl {
         return EpochSeconds(absl::ToTimeT(src));
       }
       // convert TimePoint to timeval
-      else if constexpr (std::same_as<timeval, Tgt>) {
+      else if constexpr (std::same_as<::timeval, Tgt>) {
         return absl::ToTimeval(src);
       }
       // convert TimePoint to timespec
-      else if constexpr (std::same_as<timespec, Tgt>) {
+      else if constexpr (std::same_as<::timespec, Tgt>) {
         return absl::ToTimespec(src);
       }
       // convert TimePoint to boost::posix_time::ptime
@@ -237,7 +223,7 @@ struct ConvertImpl {
       return absl::FromTimeT(unsafe(src));
     }
     // convert from timeval to TimePoint
-    else if constexpr (SameAsDecayedT<timeval, Src>) {
+    else if constexpr (SameAsDecayedT<::timeval, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timeval must target TimePoint");
       return absl::FromUnixMicros([&]() {
@@ -245,7 +231,7 @@ struct ConvertImpl {
       }());
     }
     // convert from timespec to TimePoint
-    else if constexpr (SameAsDecayedT<timespec, Src>) {
+    else if constexpr (SameAsDecayedT<::timespec, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timespec must target TimePoint");
       return absl::FromUnixNanos([&]() {
