@@ -1,7 +1,6 @@
 
 cc_library(
     name = 'control_blocks',
-    visibility = ['//visibility:public'],
     hdrs = ['control_blocks.h'],
     deps = ['//:jmg'],
 )
@@ -12,6 +11,25 @@ cc_test(
     deps = [
         '@com_google_googletest//:gtest_main',
         ':control_blocks'
+    ],
+)
+
+cc_library(
+    name = 'uring',
+    hdrs = ['uring.h'],
+    srcs = ['uring.cpp'],
+    deps = [
+        '//:jmg',
+        '@liburing',
+    ],
+)
+
+cc_test(
+    name = 'test_uring',
+    srcs = ['test_uring.cpp'],
+    deps = [
+        '@com_google_googletest//:gtest_main',
+        ':uring'
     ],
 )
 
