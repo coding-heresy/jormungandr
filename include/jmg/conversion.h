@@ -97,6 +97,23 @@ template<typename T>
 concept StdChronoDurationT =
   TemplateSpecializationOfT<T, std::chrono::duration>;
 
+////////////////////////////////////////////////////////////////////////////////
+// time conversion constants
+////////////////////////////////////////////////////////////////////////////////
+
+constexpr auto kMillisecPerSec = int64_t(1000);
+constexpr auto kMicrosecPerSec = int64_t(1000000);
+constexpr auto kNanosecPerSec = int64_t(1000000000);
+
+constexpr auto kMicroSecPerMillisec = int64_t(1000);
+constexpr auto kNanosecPerMilliSec = int64_t(1000000);
+
+constexpr auto kNanosecPerMicroSec = int64_t(1000);
+
+////////////////////////////////////////////////////////////////////////////////
+// conversion implementation
+////////////////////////////////////////////////////////////////////////////////
+
 namespace detail
 {
 
@@ -114,7 +131,6 @@ struct ConvertImpl {
   static Tgt convert(const Src src, Extras&&... extras) {
     using namespace boost::posix_time;
     using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
-    static constexpr auto kNanosPerSecond = int64_t(1000000000);
     ////////////////////////////////////////////////////////////
     // degenerate case: any type converts to itself
     ////////////////////////////////////////////////////////////
@@ -205,8 +221,8 @@ struct ConvertImpl {
       else if constexpr (SameAsDecayedT<UringDuration, Tgt>) {
         UringDuration rslt;
         const auto nanos = absl::ToInt64Nanoseconds(src);
-        rslt.tv_sec = static_cast<int64_t>(nanos / kNanosPerSecond);
-        rslt.tv_nsec = nanos - (rslt.tv_sec * kNanosPerSecond);
+        rslt.tv_sec = static_cast<int64_t>(nanos / kNanosecPerSec);
+        rslt.tv_nsec = nanos - (rslt.tv_sec * kNanosecPerSec);
         return rslt;
       }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
