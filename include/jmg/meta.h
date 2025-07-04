@@ -141,31 +141,11 @@ using RemoveOptionalT = detail::RemoveOptional<Decay<T>>::type;
 // concepts for enums
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(__cpp_lib_is_scoped_enum)
 template<typename T>
 concept EnumT = std::is_enum_v<Decay<T>> && !std::is_scoped_enum_v<Decay<T>>;
 
 template<typename T>
 concept ScopedEnumT = std::is_scoped_enum_v<Decay<T>>;
-#else
-// TODO remove this section when the library requires c++23
-namespace detail
-{
-template<typename E>
-  struct is_scoped_enum : std::bool_constant < requires {
-  requires std::is_enum_v<E>;
-  requires !std::is_convertible_v<E, std::underlying_type_t<E>>;
-} > {};
-template<class T>
-constexpr bool is_scoped_enum_v = is_scoped_enum<T>::value;
-} // namespace detail
-
-template<typename T>
-concept EnumT = std::is_enum_v<Decay<T>> && !detail::is_scoped_enum_v<Decay<T>>;
-
-template<typename T>
-concept ScopedEnumT = detail::is_scoped_enum_v<Decay<T>>;
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for non-bool types
