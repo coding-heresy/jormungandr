@@ -575,6 +575,8 @@ please use these abbreviations where appropriate.
 * fld   - field
 * msg   - message
 * px    - price
+* rc    - return code, typically used for POSIX functions and other 3rd
+          party library functions that insist on returning an integer code
 * req   - request
 * rsp   - response
 * srvr  - server
