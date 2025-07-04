@@ -105,26 +105,49 @@ TEST(MetaprogrammingTests, TestNumericConcepts) {
 }
 
 TEST(MetaprogrammingTests, TestCStyleStringConcept) {
-  EXPECT_FALSE(CStyleStringT<string>);
-  EXPECT_FALSE(CStyleStringT<string_view>);
   EXPECT_TRUE(CStyleStringT<const char*>);
   auto* literal = "foo";
   EXPECT_TRUE(CStyleStringT<decltype(literal)>);
   constexpr char compile_time[] = "bar";
   EXPECT_TRUE(CStyleStringT<decltype(compile_time)>);
+  EXPECT_TRUE(CStyleStringT<decltype("blub")>);
+  char barf[5];
+  EXPECT_TRUE(CStyleStringT<decltype(barf)>);
+  const char const_barf[5] = "barf";
+  EXPECT_TRUE(CStyleStringT<decltype(const_barf)>);
+
+  EXPECT_FALSE(CStyleStringT<int>);
+
+  // std::string and std::string_view don't match
+  EXPECT_FALSE(CStyleStringT<string>);
+  EXPECT_FALSE(CStyleStringT<string_view>);
 }
 
 TEST(MetaprogrammingTests, TestStringLikeConcepts) {
   EXPECT_FALSE(StringLikeT<int>);
 
+  // check all the same cases as CStyleStringT
+  EXPECT_TRUE(StringLikeT<const char*>);
+  auto* literal = "foo";
+  EXPECT_TRUE(StringLikeT<decltype(literal)>);
+  constexpr char compile_time[] = "bar";
+  EXPECT_TRUE(StringLikeT<decltype(compile_time)>);
+  EXPECT_TRUE(StringLikeT<decltype("blub")>);
+  char barf[5];
+  EXPECT_TRUE(StringLikeT<decltype(barf)>);
+  const char const_barf[5] = "barf";
+  EXPECT_TRUE(StringLikeT<decltype(const_barf)>);
+
+  // also check std::string and std::string_view
+  EXPECT_TRUE(StringLikeT<string>);
+  EXPECT_TRUE(StringLikeT<string_view>);
+}
+
+TEST(MetaprogrammingTests, TestViewStringConcepts) {
+  // EXPECT_FALSE(StringLikeT<int>);
+
   auto* literal = "foo";
   constexpr char compile_time[] = "bar";
-
-  EXPECT_TRUE(StringLikeT<string>);
-  EXPECT_TRUE(StringLikeT<const char*>);
-  EXPECT_TRUE(StringLikeT<decltype(literal)>);
-  EXPECT_TRUE(StringLikeT<decltype(compile_time)>);
-  EXPECT_TRUE(StringLikeT<string_view>);
 
   EXPECT_TRUE(NonViewStringT<string>);
   EXPECT_TRUE(NonViewStringT<const char*>);
@@ -137,10 +160,26 @@ TEST(MetaprogrammingTests, TestStringLikeConcepts) {
   EXPECT_FALSE(ViewStringT<decltype(literal)>);
   EXPECT_FALSE(ViewStringT<decltype(compile_time)>);
   EXPECT_TRUE(ViewStringT<string_view>);
+}
+
+TEST(MetaprogrammingTests, TestMiscStringConcepts) {
+  EXPECT_TRUE(StaticStringConstT<decltype("foo")>);
 
   EXPECT_FALSE(NonStringClassT<string>);
   EXPECT_FALSE(NonStringClassT<int>);
   EXPECT_TRUE(NonStringClassT<BufferView>);
+}
+
+TEST(MetaprogrammingTests, TestSpanAndVectorConcepts) {
+  EXPECT_FALSE(VectorT<int>);
+  EXPECT_FALSE(SpanT<int>);
+  EXPECT_TRUE(VectorT<vector<int>>);
+  EXPECT_FALSE(VectorT<span<int>>);
+  EXPECT_FALSE(SpanT<vector<int>>);
+  EXPECT_TRUE(SpanT<span<int>>);
+  array<float, 5> floats;
+  const auto floats_span = span(floats);
+  EXPECT_TRUE(SpanT<decltype(floats_span)>);
 }
 
 TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {

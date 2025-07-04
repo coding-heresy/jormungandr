@@ -46,7 +46,7 @@ namespace jmg
 {
 
 ////////////////////////////////////////////////////////////////////////////////
-// concept for type flag (i.e. std::true_type or std::false_type
+// concept for flag in type space (i.e. std::true_type or std::false_type
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
@@ -72,20 +72,22 @@ template<typename T, typename U>
 concept SameAsDecayedT = std::same_as<T, Decay<U>>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// concept for types that are specializations of templates
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @warning this will not work if there are non-type parameters in the pack
+ */
+template<typename T, template<typename...> typename Template>
+concept TemplateSpecializationOfT =
+  requires(Decay<T> t) { []<typename... Ts>(Template<Ts...>&) {}(t); };
+
+////////////////////////////////////////////////////////////////////////////////
 // concept for meta::list
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
 template<typename T>
-struct IsTypeList : std::false_type {};
-
-template<typename... Ts>
-struct IsTypeList<meta::list<Ts...>> : std::true_type {};
-} // namespace detail
-
-template<typename T>
-concept TypeListT = detail::IsTypeList<T>{}();
+concept TypeListT = TemplateSpecializationOfT<T, meta::list>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for numeric types
@@ -105,17 +107,8 @@ concept ArithmeticT = IntegralT<T> || std::floating_point<Decay<T>>;
 // concept for optional types
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
 template<typename T>
-struct IsOptional : std::false_type {};
-
-template<typename T>
-struct IsOptional<std::optional<T>> : std::true_type {};
-}; // namespace detail
-
-template<typename T>
-concept OptionalT = detail::IsOptional<Decay<T>>{}();
+concept OptionalT = TemplateSpecializationOfT<T, std::optional>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // remove optional to expose value_type
@@ -171,73 +164,50 @@ concept NonClassT = !ClassT<T>;
 namespace detail
 {
 template<typename T>
-struct IsSpan : std::false_type {};
+struct IsSpanT : std::false_type {};
 template<typename T>
-struct IsSpan<std::span<T>> : std::true_type {};
-template<typename T>
-struct IsVector : std::false_type {};
-template<typename... Ts>
-struct IsVector<std::vector<Ts...>> : std::true_type {};
+struct IsSpanT<std::span<T>> : std::true_type {};
+template<typename T, std::size_t kSz>
+struct IsSpanT<std::span<T, kSz>> : std::true_type {};
 } // namespace detail
 
 /**
  * concept for span
  */
 template<typename T>
-concept SpanT = detail::IsSpan<Decay<T>>{}();
+concept SpanT = detail::IsSpanT<Decay<T>>{}();
 
 /**
  * concept for vector
  */
 template<typename T>
-concept VectorT = detail::IsVector<Decay<T>>{}();
+concept VectorT = TemplateSpecializationOfT<T, std::vector>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for static string constant
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept StaticStringConstT =
+  !SameAsDecayedT<char*, T> && !SameAsDecayedT<const char*, T>
+  && std::is_array_v<Decay<T>>
+  && std::same_as<std::remove_extent_t<Decay<T>>, char>
+  && !std::same_as<std::remove_extent_t<Decay<T>>, const char>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for string-like types
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
 template<typename T>
-struct IsCStyleString : std::false_type {};
-template<>
-struct IsCStyleString<char*> : std::true_type {};
-template<>
-struct IsCStyleString<const char*> : std::true_type {};
-template<int kSz>
-struct IsCStyleString<char[kSz]> : std::true_type {};
-template<int kSz>
-struct IsCStyleString<const char[kSz]> : std::true_type {};
+concept CStyleStringT =
+  SameAsDecayedT<char*, T> || SameAsDecayedT<const char*, T>
+  || std::same_as<std::remove_extent_t<Decay<T>>, char>
+  || std::same_as<std::remove_extent_t<Decay<T>>, const char>;
 
 template<typename T>
-struct IsStringLike : std::false_type {};
-template<>
-struct IsStringLike<std::string> : std::true_type {};
-template<>
-struct IsStringLike<std::string_view> : std::true_type {};
-template<>
-struct IsStringLike<char*> : std::true_type {};
-template<>
-struct IsStringLike<const char*> : std::true_type {};
-template<int kSz>
-struct IsStringLike<char[kSz]> : std::true_type {};
-template<int kSz>
-struct IsStringLike<const char[kSz]> : std::true_type {};
-} // namespace detail
-
-/**
- * concept differentiates between C-style strings and all other
- * string-like types
- */
-template<typename T>
-concept CStyleStringT = detail::IsCStyleString<Decay<T>>{}();
-
-/**
- * concept for all string-like types that maintain a contiguous buffer
- * of bytes, i.e. it doesn't include things like absl::Cord
- */
-template<typename T>
-concept StringLikeT = detail::IsStringLike<Decay<T>>{}();
+concept StringLikeT =
+  SameAsDecayedT<std::string, T> || SameAsDecayedT<std::string_view, T>
+  || CStyleStringT<T>;
 
 ////////////////////
 // concepts that differentiate between string_view and all other
