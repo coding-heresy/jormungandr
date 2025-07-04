@@ -39,6 +39,7 @@ cc_library(
         '@com_google_abseil//absl/time:time',
         '@ericniebler_meta//:meta',
         '@doom_strong_type//:strong_type',
+        '@liburing',
         '@yaml-cpp//:yaml-cpp',
         '@boost//:property_tree',
     ],

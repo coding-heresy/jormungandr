@@ -53,13 +53,21 @@ bazel_dep(
 )
 
 ########################################
+# liburing
+########################################
+
+bazel_dep(
+    name = 'liburing',
+    version = '2.5',
+)
+
+########################################
 # yaml library
 ########################################
 
 bazel_dep(
     name = 'yaml-cpp',
     version = '0.8.0',
-    repo_name = 'yaml-cpp',
 )
 
 ########################################
@@ -69,7 +77,6 @@ bazel_dep(
 bazel_dep(
     name = 'ericniebler_meta',
     version = '1.0.0',
-    repo_name = 'ericniebler_meta',
 )
 
 # TODO issue pull request to https://github.com/ericniebler/meta and
@@ -88,7 +95,6 @@ archive_override(
 bazel_dep(
     name = 'doom_strong_type',
     version = '1.1.0',
-    repo_name = 'doom_strong_type',
 )
 
 # TODO issue pull request to https://github.com/doom/strong_type and

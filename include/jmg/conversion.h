@@ -38,6 +38,7 @@
 #include <string_view>
 #include <system_error>
 
+#include <liburing.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include "jmg/meta.h"
@@ -51,6 +52,8 @@
 
 namespace jmg
 {
+
+using UringDuration = struct __kernel_timespec;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for types convertible to/from TimePoint
@@ -81,34 +84,18 @@ concept TimePointT = detail::TimePointT<Decay<T>>{}();
 // concept for types convertible to/from Duration
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
 template<typename T>
-struct DurationT : std::false_type {};
-template<>
-struct DurationT<Duration> : std::true_type {};
-template<typename Rep, typename Period>
-struct DurationT<std::chrono::duration<Rep, Period>> : std::true_type {};
-} // namespace detail
-
-template<typename T>
-concept DurationT = detail::DurationT<Decay<T>>{}();
+concept DurationT = SameAsDecayedT<Duration, T>
+                    || TemplateSpecializationOfT<T, std::chrono::duration>
+                    || SameAsDecayedT<UringDuration, T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for std::chrono::duration
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace detail
-{
 template<typename T>
-struct StdChronoDurationT : std::false_type {};
-template<typename Rep, typename Period>
-struct StdChronoDurationT<std::chrono::duration<Rep, Period>> : std::true_type {
-};
-} // namespace detail
-
-template<typename T>
-concept StdChronoDurationT = detail::StdChronoDurationT<Decay<T>>{}();
+concept StdChronoDurationT =
+  TemplateSpecializationOfT<T, std::chrono::duration>;
 
 namespace detail
 {
@@ -127,6 +114,7 @@ struct ConvertImpl {
   static Tgt convert(const Src src, Extras&&... extras) {
     using namespace boost::posix_time;
     using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
+    static constexpr auto kNanosPerSecond = int64_t(1000000000);
     ////////////////////////////////////////////////////////////
     // degenerate case: any type converts to itself
     ////////////////////////////////////////////////////////////
@@ -214,6 +202,13 @@ struct ConvertImpl {
         // break in the future
         return absl::time_internal::ToChronoDuration<Tgt>(src);
       }
+      else if constexpr (SameAsDecayedT<UringDuration, Tgt>) {
+        UringDuration rslt;
+        const auto nanos = absl::ToInt64Nanoseconds(src);
+        rslt.tv_sec = static_cast<int64_t>(nanos / kNanosPerSecond);
+        rslt.tv_nsec = nanos - (rslt.tv_sec * kNanosPerSecond);
+        return rslt;
+      }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
     ////////////////////////////////////////////////////////////
@@ -260,11 +255,17 @@ struct ConvertImpl {
     ////////////////////////////////////////////////////////////
     // this section converts from external types to Duration
     ////////////////////////////////////////////////////////////
-    else if constexpr (jmg::StdChronoDurationT<Src>) {
+    else if constexpr (StdChronoDurationT<Src>) {
       static_assert(
         std::same_as<Duration, Tgt>,
         "conversion from std::chrono::duration must target Duration");
       return absl::FromChrono(src);
+    }
+    else if constexpr (SameAsDecayedT<UringDuration, Src>) {
+      static_assert(std::same_as<Duration, Tgt>,
+                    "conversion from uring duration (AKA struct "
+                    "__kernel_timespec) must target Duration");
+      return absl::Seconds(src.tv_sec) + absl::Nanoseconds(src.tv_nsec);
     }
     ////////////////////////////////////////////////////////////
     // unable to perform conversion
