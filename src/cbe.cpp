@@ -263,7 +263,7 @@ size_t encodeFlt(BufferProxy tgt, const T src) {
   }();
 
   size_t idx = 0;
-  if constexpr (sameAsDecayed<float, T>()) {
+  if constexpr (SameAsDecayedT<float, T>) {
     // exponent is exactly 8 bits, no need for stop bit encoding
     tgt[idx] = static_cast<uint8_t>(exp);
     ++idx;
@@ -301,7 +301,7 @@ tuple<T, size_t> decodeFlt(BufferView src) {
 
   // decode the exponent
   const OctetsType exp = [&]() -> OctetsType {
-    if constexpr (sameAsDecayed<float, T>()) {
+    if constexpr (SameAsDecayedT<float, T>) {
       // exponent is exactly 8 bits, no need for stop bit encoding
       idx += 1;
       return static_cast<OctetsType>(src[0]) << Masks<T>::kExpOffset;
@@ -379,7 +379,7 @@ size_t encodePrimitive(BufferProxy tgt, T src) {
   else if constexpr (NonViewStringT<T>) {
     return encodePrimitive(tgt, string_view(src));
   }
-  else if constexpr (sameAsDecayed<std::string_view, T>) {
+  else if constexpr (SameAsDecayedT<std::string_view, T>) {
     return encodeStr(tgt, src);
   }
   else { JMG_NOT_EXHAUSTIVE(T); }
@@ -397,7 +397,7 @@ std::tuple<T, size_t> decodePrimitive(BufferView src) {
   }
   else if constexpr (FloatingPointT<T>) { return decodeFlt<T>(src); }
   // NOTE: decode must produce an owning string
-  else if constexpr (sameAsDecayed<string, T>) { return decodeStr(src); }
+  else if constexpr (SameAsDecayedT<string, T>) { return decodeStr(src); }
   else { JMG_NOT_EXHAUSTIVE(T); }
 }
 } // namespace detail

@@ -130,7 +130,7 @@ struct ConvertImpl {
     ////////////////////////////////////////////////////////////
     // degenerate case: any type converts to itself
     ////////////////////////////////////////////////////////////
-    if constexpr (decayedSameAs<Src, Tgt>()) { return src; }
+    if constexpr (DecayedSameAsT<Src, Tgt>) { return src; }
     else if constexpr (jmg::StdChronoDurationT<Src>
                        && jmg::StdChronoDurationT<Tgt>) {
       return std::chrono::duration_cast<Decay<Tgt>>(src);
@@ -142,7 +142,7 @@ struct ConvertImpl {
       // conversions of strings to other types
 
       // convert string-like type to itself
-      if constexpr (sameAsDecayed<Tgt, Src>()) {
+      if constexpr (SameAsDecayedT<Tgt, Src>) {
         DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, string, numeric);
         return src;
       }
@@ -173,7 +173,7 @@ struct ConvertImpl {
     ////////////////////////////////////////////////////////////
     // this section converts from TimePoint to other types
     ////////////////////////////////////////////////////////////
-    else if constexpr (sameAsDecayed<TimePoint, Src>()) {
+    else if constexpr (SameAsDecayedT<TimePoint, Src>) {
       // conversion of TimePoint to other types or representations
 
       // convert TimePoint to string
@@ -206,7 +206,7 @@ struct ConvertImpl {
     ////////////////////////////////////////////////////////////
     // this section converts from Duration to other types
     ////////////////////////////////////////////////////////////
-    else if constexpr (sameAsDecayed<Duration, Src>()) {
+    else if constexpr (SameAsDecayedT<Duration, Src>) {
       // conversion of Duration to other types or representations
       if constexpr (jmg::StdChronoDurationT<Tgt>) {
         // TODO(bd) very naughty to use an internal Abseil namespace, but the
@@ -220,13 +220,13 @@ struct ConvertImpl {
     // this section converts from external types to TimePoint
     ////////////////////////////////////////////////////////////
     // convert from EpochSeconds to TimePoint
-    else if constexpr (sameAsDecayed<EpochSeconds, Src>()) {
+    else if constexpr (SameAsDecayedT<EpochSeconds, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from EpochSeconds must target TimePoint");
       return absl::FromTimeT(unsafe(src));
     }
     // convert from timeval to TimePoint
-    else if constexpr (sameAsDecayed<timeval, Src>()) {
+    else if constexpr (SameAsDecayedT<timeval, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timeval must target TimePoint");
       return absl::FromUnixMicros([&]() {
@@ -234,7 +234,7 @@ struct ConvertImpl {
       }());
     }
     // convert from timespec to TimePoint
-    else if constexpr (sameAsDecayed<timespec, Src>()) {
+    else if constexpr (SameAsDecayedT<timespec, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timespec must target TimePoint");
       return absl::FromUnixNanos([&]() {
@@ -242,7 +242,7 @@ struct ConvertImpl {
       }());
     }
     // convert from boost::posix_time::ptime to TimePoint
-    else if constexpr (sameAsDecayed<ptime, Src>()) {
+    else if constexpr (SameAsDecayedT<ptime, Src>) {
       static_assert(
         std::same_as<TimePoint, Tgt>,
         "conversion from boost::posix_time::ptime must target TimePoint");
@@ -251,7 +251,7 @@ struct ConvertImpl {
       return absl::FromUnixNanos(since_epoch.total_nanoseconds());
     }
     // convert from std::chrono::time_point<std::chrono::system_clock> to TimePoint
-    else if constexpr (sameAsDecayed<ChronoTimePoint, Src>()) {
+    else if constexpr (SameAsDecayedT<ChronoTimePoint, Src>) {
       static_assert(
         std::same_as<TimePoint, Tgt>,
         "conversion from std::chrono::time_point must target TimePoint");
@@ -287,13 +287,13 @@ private:
       std::optional<std::string_view> opt_fmt;
       std::optional<TimeZone> opt_zone;
       auto processArg = [&]<typename T>(const T& arg) {
-        if constexpr (sameAsDecayed<TimePointFmt, T>()) {
+        if constexpr (SameAsDecayedT<TimePointFmt, T>) {
           JMG_ENFORCE(!opt_fmt.has_value(),
                       "more than one format specified "
                       "when converting between string and time point");
           opt_fmt = unsafe(arg);
         }
-        else if constexpr (sameAsDecayed<TimeZone, T>()) {
+        else if constexpr (SameAsDecayedT<TimeZone, T>) {
           JMG_ENFORCE(!opt_zone.has_value(),
                       "more than one time zone specified when converting "
                       "between string and time point");

@@ -214,7 +214,7 @@ template<typename Tgt, typename... Args>
 Tgt getFromArgs(Args&&... args) {
   Tgt rslt;
   auto processArg = [&]<typename T>(T&& arg) {
-    if constexpr (decayedSameAs<T, Tgt>()) { rslt = std::forward<T>(arg); }
+    if constexpr (DecayedSameAsT<T, Tgt>) { rslt = std::forward<T>(arg); }
   };
   (processArg(args), ...);
   return rslt;
@@ -232,7 +232,7 @@ std::optional<Tgt> tryGetFromArgs(Args&&... args) {
 
   Tgt rslt;
   auto processArg = [&]<typename T>(T&& arg) {
-    if constexpr (decayedSameAs<T, Tgt>()) { rslt = std::forward<T>(arg); }
+    if constexpr (DecayedSameAsT<T, Tgt>) { rslt = std::forward<T>(arg); }
   };
   (processArg(args), ...);
   return rslt;

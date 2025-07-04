@@ -65,23 +65,11 @@ concept TypeFlagT =
 template<typename T>
 using Decay = std::remove_cvref_t<T>;
 
-/**
- * type comparison helper similar to std::same_as that removes const,
- * volatile and references
- */
-template<typename TLhs, typename TRhs>
-constexpr bool decayedSameAs() {
-  return std::same_as<Decay<TLhs>, Decay<TRhs>>;
-}
+template<typename T, typename U>
+concept DecayedSameAsT = std::same_as<Decay<T>, Decay<U>>;
 
-/**
- * similar to decayedSameAs except that it only decays the second
- * argument
- */
-template<typename TLhs, typename TRhs>
-constexpr bool sameAsDecayed() {
-  return std::same_as<TLhs, Decay<TRhs>>;
-}
+template<typename T, typename U>
+concept SameAsDecayedT = std::same_as<T, Decay<U>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for meta::list
@@ -184,7 +172,7 @@ concept ScopedEnumT = detail::is_scoped_enum_v<Decay<T>>;
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept NonBoolT = !std::same_as<T, bool>;
+concept NonBoolT = !SameAsDecayedT<bool, T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for class and non-class types
@@ -283,14 +271,13 @@ concept StringLikeT = detail::IsStringLike<Decay<T>>{}();
  * concept for string-like types other than string_view
  */
 template<typename T>
-concept NonViewStringT =
-  StringLikeT<T> && !sameAsDecayed<std::string_view, T>();
+concept NonViewStringT = StringLikeT<T> && !SameAsDecayedT<std::string_view, T>;
 
 /**
  * concept for string_view
  */
 template<typename T>
-concept ViewStringT = sameAsDecayed<std::string_view, T>();
+concept ViewStringT = SameAsDecayedT<std::string_view, T>;
 
 /**
  * concept for any class type that is not a string
@@ -536,7 +523,7 @@ inline std::string demangle(const std::type_info* id) { return demangle(*id); }
 template<typename T>
 std::string type_name_for() {
   // the actual type of std::string is annoying
-  if constexpr (sameAsDecayed<std::string, T>()) { return "std::string"; }
+  if constexpr (SameAsDecayedT<std::string, T>) { return "std::string"; }
   return demangle(typeid(T));
 }
 

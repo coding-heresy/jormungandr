@@ -104,7 +104,7 @@ TEST(NativeObjectTests, TestReturnTypes) {
 
   // object types return const ref
   using SubObjGetReturn = decltype(jmg::get<SubObjFld>(declval<TestObject>()));
-  EXPECT_TRUE((sameAsDecayed<SubObject, SubObjGetReturn>()));
+  EXPECT_TRUE((SameAsDecayedT<SubObject, SubObjGetReturn>));
   EXPECT_TRUE(is_reference_v<SubObjGetReturn>);
   // TODO(bd) result should be ref to const
   // EXPECT_TRUE(is_const_v<remove_cvref_t<SubObjGetReturn>>);
@@ -114,7 +114,7 @@ TEST(NativeObjectTests, TestReturnTypes) {
   EXPECT_TRUE(is_pointer_v<OptSubObjGetReturn>);
   {
     using Deref = decltype(*declval<OptSubObjGetReturn>());
-    EXPECT_TRUE((decayedSameAs<SubObject, Deref>()));
+    EXPECT_TRUE((DecayedSameAsT<SubObject, Deref>));
     // TODO(bd) result should be pointer to const
     // EXPECT_TRUE(is_const_v<Deref>);
   }

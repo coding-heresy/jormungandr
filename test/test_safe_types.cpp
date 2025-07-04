@@ -134,7 +134,7 @@ TEST(SafeTypeTests, SafeRefOfTest) {
   int32_t val;
   auto& unsafe_ref = val;
   auto& safe_ref = SafeRefOf<TestSafeInt>::from(unsafe_ref);
-  EXPECT_TRUE((decayedSameAs<decltype(safe_ref), TestSafeInt>()));
+  EXPECT_TRUE((DecayedSameAsT<decltype(safe_ref), TestSafeInt>));
 }
 
 TEST(SafeTypeTests, ReturnTypeForSafeTest) {

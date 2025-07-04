@@ -88,16 +88,16 @@ using CheckTypeForT = detail::CheckTypeSelect<T>::type;
  * use bitwise equality to compare floating point types to avoid
  * complexities around non-normal values such as NaN
  */
-#define VERIFY_SAME_VALUE(flt_val1, flt_val2)                               \
-  do {                                                                      \
-    static_assert(decayedSameAs<decltype(flt_val1), decltype(flt_val2)>()); \
-    using Decayed = remove_cvref_t<decltype(flt_val1)>;                     \
-    using CheckType = CheckTypeForT<Decayed>;                               \
-    CheckType check1;                                                       \
-    memcpy(&check1, &(flt_val1), sizeof(check1));                           \
-    CheckType check2;                                                       \
-    memcpy(&check2, &(flt_val1), sizeof(check1));                           \
-    EXPECT_EQ(check1, check2);                                              \
+#define VERIFY_SAME_VALUE(flt_val1, flt_val2)                              \
+  do {                                                                     \
+    static_assert(DecayedSameAsT<decltype(flt_val1), decltype(flt_val2)>); \
+    using Decayed = remove_cvref_t<decltype(flt_val1)>;                    \
+    using CheckType = CheckTypeForT<Decayed>;                              \
+    CheckType check1;                                                      \
+    memcpy(&check1, &(flt_val1), sizeof(check1));                          \
+    CheckType check2;                                                      \
+    memcpy(&check2, &(flt_val1), sizeof(check1));                          \
+    EXPECT_EQ(check1, check2);                                             \
   } while (0)
 
 /**
