@@ -150,12 +150,12 @@
  * -errno on failure, and throw an exception of type std::system_error
  * if it fails
  */
-#define JMG_SYSTEM_ERRNO_RETURN(func, ...)                 \
-  do {                                                     \
-    const auto rc = (func);                                \
-    if (JMG_UNLIKELY(rc != 0)) {                           \
-      JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(-rc, __VA_ARGS__); \
-    }                                                      \
+#define JMG_SYSTEM_ERRNO_RETURN(func, ...)                     \
+  do {                                                         \
+    const auto sys_rc = (func);                                \
+    if (JMG_UNLIKELY(sys_rc != 0)) {                           \
+      JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(-sys_rc, __VA_ARGS__); \
+    }                                                          \
   } while (0)
 
 #define JMG_SYSFCN_PTR_RETURN(func, ...)      \
