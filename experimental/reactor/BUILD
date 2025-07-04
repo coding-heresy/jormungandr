@@ -18,6 +18,7 @@ cc_library(
     name = 'uring',
     hdrs = ['uring.h'],
     srcs = ['uring.cpp'],
+    defines = ['_GNU_SOURCE'],
     deps = [
         '//:jmg',
         '@liburing',

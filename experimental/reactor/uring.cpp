@@ -54,10 +54,21 @@ Event::~Event() {
   if (cqe_ && !is_cleanup_canceled_) { io_uring_cqe_seen(ring_, cqe_); }
 }
 
-Uring::Uring(const UringSz sz, const UringFlags flags) {
+Uring::Uring(const UringSz sz) {
   memset(&ring_, 0, sizeof(ring_));
-  JMG_SYSTEM(io_uring_queue_init(unsafe(sz), &ring_, unsafe(flags)),
-             "unable to initialize io_uring queue");
+  io_uring_params params = {};
+
+  // TODO(bd) are these flags correct?
+
+  // only the reactor main thread should access
+  params.flags |= IORING_SETUP_SINGLE_ISSUER;
+  // NOTE: cribbed these flags from an example, not 100% sure what they do
+  params.flags |= IORING_SETUP_COOP_TASKRUN;
+  params.flags |= IORING_SETUP_DEFER_TASKRUN;
+  JMG_SYSTEM(io_uring_queue_init_params(unsafe(sz), &ring_, &params),
+             "unable to initialize io_uring");
+  // save the notifier file descriptor so other threads can send in messages
+  notifier_ = FileDescriptor(ring_.ring_fd);
 }
 
 Uring::~Uring() { io_uring_queue_exit(&ring_); }

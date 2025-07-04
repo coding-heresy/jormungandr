@@ -57,6 +57,9 @@ enum class SqeFlags : uint8_t {
   kSkipSuccess = IOSQE_CQE_SKIP_SUCCESS_BIT
 };
 
+/**
+ * flags used to parameterize a filesystem stat request
+ */
 enum class StatFlags : int32_t {
   kNone = 0,
   kUseFdIfEmptyPath = AT_EMPTY_PATH,
@@ -66,6 +69,9 @@ enum class StatFlags : int32_t {
   kNoSync = AT_STATX_DONT_SYNC
 };
 
+/**
+ * masks used to parameterize a filesystem stat request
+ */
 enum class StatMask : uint32_t {
   // basic stats
   kType = STATX_TYPE,
@@ -86,6 +92,9 @@ enum class StatMask : uint32_t {
   kAlignment = STATX_DIOALIGN
 };
 
+/**
+ * flags used to parameterize an open request
+ */
 // for details on values for flags, c.f. https://linux.die.net/man/2/open
 enum class OpenFlags : int32_t {
   // access modes
@@ -110,6 +119,9 @@ enum class OpenFlags : int32_t {
   kNoDelay = O_NDELAY
 };
 
+/**
+ * flags used to set modes for a filesystem open request
+ */
 enum class ModeFlags : mode_t {
   kNone = 0,
   // user
@@ -129,6 +141,11 @@ enum class ModeFlags : mode_t {
   kOtherExec = S_IXOTH
 };
 
+/**
+ * opcodes for io_uring requests
+ *
+ * @note the order of operations here should not be changed
+ */
 enum class OpCode : uint8_t {
   NoOp,
   ReadV,
@@ -190,6 +207,10 @@ enum class OpCode : uint8_t {
   // OpLast
 };
 
+/**
+ * names that describe io_uring operations, this array is index-linked to the
+ * OpCode enum
+ */
 const std::array kOperations{
   "no-op",
   "scatter read",
@@ -252,6 +273,10 @@ const std::array kOperations{
 
 } // namespace io_sqe
 
+////////////////////////////////////////////////////////////////////////////////
+// safe types for uring
+////////////////////////////////////////////////////////////////////////////////
+
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using UringSz = SafeType<uint32_t>;
 using UringFlags = SafeType<uint32_t>;
@@ -262,8 +287,17 @@ JMG_NEW_SIMPLE_SAFE_TYPE(UringFlags, uint32_t);
 JMG_NEW_SIMPLE_SAFE_TYPE(UserData, uint64_t);
 #endif
 
+////////////////////////////////////////////////////////////////////////////////
+// constants for uring
+////////////////////////////////////////////////////////////////////////////////
+
 constexpr auto kDefaultUringFlags = UringFlags(0);
 
+/**
+ * indication of whether the submission of requests to the io_uring
+ * should be delayed to allow multiple operations, possibly linked, to
+ * be submitted as efficiently as possible
+ */
 enum class DelaySubmission : bool { kDelay = true, kNoDelay = false };
 
 /**
@@ -310,7 +344,14 @@ public:
   JMG_NON_MOVEABLE(Uring);
   ~Uring();
 
-  explicit Uring(const UringSz sz, const UringFlags flags = kDefaultUringFlags);
+  // TODO(bd) allow user to pass flags as well?
+  explicit Uring(const UringSz sz);
+
+  /**
+   * external threads that have access to a separate io_uring can use this file
+   * descriptor to send messages to this uring
+   */
+  FileDescriptor getNotifier() const { return notifier_; }
 
   /**
    * wait for the next uring event to occur, or until the timeout, if any
@@ -326,7 +367,12 @@ public:
   }
 
   /**
-   * submit a request for a timeout event in the future
+   * submit a request for a timeout event to occur in the future
+   *
+   * @note this is separate from the timeout that can occur when waiting for the
+   * uring to receive events, it is intended to allow external threads to
+   * schedule timeout events directly with the kernel in order to avoid the need
+   * to maintain such a schedule internally e.g. with a priority queue
    */
   void submitTimeoutReq(UserData data,
                         Duration timeout,
@@ -336,6 +382,7 @@ private:
   io_uring_sqe& getNextSqe();
 
   io_uring ring_;
+  std::atomic<FileDescriptor> notifier_ = kInvalidFileDescriptor;
 };
 
 } // namespace jmg::uring
