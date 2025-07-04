@@ -30,6 +30,9 @@
  *
  */
 
+#include <concepts>
+#include <optional>
+
 #include <gtest/gtest.h>
 
 #include "jmg/types.h"
@@ -38,6 +41,24 @@ using namespace jmg;
 using namespace std;
 
 constexpr char kTestStr[] = "test";
+
+namespace
+{
+enum class SomeEnum : uint8_t { kSomeValue = 0, kSomeOtherValue = 1 };
+} // namespace
+
+TEST(TypesTest, TestWrappedConcept) {
+  EXPECT_FALSE(WrapperT<int>);
+  EXPECT_TRUE(WrapperT<optional<int>>);
+  EXPECT_TRUE(WrapperT<SomeEnum>);
+  EXPECT_TRUE(WrapperT<EpochSeconds>);
+}
+
+TEST(TypesTest, TestUnwrapMetafunction) {
+  EXPECT_TRUE((same_as<int, UnwrapT<optional<int>>>));
+  EXPECT_TRUE((same_as<uint8_t, UnwrapT<SomeEnum>>));
+  EXPECT_TRUE((same_as<time_t, UnwrapT<EpochSeconds>>));
+}
 
 TEST(TypesTest, TestCStringView) {
   {

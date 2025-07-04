@@ -53,6 +53,42 @@ namespace jmg
 {
 
 ////////////////////////////////////////////////////////////////////////////////
+// concept for wrapper type, i.e. common cases where a type 'contains' some
+// other type in some way
+//
+// NOTE: concept is declared here because it depends on Safe Type declarations
+// but is not strictly a safe type
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept WrapperT = SafeT<T> || ScopedEnumT<T> || OptionalT<T>;
+
+////////////////////////////////////////////////////////////////////////////////
+// metafunction that returns the wrapped type of a wrapper type
+////////////////////////////////////////////////////////////////////////////////
+
+namespace detail
+{
+template<typename T>
+struct UnwrapT;
+template<SafeT T>
+struct UnwrapT<T> {
+  using type = typename T::value_type;
+};
+template<ScopedEnumT T>
+struct UnwrapT<T> {
+  using type = std::underlying_type_t<T>;
+};
+template<OptionalT T>
+struct UnwrapT<T> {
+  using type = RemoveOptionalT<T>;
+};
+} // namespace detail
+
+template<typename T>
+using UnwrapT = typename detail::UnwrapT<T>::type;
+
+////////////////////////////////////////////////////////////////////////////////
 // containers
 ////////////////////////////////////////////////////////////////////////////////
 
