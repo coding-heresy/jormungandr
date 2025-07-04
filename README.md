@@ -628,3 +628,5 @@ types to encode the currency for a price into the type system?
 
 * Add test cases for code that should fail to compile using
   `cc_build_error` rules from `rules_build_error`
+* Standardize naming of all concepts and type metafunctions
+* Document coding standards for concepts and type metafunctions
