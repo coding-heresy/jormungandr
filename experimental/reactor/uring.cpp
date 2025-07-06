@@ -61,10 +61,9 @@ Uring::Uring(const UringSz sz) {
   // TODO(bd) are these flags correct?
 
   // only the reactor main thread should access
-  params.flags |= IORING_SETUP_SINGLE_ISSUER;
+  params.flags = IORING_SETUP_SINGLE_ISSUER;
   // NOTE: cribbed these flags from an example, not 100% sure what they do
-  params.flags |= IORING_SETUP_COOP_TASKRUN;
-  params.flags |= IORING_SETUP_DEFER_TASKRUN;
+  params.flags |= IORING_SETUP_COOP_TASKRUN | IORING_SETUP_DEFER_TASKRUN;
   JMG_SYSTEM(io_uring_queue_init_params(unsafe(sz), &ring_, &params),
              "unable to initialize io_uring");
   // save the notifier file descriptor so other threads can send in messages

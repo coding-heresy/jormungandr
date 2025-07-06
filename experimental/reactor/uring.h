@@ -323,9 +323,11 @@ public:
     return *cqe_;
   }
 
+  // TODO(bd) add definition of operator->
+
   UserData getUserData() const {
     // NOTE: using operator* to avoid SIGSEGV if the CQE pointer is not set
-    return UserData(io_uring_cqe_get_data64(&(**this)));
+    return UserData(cqe_->user_data);
   }
 
 private:
