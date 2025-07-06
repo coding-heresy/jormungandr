@@ -33,6 +33,8 @@ cc_library(
     includes = ['include'],
     linkstatic = True,
     deps = [
+        '@boost//:date_time',
+        '@boost//:property_tree',
         '@com_google_abseil//absl/container:btree',
         '@com_google_abseil//absl/container:flat_hash_map',
         '@com_google_abseil//absl/container:flat_hash_set',
@@ -41,7 +43,6 @@ cc_library(
         '@doom_strong_type//:strong_type',
         '@liburing',
         '@yaml-cpp//:yaml-cpp',
-        '@boost//:property_tree',
     ],
 )
 
