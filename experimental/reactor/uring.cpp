@@ -62,12 +62,12 @@ Uring::Uring(const UringSz sz) {
 
   // only the reactor main thread should access
   params.flags = IORING_SETUP_SINGLE_ISSUER;
-  // NOTE: cribbed these flags from an example, not 100% sure what they do
   params.flags |= IORING_SETUP_COOP_TASKRUN | IORING_SETUP_DEFER_TASKRUN;
   JMG_SYSTEM(io_uring_queue_init_params(unsafe(sz), &ring_, &params),
              "unable to initialize io_uring");
-  // save the notifier file descriptor so other threads can send in messages
-  notifier_ = FileDescriptor(ring_.ring_fd);
+  // save the channel file descriptor so other threads with access to separate
+  // urings can send in messages
+  channel_ = FileDescriptor(ring_.ring_fd);
 }
 
 Uring::~Uring() { io_uring_queue_exit(&ring_); }
@@ -98,7 +98,37 @@ Event Uring::awaitEvent(optional<Duration> timeout) {
   JMG_ENFORCE(
     pred(cqe),
     "successfully waited for uring event but no event details were returned");
+
+  /*
+    TODO(bd) decide how to handle failures of individual, long-running requests
+
+    e.g. for multishot polling on eventfd:
+
+    A CQE posted from a   multishot poll request will have IORING_CQE_F_MORE set
+    in the CQE flags member, indicating that the application should expect more
+    completions from this request. If the multishot poll request gets terminated
+    or experiences an error, this flag will not be set in the CQE. If this
+    happens, the application should not expect further CQEs from the original
+    request and must reissue a new one if it still wishes to get notifications
+    on this file descriptor.
+  */
+
   return Event(&ring_, cqe);
+}
+
+void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
+  JMG_ENFORCE_USING(
+    logic_error, !notifier_,
+    "attempted to register more than one event notifier with uring instance");
+  notifier_ = notifier;
+  auto clear_notifier = Cleanup([&] { notifier_ = nullopt; });
+  auto sqe = io_uring_get_sqe(&ring_);
+  // read readiness triggers the event
+  io_uring_prep_poll_multishot(sqe, unsafe(notifier), POLL_IN);
+  // use event_fd as user_data for identification
+  io_uring_sqe_set_data(sqe, (void*)static_cast<intptr_t>(unsafe(notifier)));
+  if (!unwrap(isDelayed)) { submitReq("event notifier registration"sv); }
+  clear_notifier.cancel();
 }
 
 void Uring::submitTimeoutReq(UserData data,

@@ -30,6 +30,8 @@
  *
  */
 
+#include <sys/eventfd.h>
+
 #include <gmock/gmock.h>
 
 #include "jmg/conversion.h"
@@ -59,22 +61,43 @@ TEST(UringTests, SmokeTest) {
     << "event duration was less than expected timeout";
 }
 
-// TODO(bd) this test currently fails
+// test the ability to send messages to a uring owned by a worker thread via an
+// eventfd notifier registered with the uring
 TEST(UringTests, MsgTest) {
-  auto notifier_prm = make_unique<Promise<FileDescriptor>>();
-  auto notifier_ftr = notifier_prm->get_future();
-  auto user_data_prm = make_unique<Promise<uring::UserData>>();
+  auto sync_prm = make_unique<Promise<void>>();
+  auto sync_ftr = sync_prm->get_future();
+  auto user_data_prm = make_unique<Promise<uint64_t>>();
   auto user_data_ftr = user_data_prm->get_future();
-  auto uring_worker = thread([notifier_prm = std::move(notifier_prm),
+  const auto notifier = [&] {
+    // store and forward
+    int fd;
+    JMG_SYSTEM((fd = eventfd(0 /* initval */, EFD_NONBLOCK)),
+               "unable to create eventfd");
+    return EventFd(fd);
+  }();
+  auto uring_worker = thread([notifier, sync_prm = std::move(sync_prm),
                               user_data_prm = std::move(user_data_prm)] {
     try {
       auto uring = uring::Uring(uring::UringSz(256));
-      notifier_prm->set_value(uring.getNotifier());
+      uring.registerEventNotifier(notifier);
+      // signal the other thread to trigger the event
+      sync_prm->set_value();
       const auto event = uring.awaitEvent(from(100ms));
       JMG_ENFORCE(pred(event), "timed out waiting for event");
 
+      JMG_ENFORCE(static_cast<uint64_t>(unsafe(notifier))
+                    == unsafe(event.getUserData()),
+                  "incoming event did reference notifier as expected");
+
+      uint64_t data;
+      int sz;
+      JMG_SYSTEM((sz = read(unsafe(notifier), &data, sizeof(data))),
+                 "unable to read data from eventfd");
+      JMG_ENFORCE(sizeof(data) == sz, "read size mismatch, should have read [",
+                  sizeof(data), "] but actually read [", sz, "]");
+
       // send the user data back to the main thread
-      user_data_prm->set_value(event.getUserData());
+      user_data_prm->set_value(data);
     }
     catch (...) {
       // propagate exception
@@ -82,29 +105,19 @@ TEST(UringTests, MsgTest) {
     }
   });
 
-  // retrieve the notifier file descriptor once it is ready
-  const auto notifier = notifier_ftr.get(10ms);
+  // wait until the uring is ready for the event
+  sync_ftr.get();
 
-  io_uring msg_originator;
-  io_uring_params params = {};
-
-  // TODO(bd) are these flags correct/necessary/optimal?
-  params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_COOP_TASKRUN
-                 | IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_SUBMIT_ALL;
-  JMG_SYSTEM(io_uring_queue_init_params(256, &msg_originator, &params),
-             "unable to initialize io_uring message originator");
+  // write the data
+  const uint64_t event_data = 42;
+  // store and forward
   {
-    // send some user data to the uring thread
-    auto* sqe = io_uring_get_sqe(&msg_originator);
-    JMG_ENFORCE(pred(sqe), "no submit queue entries available");
-    // don't trigger an event on the msg_originator uring when the message is
-    // sent successfully (i.e. the message is fire and forget)
-    io_uring_sqe_set_flags(sqe, IOSQE_CQE_SKIP_SUCCESS);
-    io_uring_prep_msg_ring(sqe, unsafe(notifier), 0 /* length (not needed) */,
-                           42 /* data */, 0 /* flags (always 0) */);
-
-    // fire off the message
-    io_uring_submit(&msg_originator);
+    int sz;
+    JMG_ENFORCE((sz = write(unsafe(notifier), &event_data, sizeof(event_data))),
+                "unable to write event data to eventfd");
+    JMG_ENFORCE(sizeof(event_data) == sz,
+                "write size mismatch, should have written [",
+                sizeof(event_data), "] but actually wrote [", sz, "]");
   }
 
   // wait for the worker thread to shut down
@@ -112,5 +125,5 @@ TEST(UringTests, MsgTest) {
 
   // grab the response from the future
   const auto user_data = user_data_ftr.get(10ms);
-  EXPECT_EQ(42, unsafe(user_data));
+  EXPECT_EQ(42, user_data);
 }

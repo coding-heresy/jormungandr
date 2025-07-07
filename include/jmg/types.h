@@ -194,10 +194,12 @@ public:
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using Octet = SafeType<uint8_t, st::arithmetic>;
 using FileDescriptor = SafeType<int, SafeIdType>;
+using EventFd = SafeType<int, SafeIdType>;
 using Port = SafeType<uint16_t, SafeIdType>;
 #else
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
 JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(EventFd, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 #endif
 inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);

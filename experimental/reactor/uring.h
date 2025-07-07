@@ -37,6 +37,7 @@
 
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
+#include "jmg/types.h"
 #include "jmg/util.h"
 
 namespace jmg::uring
@@ -347,13 +348,16 @@ public:
   ~Uring();
 
   // TODO(bd) allow user to pass flags as well?
+  /**
+   * @param sz - number of entries in the uring circular queue
+   */
   explicit Uring(const UringSz sz);
 
   /**
    * external threads that have access to a separate io_uring can use this file
    * descriptor to send messages to this uring
    */
-  FileDescriptor getNotifier() const { return notifier_; }
+  FileDescriptor getChannel() const { return channel_; }
 
   /**
    * wait for the next uring event to occur, or until the timeout, if any
@@ -366,7 +370,13 @@ public:
   void submitReq(const std::string_view req_type) {
     JMG_SYSTEM(io_uring_submit(&ring_), "unable to submit io_uring ", req_type,
                " request");
+    // NOTE: intentionally ignoring the submission count to allow multiple
+    // submissions to be chained
   }
+
+  void registerEventNotifier(
+    EventFd notifier,
+    DelaySubmission isDelayed = DelaySubmission::kNoDelay);
 
   /**
    * submit a request for a timeout event to occur in the future
@@ -383,8 +393,9 @@ public:
 private:
   io_uring_sqe& getNextSqe();
 
+  std::optional<EventFd> notifier_;
   io_uring ring_;
-  std::atomic<FileDescriptor> notifier_ = kInvalidFileDescriptor;
+  std::atomic<FileDescriptor> channel_ = kInvalidFileDescriptor;
 };
 
 } // namespace jmg::uring
