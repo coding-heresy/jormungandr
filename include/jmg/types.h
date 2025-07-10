@@ -93,7 +93,7 @@ using UnwrapT = typename detail::UnwrapT<T>::type;
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-auto unwrap(const T& wrapped) {
+constexpr auto unwrap(const T& wrapped) {
   if constexpr (SafeT<T>) { return unsafe(wrapped); }
   else if constexpr (ScopedEnumT<T>) {
     return static_cast<UnwrapT<T>>(wrapped);
