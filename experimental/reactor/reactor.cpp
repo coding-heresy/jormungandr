@@ -30,14 +30,13 @@
  *
  */
 
+#include <sys/eventfd.h>
+
 #include <cstdint>
 
+#include "jmg/conversion.h"
 #include "reactor.h"
-
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// headers specific to the initial epoll implementation
-#include <fcntl.h>
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#include "util.h"
 
 using namespace std;
 using namespace std::string_literals;
@@ -49,33 +48,20 @@ namespace jmg
 {
 
 void Reactor::start() {
-  // create the event pipe
-  {
-    int pipefds[2];
-    memset(pipefds, 0, sizeof(pipefds));
-    JMG_SYSTEM(pipe2(pipefds, O_NONBLOCK), "initializing pipe for posting ");
-    read_fd_ = FileDescriptor(pipefds[0]);
-    write_fd_ = FileDescriptor(pipefds[1]);
-  }
+  // create the eventfd
+  notifier_ = [&] {
+    // store and forward
+    int fd;
+    JMG_SYSTEM((fd = eventfd(0 /* initval */, EFD_NONBLOCK)),
+               "unable to create eventfd");
+    return EventFd(fd);
+  }();
 
-  // set up the epoll fd
-  // NOTE: store and forward idiom vs data member
-  JMG_SYSTEM(
-    [this] {
-      const auto rslt = epoll_create1(0);
-      if (rslt != 0) { epoll_fd_ = FileDescriptor(rslt); }
-      return rslt;
-    }(),
-    "unable to create epoll file descriptor");
+  // create the uring instance
+  // TODO(bd) make uring size a parameter
+  uring_ = make_unique<uring::Uring>(uring::UringSz(256));
 
-  // configure epoll to listen for events of interest
-  EpollEvent event;
-  memset(&event, 0, sizeof(event));
-  event.events = EPOLLIN;
-  event.data.fd = unsafe(read_fd_);
-  JMG_SYSTEM(epoll_ctl(unsafe(epoll_fd_), EPOLL_CTL_ADD, event.data.fd, &event),
-             "unable to configure epoll to monitor the file descriptor for "
-             "reading incoming control messages");
+  uring_->registerEventNotifier(*notifier_);
 
   auto initiator = FiberFcn([this] {
     // TODO(bd) any required initialization here before executing the scheduler
@@ -111,81 +97,41 @@ void Reactor::start() {
 }
 
 void Reactor::shutdown() {
-  static constexpr auto kShutdownCmd = static_cast<uint8_t>(Cmd::kShutdown);
-  // store and forward idiom
-  ssize_t write_sz = 0;
-  JMG_SYSTEM(
-    [&] {
-      write_sz = write(unsafe(write_fd_), &kShutdownCmd, sizeof(kShutdownCmd));
-      return write_sz;
-    }(),
-    "unable to send shutdown command to reactor");
-  JMG_ENFORCE(sizeof(kShutdownCmd) == write_sz,
-              "unexpected condition, there was no failure reported when "
-              "sending the shutdown command to the reactor but [",
-              write_sz, "] bytes were written instead of the expected [",
-              sizeof(kShutdownCmd), "]");
+  static constexpr auto kShutdownCmd = unwrap(Cmd::kShutdown);
+  JMG_ENFORCE_USING(logic_error, notifier_, "no notifier eventfd is available");
+  detail::write_all(*notifier_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
 }
 
 void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
-  static constexpr auto kNoTimeout = -1;
+  JMG_ENFORCE_USING(logic_error, uring_,
+                    "attempted to schedule fibers before starting the reactor");
+  const auto event = [&] {
+    std::optional<Duration> uring_timeout = nullopt;
+    if (timeout) { *uring_timeout = from(*timeout); }
+    return uring_->awaitEvent(uring_timeout);
+  }();
 
-  EpollEvent event;
-  memset(&event, 0, sizeof(event));
+  const auto& event_data = event.getUserData();
 
-  // NOTE: store and forward idiom here
-  int ready_fds_sz;
-  JMG_SYSTEM(
-    [&]() -> int {
-      const auto timeout_duration =
-        timeout ? static_cast<int>(timeout->count()) : kNoTimeout;
-      ready_fds_sz = epoll_wait(unsafe(epoll_fd_), &event, 1 /* maxevents */,
-                                timeout_duration);
-      return ready_fds_sz;
-    }(),
-    "unable to wait for epoll events");
-
-  JMG_ENFORCE(pred(ready_fds_sz) || pred(timeout),
-              "unexpected condition: epoll_wait returned no events but there "
-              "was no timeout originally set");
-  JMG_ENFORCE(1 == ready_fds_sz, "unexpected condition, epoll_wait returned [",
-              ready_fds_sz,
-              "] but should have returned [1] if there was no timeout");
-  if (event.data.fd == unsafe(read_fd_)) {
-    // TODO(bd) how many to read here?
-    uint8_t buffer[256];
-    // store and forward idiom
-    ssize_t read_sz = 0;
-    JMG_SYSTEM(
-      [&] {
-        read_sz = read(event.data.fd, &buffer, sizeof(buffer));
-        // TODO(bd) explicitly handle EAGAIN/EWOULDBLOCK here?
-        return read_sz;
-      }(),
-      "unable to read incoming command");
-    if (0 == read_sz) {
-      // read_fd_ was closed, should shut down
-      is_shutdown_ = true;
-      // TODO(bd) clean up?
-      return;
-    }
-
-    for (int idx = 0; idx < read_sz; ++idx) {
-      switch (static_cast<Cmd>(buffer[idx])) {
-        case Cmd::kShutdown:
-          is_shutdown_ = true;
-          // TODO(bd) clean up?
-          return;
-
-        case Cmd::kPost:
-          // TODO(bd) create another fiber to execute the incoming function
-          break;
-      }
+  if (notifier_
+      && (static_cast<int>(unsafe(event_data)) == unsafe(*notifier_))) {
+    // external thread has sent a message on the notifier event fd
+    const auto data = [&] {
+      uint64_t data;
+      detail::read_all(*notifier_, buffer_from(data), "notifier eventfd"sv);
+      return data;
+    }();
+    switch (data) {
+      case unwrap(Cmd::kShutdown):
+        // TODO(bd) execute shutdown sequence
+        return;
+      case unwrap(Cmd::kPost):
+        JMG_THROW_EXCEPTION(
+          runtime_error, "'post' message not yet implemented, stay tuned...");
+      default:
+        JMG_THROW_EXCEPTION(runtime_error, "unknown message type [", data, "]");
     }
   }
-  JMG_THROW_EXCEPTION(runtime_error,
-                      "unexpected event on unknown file descriptor [",
-                      event.data.fd, "]");
 }
 
 void Reactor::trampoline(const intptr_t lambda_ptr_val) {

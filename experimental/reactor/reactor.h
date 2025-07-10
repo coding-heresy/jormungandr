@@ -31,21 +31,15 @@
  */
 #pragma once
 
+#include <span>
+
 #include "jmg/preprocessor.h"
 #include "jmg/types.h"
 #include "jmg/util.h"
 
 #include "control_blocks.h"
 #include "fiber.h"
-
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// headers specific to the initial epoll implementation
-#include <sys/epoll.h>
-#include <unistd.h>
-
-#include <atomic>
-#include <chrono>
-//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#include "uring.h"
 
 namespace jmg
 {
@@ -53,7 +47,12 @@ namespace jmg
 /**
  * commands that can be sent to the reactor thread from external threads
  */
-enum class Cmd : uint8_t { kShutdown, kPost };
+enum class Cmd : uint64_t {
+  // NOTE: initial value is 1 because writing a 0 to an eventfd will cause a
+  // read against it to produce an EAGAIN/EWOULDBLOCK error
+  kShutdown = 1,
+  kPost = 2
+};
 
 class Reactor {
 public:
@@ -69,11 +68,7 @@ public:
   void shutdown();
 
 private:
-  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // epoll-specific
-  using EpollEvent = struct epoll_event;
   using OptMillisec = std::optional<std::chrono::milliseconds>;
-  //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   using OptStrView = std::optional<std::string_view>;
 
   /**
@@ -119,12 +114,11 @@ private:
                const OptStrView operation = std::nullopt,
                ucontext_t* returnTgt = nullptr);
 
-  FileDescriptor epoll_fd_ = kInvalidFileDescriptor;
-  FileDescriptor read_fd_ = kInvalidFileDescriptor;
-  FileDescriptor write_fd_ = kInvalidFileDescriptor;
   FiberId active_fiber_id_;
   FiberCtrl fiber_ctrl_;
   ucontext_t shutdown_chkpt_;
+  std::optional<EventFd> notifier_;
+  std::unique_ptr<uring::Uring> uring_;
   std::atomic<bool> is_shutdown_ = false;
 };
 
