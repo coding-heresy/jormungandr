@@ -207,4 +207,22 @@ inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);
 using BufferView = std::span<const uint8_t, std::dynamic_extent>;
 using BufferProxy = std::span<uint8_t, std::dynamic_extent>;
 
+/**
+ * create a BufferView from a type, typically used when reading a
+ * small amount of data directly from a variable such as an int
+ */
+template<typename T>
+BufferView buffer_from(const T& ref) {
+  return BufferView(reinterpret_cast<const uint8_t*>(&ref), sizeof(ref));
+}
+
+/**
+ * create a BufferProxy from a type, typically used when writing a
+ * small amount of data directly into a variable such as an int
+ */
+template<typename T>
+BufferProxy buffer_from(T& ref) {
+  return BufferProxy(reinterpret_cast<uint8_t*>(&ref), sizeof(ref));
+}
+
 } // namespace jmg
