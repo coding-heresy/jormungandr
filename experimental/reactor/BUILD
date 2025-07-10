@@ -16,7 +16,10 @@ cc_test(
 
 cc_library(
     name = 'uring',
-    hdrs = ['uring.h'],
+    hdrs = [
+        'uring.h',
+        'util.h',
+    ],
     srcs = ['uring.cpp'],
     defines = ['_GNU_SOURCE'],
     deps = [
@@ -46,6 +49,7 @@ cc_library(
     ],
     deps = [
         ':control_blocks',
+        ':uring',
     ],
 )
 
