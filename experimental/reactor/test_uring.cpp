@@ -38,6 +38,7 @@
 #include "jmg/future.h"
 #include "jmg/types.h"
 #include "uring.h"
+#include "util.h"
 
 using namespace jmg;
 using namespace std;
@@ -90,11 +91,7 @@ TEST(UringTests, MsgTest) {
                   "incoming event did reference notifier as expected");
 
       uint64_t data;
-      int sz;
-      JMG_SYSTEM((sz = read(unsafe(notifier), &data, sizeof(data))),
-                 "unable to read data from eventfd");
-      JMG_ENFORCE(sizeof(data) == sz, "read size mismatch, should have read [",
-                  sizeof(data), "] but actually read [", sz, "]");
+      detail::read_all(notifier, buffer_from(data), "eventfd"sv);
 
       // send the user data back to the main thread
       user_data_prm->set_value(data);
