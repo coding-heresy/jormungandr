@@ -192,17 +192,26 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
+using Port = SafeType<uint16_t, SafeIdType>;
 using Octet = SafeType<uint8_t, st::arithmetic>;
+// safe types wrapping various file descriptors
 using FileDescriptor = SafeType<int, SafeIdType>;
 using EventFd = SafeType<int, SafeIdType>;
-using Port = SafeType<uint16_t, SafeIdType>;
 #else
+JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
 JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(EventFd, int, SafeIdType);
-JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 #endif
 inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);
+
+/**
+ * concept for any safe type which wraps an int that should be interpreted as a
+ * file descriptor
+ */
+template<typename T>
+concept DescriptorT =
+  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>;
 
 using BufferView = std::span<const uint8_t, std::dynamic_extent>;
 using BufferProxy = std::span<uint8_t, std::dynamic_extent>;
