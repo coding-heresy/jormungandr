@@ -90,3 +90,22 @@ TEST(ObjectTests, TestConceptsAndCharacteristics) {
   // expanded
   EXPECT_EQ(4, meta::size<TestObject::Fields>{});
 }
+
+#if defined(DBG_RECURSIVE_GROUPS_WORKS)
+using TestExtraField = FieldDef<double, "xtra", Required>;
+using TestRecursiveGroup = FieldGroupDef<TestExtraField, TestFieldGroup>;
+using TestRecursiveGroupObject = ObjectDef<TestField, TestRecursiveGroup>;
+TEST(ExperimentalTest, TestRecursiveGroups) {
+  // TestRecursiveGroup is a field group, not a field or object
+  EXPECT_FALSE(FieldDefT<TestRecursiveGroup>);
+  EXPECT_TRUE(FieldGroupDefT<TestRecursiveGroup>);
+  EXPECT_TRUE(FieldOrGroupT<TestRecursiveGroup>);
+  EXPECT_FALSE(ObjectDefT<TestRecursiveGroup>);
+
+  // TestRecursiveGroupObject is an object, not a field or field group
+  EXPECT_FALSE(FieldDefT<TestRecursiveGroupObject>);
+  EXPECT_FALSE(FieldGroupDefT<TestRecursiveGroupObject>);
+  EXPECT_FALSE(FieldOrGroupT<TestRecursiveGroupObject>);
+  EXPECT_TRUE(ObjectDefT<TestRecursiveGroupObject>);
+}
+#endif

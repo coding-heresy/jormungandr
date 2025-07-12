@@ -45,7 +45,11 @@ namespace jmg
 // declaration of a field group
 ////////////////////////////////////////////////////////////////////////////////
 
+#if defined(DBG_RECURSIVE_GROUPS_WORKS)
+template<FieldDefT...>
+#else
 template<typename...>
+#endif
 struct FieldGroupDef {
 };
 
