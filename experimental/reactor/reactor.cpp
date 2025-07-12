@@ -35,6 +35,8 @@
 #include <cstdint>
 
 #include "jmg/conversion.h"
+#include "jmg/meta.h"
+
 #include "reactor.h"
 #include "util.h"
 
@@ -43,6 +45,65 @@ using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 using OptStrView = std::optional<std::string_view>;
+
+// fix the abominable naming of the context library functions using macros since
+// wrapping them in functions causes problems (particularly for getcontext and
+// makecontext, which seem to be required to be called with the same activation
+// record or they will blow out the stack when control returns)
+#define save_chkpt ::getcontext
+#define update_chkpt ::makecontext
+#define jump_to_chkpt ::setcontext
+
+namespace
+{
+using PtrParts = std::pair<int32_t, int32_t>;
+
+/**
+ * split 64 bit pointer up into 32 bit low and high chunks for use when calling
+ * update_chkpt/makecontext
+ */
+template<typename T>
+PtrParts split_ptr(T& ref) {
+  PtrParts rslt;
+  int64_t addr = reinterpret_cast<int64_t>(&ref);
+  rslt.first = static_cast<int32_t>(addr >> 32);
+  rslt.second = static_cast<int32_t>(addr & 0xFFFFFFFF);
+  return rslt;
+}
+
+template<typename T>
+concept ReactorFcnT = jmg::SameAsDecayedT<jmg::Reactor::WorkerFcn, T>
+                      || jmg::SameAsDecayedT<jmg::FiberFcn, T>;
+
+// TODO(bd) understand why it appears that intptr_t can be used here while the
+// other trampoline requires 32 bit integers
+void workerTrampoline(const intptr_t lambda_ptr_val) {
+  // NOTE: Google told me to do this, it's not my fault
+  auto* lambda_ptr = reinterpret_cast<std::function<void()>*>(lambda_ptr_val);
+  JMG_ENFORCE(jmg::pred(lambda_ptr), "unable to trampoline to thread worker");
+  (*lambda_ptr)();
+}
+
+void fiberTrampoline(const int32_t lambda_ptr_high,
+                     const int32_t lambda_ptr_low,
+                     const int32_t fbr_ptr_high,
+                     const int32_t fbr_ptr_low) {
+  using namespace jmg;
+  // NOTE: Google told me to do this, it's not my fault
+  FiberFcn* lambda_ptr =
+    reinterpret_cast<FiberFcn*>((static_cast<uint64_t>(lambda_ptr_high) << 32)
+                                | lambda_ptr_low);
+  Fiber* fbr_ptr =
+    reinterpret_cast<Fiber*>((static_cast<uint64_t>(fbr_ptr_high) << 32)
+                             | fbr_ptr_low);
+  JMG_ENFORCE(pred(lambda_ptr),
+              "unable to trampoline to fiber: bad lambda pointer");
+  JMG_ENFORCE(pred(fbr_ptr),
+              "unable to trampoline to fiber: bad fiber pointer");
+  (*lambda_ptr)(*fbr_ptr);
+}
+
+} // namespace
 
 namespace jmg
 {
@@ -63,7 +124,7 @@ void Reactor::start() {
 
   uring_->registerEventNotifier(*notifier_);
 
-  auto initiator = FiberFcn([this] {
+  auto initiator = WorkerFcn([this] {
     // TODO(bd) any required initialization here before executing the scheduler
     schedule();
   });
@@ -79,11 +140,14 @@ void Reactor::start() {
     // mark the reactor as having been started so the second return can exit
     was_started = true;
 
-    auto [id, fcb] = fiber_ctrl_.getOrAllocate();
-    fcb.body.state = FiberState::kActive;
-    active_fiber_id_ = id;
+    // auto [id, fcb] = fiber_ctrl_.getOrAllocate();
+    // fcb.body.state = FiberState::kActive;
+    // active_fiber_id_ = id;
 
-    initFbr(fcb, initiator, "set up initial reactor fiber", &shutdown_chkpt_);
+    auto& fcb =
+      initFbr(initiator, "set up initial reactor fiber", &shutdown_chkpt_);
+    fcb.body.state = FiberState::kActive;
+    active_fiber_id_ = fcb.id;
     jumpTo(fcb, "initial reactor fiber");
   }
   // second return from getcontext, the reactor should be shut down at this point
@@ -102,47 +166,51 @@ void Reactor::shutdown() {
   detail::write_all(*notifier_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
 }
 
+void reactor::post(FiberFcn&& fcn) {
+  // write the address of the lambda to the notifier eventfd to inform the
+  // reactor of the work request
+  detail::write_all(*notifier_, buffer_from(&fcn), "notifier eventfd");
+}
+
 void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
   JMG_ENFORCE_USING(logic_error, uring_,
                     "attempted to schedule fibers before starting the reactor");
-  const auto event = [&] {
-    std::optional<Duration> uring_timeout = nullopt;
-    if (timeout) { *uring_timeout = from(*timeout); }
-    return uring_->awaitEvent(uring_timeout);
-  }();
-
-  const auto& event_data = event.getUserData();
-
-  if (notifier_
-      && (static_cast<int>(unsafe(event_data)) == unsafe(*notifier_))) {
-    // external thread has sent a message on the notifier event fd
-    const auto data = [&] {
-      uint64_t data;
-      detail::read_all(*notifier_, buffer_from(data), "notifier eventfd"sv);
-      return data;
+  bool is_shutdown = false;
+  while (!is_shutdown) {
+    const auto event = [&] {
+      std::optional<Duration> uring_timeout = nullopt;
+      if (timeout) { *uring_timeout = from(*timeout); }
+      return uring_->awaitEvent(uring_timeout);
     }();
-    switch (data) {
-      case unwrap(Cmd::kShutdown):
-        // TODO(bd) execute shutdown sequence
-        return;
-      case unwrap(Cmd::kPost):
-        JMG_THROW_EXCEPTION(
-          runtime_error, "'post' message not yet implemented, stay tuned...");
-      default:
-        JMG_THROW_EXCEPTION(runtime_error, "unknown message type [", data, "]");
+
+    const auto& event_data = event.getUserData();
+
+    if (notifier_
+        && (static_cast<int>(unsafe(event_data)) == unsafe(*notifier_))) {
+      // external thread has sent a message on the notifier event fd
+      const auto data = [&] {
+        uint64_t data;
+        detail::read_all(*notifier_, buffer_from(data), "notifier eventfd"sv);
+        return data;
+      }();
+      switch (data) {
+        case unwrap(Cmd::kShutdown):
+          // TODO(bd) execute shutdown sequence
+          is_shutdown = true;
+          continue;
+        case unwrap(Cmd::kPost):
+          JMG_THROW_EXCEPTION(
+            runtime_error, "'post' message not yet implemented, stay tuned...");
+        default:
+          JMG_THROW_EXCEPTION(runtime_error, "unknown message type [", data,
+                              "]");
+      }
     }
   }
 }
 
-void Reactor::trampoline(const intptr_t lambda_ptr_val) {
-  // NOTE: Google told me to do this, it's not my fault
-  auto* lambda_ptr = reinterpret_cast<std::function<void()>*>(lambda_ptr_val);
-  JMG_ENFORCE(pred(lambda_ptr), "unable to trampoline to lambda");
-  (*lambda_ptr)();
-}
-
 void Reactor::saveChkpt(ucontext_t& chkpt, const OptStrView operation) {
-  JMG_SYSTEM(::getcontext(&chkpt), "unable to ",
+  JMG_SYSTEM(save_chkpt(&chkpt), "unable to ",
              operation ? *operation : "store checkpoint"sv);
 }
 
@@ -153,23 +221,28 @@ void Reactor::jumpTo(FiberCtrlBlock& fcb, const OptStrView tgt) {
   int rslt;
   JMG_SYSTEM(
     [&] {
-      rslt = ::setcontext(&(fcb.body.chkpt));
+      rslt = jump_to_chkpt(&(fcb.body.chkpt));
       return rslt;
     }(),
     "unable to jump to ", (tgt ? *tgt : "target checkpoint"sv));
   JMG_ENFORCE(rslt == -1, "unable to jump to ",
               (tgt ? *tgt : "target checkpoint"sv),
-              ", setcontext returned with a value other than -1");
+              ", jump_to (setcontext) returned with a value other than -1");
   JMG_THROW_SYSTEM_ERROR("unreachable");
 }
 
-void Reactor::initFbr(FiberCtrlBlock& fcb,
-                      FiberFcn& fcn,
-                      const OptStrView operation,
-                      ucontext_t* return_tgt) {
+FiberCtrlBlock& Reactor::initFbr(WorkerFcn& fcn,
+                                 const OptStrView operation,
+                                 ucontext_t* return_tgt) {
+  // set up fiber control block
+  auto [id, fcb] = fiber_ctrl_.getOrAllocate();
+  fcb.body.state = FiberState::kActive;
+  active_fiber_id_ = id;
+
   // for whatever reason, you need to store the current checkpoint using
   // getcontext and then modify it to point to the fiber function
   saveChkpt(fcb, operation);
+
   // point the updated context at the resources controlled by the provided fiber
   // control block
   fcb.body.chkpt.uc_link = return_tgt;
@@ -180,14 +253,58 @@ void Reactor::initFbr(FiberCtrlBlock& fcb,
   // fiber function
   // NOTE: this is extremely sketchy.
   //
-  // For reference, makecontext is a variadic
-  // function that takes a ucontext_t*, a pointer to a function taking and
-  // returning void, an argument count and a list of arguments whose length must
-  // match the argument count. The C-style cast of the trampoline function is
-  // required by the interface so there's no way around the sketchiness, but
-  // that doesn't mean that I'm happy about it
-  ::makecontext(&(fcb.body.chkpt), (void (*)())trampoline, 1 /* argc */,
-                reinterpret_cast<intptr_t>(&fcn));
+  // For reference, update_chkpt/makecontext is a variadic function
+  // that takes a ucontext_t*, a pointer to a function taking and
+  // returning void, an argument count and a list of arguments whose
+  // length must match the argument count. The C-style cast of the
+  // trampoline function is required by the interface so there's no
+  // way around the sketchiness, but that doesn't mean that I'm happy
+  // about it
+  update_chkpt(&(fcb.body.chkpt), (void (*)())workerTrampoline, 1 /* argc */,
+               reinterpret_cast<intptr_t>(&fcn));
+}
+
+FiberCtrlBlock& Reactor::initFbr(FiberFcn& fcn,
+                                 const OptStrView operation,
+                                 ucontext_t* returnTgt) {
+  // set up fiber control block
+  auto [id, fcb] = fiber_ctrl_.getOrAllocate();
+  fcb.body.state = FiberState::kActive;
+  active_fiber_id_ = id;
+
+  // for whatever reason, you need to store the current checkpoint using
+  // getcontext and then modify it to point to the fiber function
+  saveChkpt(fcb, operation);
+
+  // point the updated context at the resources controlled by the provided fiber
+  // control block
+  fcb.body.chkpt.uc_link = return_tgt;
+  fcb.body.chkpt.uc_stack.ss_sp = fcb.body.stack.data();
+  fcb.body.chkpt.uc_stack.ss_size = fcb.body.stack.size();
+
+  void* fcb_fbr_ptr = static_cast<void*>(&fcb.body.fbr);
+  // TODO(bd) avoid initializing the fiber more than once
+
+  // initialize the Fiber using placement new
+  auto* fbr = new (fcb_fbr_ptr) Fiber(id);
+
+  auto fcn_parts = split_ptr(fcn);
+  auto fbr_parts = split_ptr(*fbr);
+
+  // update the previously stored checkpoint to cause it to jump to the provided
+  // fiber function
+  // NOTE: this is extremely sketchy.
+  //
+  // For reference, update_chkpt/makecontext is a variadic function
+  // that takes a ucontext_t*, a pointer to a function taking and
+  // returning void, an argument count and a list of arguments whose
+  // length must match the argument count. The C-style cast of the
+  // trampoline function is required by the interface so there's no
+  // way around the sketchiness, but that doesn't mean that I'm happy
+  // about it
+  update_chkpt(&(fcb.body.chkpt), (void (*)())fiberTrampoline, 4 /* argc */,
+               fcn_parts.first, fcn_parts.second, fbr_parts.first,
+               fbr_parts.second);
 }
 
 } // namespace jmg

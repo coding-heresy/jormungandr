@@ -67,3 +67,34 @@ TEST(ReactorTests, SmokeTest) {
   }
   JMG_SINK_ALL_EXCEPTIONS("top level")
 }
+
+TEST(ReactorTests, SmokeTest) {
+  Reactor reactor;
+  Promise<void> shutdown_signaller;
+  thread reactor_worker([&] {
+    try {
+      reactor.start();
+      shutdown_signaller.set_value();
+    }
+    JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
+  });
+
+  try {
+    // TODO(bd) handle startup timing better in the case where the
+    // reactor starts at idle and is then instructed to perform work
+
+    // wait until the reactor is actually running before sending work
+    this_thread::sleep_for(100ms);
+    Promise<void> fbr_executed_signaller;
+    reactor.post([&](Fiber& fbr) { fbr_executed_signaller.set_value(); });
+    cout << "waiting for posted work to complete" << endl;
+    auto fbr_executed_barrier = fbr_executed_signaller.get_future();
+    fbr_executed_signaller.get(2s, "fiber executed barrier");
+    cout << "posted work completed, shutting down" << endl;
+    reactor.shutdown();
+    auto shutdown_barrier = shutdown_signaller.get_future();
+    shutdown_barrier.get(2s, "shutdown barrier");
+    reactor_worker.join();
+  }
+  JMG_SINK_ALL_EXCEPTIONS("top level")
+}

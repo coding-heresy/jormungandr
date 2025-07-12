@@ -44,15 +44,26 @@ enum class FiberState : uint8_t { kUnallocated, kActive, kTerminated };
 
 using FiberId = CtrlBlockId;
 
+class Fiber {
+public:
+  explicit Fiber(FiberId id) : id_(id) {}
+  FiberId getId() const { return id_; }
+
+private:
+  FiberId id_;
+};
+
 // TODO(bd) support variable size segmented stacks
 static constexpr size_t kStackSz = 16384;
 struct FiberCtrlBlockBody {
   ucontext_t chkpt;
   std::array<uint8_t, kStackSz> stack;
   FiberState state;
+  Fiber fbr;
 };
-using FiberFcn = std::function<void(void)>;
 using FiberCtrl = ControlBlocks<FiberCtrlBlockBody>;
 using FiberCtrlBlock = FiberCtrl::ControlBlock;
+
+using FiberFcn = std::function<void(Fiber&)>;
 
 } // namespace jmg

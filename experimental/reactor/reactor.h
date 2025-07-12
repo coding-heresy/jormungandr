@@ -67,9 +67,15 @@ public:
    */
   void shutdown();
 
+  /**
+   * send work to be performed by a new fiber in the reactor
+   */
+  void post(FiberFcn&& fcn);
+
 private:
   using OptMillisec = std::optional<std::chrono::milliseconds>;
   using OptStrView = std::optional<std::string_view>;
+  using WorkerFcn = std::function<void(void)>;
 
   /**
    * pass control from a fiber to the reactor scheduler when the fiber executes
@@ -77,11 +83,12 @@ private:
    */
   void schedule(const OptMillisec timeout = std::nullopt);
 
-  /**
-   * perform some sketchy shenanigans to a allow a call to setcontext to execute
-   * a capturing lambda
-   */
-  static void trampoline(const intptr_t lambda_ptr_val);
+  // /**
+  //  * perform some sketchy shenanigans to a allow a call to setcontext to
+  //  execute
+  //  * a capturing lambda
+  //  */
+  // static void workerTrampoline(const intptr_t lambda_ptr_val);
 
   /**
    * store the current checkpoint directly into a context buffer
@@ -107,12 +114,19 @@ private:
                            const OptStrView tgt = std::nullopt);
 
   /**
-   * construct a context that can execute a capturing lamda
+   * initialize a fiber that will execute a thread worker function
    */
-  void initFbr(FiberCtrlBlock& fcb,
-               FiberFcn& fcn,
-               const OptStrView operation = std::nullopt,
-               ucontext_t* returnTgt = nullptr);
+  FiberCtrlBlock& initFbr(WorkerFcn& fcn,
+                          const OptStrView operation = std::nullopt,
+                          ucontext_t* returnTgt = nullptr);
+
+  /**
+   * initialize a fiber that will execute a fiber function
+   */
+  FiberCtrlBlock& initFbr(FiberFcn& fcn,
+                          const OptStrView operation = std::nullopt,
+                          // TODO(bd) is this necessary?
+                          ucontext_t* returnTgt = nullptr);
 
   FiberId active_fiber_id_;
   FiberCtrl fiber_ctrl_;
