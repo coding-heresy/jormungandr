@@ -166,10 +166,12 @@ void Reactor::shutdown() {
   detail::write_all(*notifier_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
 }
 
-void reactor::post(FiberFcn&& fcn) {
+void Reactor::post(FiberFcn&& fcn) {
+  // TODO(bd) try to come up with a better way to do this
+  auto* lambda_ptr = new FiberFcn(fcn);
   // write the address of the lambda to the notifier eventfd to inform the
   // reactor of the work request
-  detail::write_all(*notifier_, buffer_from(&fcn), "notifier eventfd");
+  detail::write_all(*notifier_, buffer_from(lambda_ptr), "notifier eventfd");
 }
 
 void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
@@ -193,17 +195,17 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
         detail::read_all(*notifier_, buffer_from(data), "notifier eventfd"sv);
         return data;
       }();
-      switch (data) {
-        case unwrap(Cmd::kShutdown):
-          // TODO(bd) execute shutdown sequence
-          is_shutdown = true;
-          continue;
-        case unwrap(Cmd::kPost):
-          JMG_THROW_EXCEPTION(
-            runtime_error, "'post' message not yet implemented, stay tuned...");
-        default:
-          JMG_THROW_EXCEPTION(runtime_error, "unknown message type [", data,
-                              "]");
+      if (unwrap(Cmd::kShutdown) == data) { is_shutdown = true; }
+      else {
+        // work requested, data is a pointer to an instance of FiberFcn that the
+        // reactor must take control of and execute
+        auto fcn = unique_ptr<FiberFcn>(reinterpret_cast<FiberFcn*>(data));
+
+        // initialize a new fiber object
+
+        // create a wrapper FiberFcn that will include cleanup
+
+        // jump to the wrapper FiberFcn
       }
     }
   }
@@ -262,11 +264,12 @@ FiberCtrlBlock& Reactor::initFbr(WorkerFcn& fcn,
   // about it
   update_chkpt(&(fcb.body.chkpt), (void (*)())workerTrampoline, 1 /* argc */,
                reinterpret_cast<intptr_t>(&fcn));
+  return fcb;
 }
 
 FiberCtrlBlock& Reactor::initFbr(FiberFcn& fcn,
                                  const OptStrView operation,
-                                 ucontext_t* returnTgt) {
+                                 ucontext_t* return_tgt) {
   // set up fiber control block
   auto [id, fcb] = fiber_ctrl_.getOrAllocate();
   fcb.body.state = FiberState::kActive;
@@ -305,6 +308,7 @@ FiberCtrlBlock& Reactor::initFbr(FiberFcn& fcn,
   update_chkpt(&(fcb.body.chkpt), (void (*)())fiberTrampoline, 4 /* argc */,
                fcn_parts.first, fcn_parts.second, fbr_parts.first,
                fbr_parts.second);
+  return fcb;
 }
 
 } // namespace jmg

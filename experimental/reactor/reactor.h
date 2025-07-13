@@ -118,7 +118,7 @@ private:
    */
   FiberCtrlBlock& initFbr(WorkerFcn& fcn,
                           const OptStrView operation = std::nullopt,
-                          ucontext_t* returnTgt = nullptr);
+                          ucontext_t* return_tgt = nullptr);
 
   /**
    * initialize a fiber that will execute a fiber function
@@ -126,7 +126,7 @@ private:
   FiberCtrlBlock& initFbr(FiberFcn& fcn,
                           const OptStrView operation = std::nullopt,
                           // TODO(bd) is this necessary?
-                          ucontext_t* returnTgt = nullptr);
+                          ucontext_t* return_tgt = nullptr);
 
   FiberId active_fiber_id_;
   FiberCtrl fiber_ctrl_;

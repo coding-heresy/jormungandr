@@ -56,6 +56,11 @@ build:opt --cxxopt='-march=native'
 build:opt --cxxopt='-mtune=native'
 build:opt --cxxopt='-DNDEBUG'
 
+# TODO flags to use for segmented stacks
+# -fsplit-stack
+# -DBOOST_USE_SEGMENTED_STACKS
+# also need to be using ucontext_t for boost.context
+
 # TODO use this??
 #common --enable_platform_specific_config
 # Prevent Bazel from detecting the system's C++ toolchain.

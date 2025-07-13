@@ -46,6 +46,9 @@ using FiberId = CtrlBlockId;
 
 class Fiber {
 public:
+  Fiber() = default;
+  JMG_NON_COPYABLE(Fiber);
+  JMG_NON_MOVEABLE(Fiber);
   explicit Fiber(FiberId id) : id_(id) {}
   FiberId getId() const { return id_; }
 
