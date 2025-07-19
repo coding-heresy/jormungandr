@@ -68,7 +68,7 @@ TEST(ReactorTests, SmokeTest) {
   JMG_SINK_ALL_EXCEPTIONS("top level")
 }
 
-TEST(ReactorTests, SmokeTest) {
+TEST(ReactorTests, TestSignalShutdown) {
   Reactor reactor;
   Promise<void> shutdown_signaller;
   thread reactor_worker([&] {
@@ -86,10 +86,10 @@ TEST(ReactorTests, SmokeTest) {
     // wait until the reactor is actually running before sending work
     this_thread::sleep_for(100ms);
     Promise<void> fbr_executed_signaller;
-    reactor.post([&](Fiber& fbr) { fbr_executed_signaller.set_value(); });
+    reactor.post([&](Fiber&) { fbr_executed_signaller.set_value(); });
     cout << "waiting for posted work to complete" << endl;
     auto fbr_executed_barrier = fbr_executed_signaller.get_future();
-    fbr_executed_signaller.get(2s, "fiber executed barrier");
+    fbr_executed_barrier.get(2s, "fiber executed barrier");
     cout << "posted work completed, shutting down" << endl;
     reactor.shutdown();
     auto shutdown_barrier = shutdown_signaller.get_future();
