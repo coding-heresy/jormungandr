@@ -138,27 +138,46 @@ public:
   JMG_DEFAULT_MOVEABLE(Promise);
   JMG_NON_COPYABLE(Promise);
 
+  ~Promise() {
+    if (!is_value_set_ && std::uncaught_exception()) {
+      prm_.set_exception(std::current_exception());
+    }
+  }
+
   auto get_future() { return Future(prm_.get_future()); }
 
-  void set_value(const T& value) { prm_.set_value(value); }
+  void set_value(const T& value) {
+    prm_.set_value(value);
+    is_value_set_ = true;
+  }
 
-  void set_value(T&& value) { prm_.set_value(std::forward<T>(value)); }
+  void set_value(T&& value) {
+    prm_.set_value(std::forward<T>(value));
+    is_value_set_ = true;
+  }
 
   void set_value_at_thread_exit(const T& value) {
     prm_.set_value_at_thread_exit(value);
+    is_value_set_ = true;
   }
 
   void set_value_at_thread_exit(T&& value) {
     prm_.set_value_at_thread_exit(std::forward<T>(value));
+    is_value_set_ = true;
   }
 
-  void set_exception(std::exception_ptr ptr) { prm_.set_exception(ptr); }
+  void set_exception(std::exception_ptr ptr) {
+    prm_.set_exception(ptr);
+    is_value_set_ = true;
+  }
 
   void set_exception_at_thread_exit(std::exception_ptr ptr) {
     prm_.set_exception_at_thread_exit(ptr);
+    is_value_set_ = true;
   }
 
 private:
+  bool is_value_set_ = false;
   std::promise<T> prm_;
 };
 
@@ -172,19 +191,36 @@ public:
   JMG_DEFAULT_MOVEABLE(Promise);
   JMG_NON_COPYABLE(Promise);
 
+  ~Promise() {
+    if (!is_value_set_ && std::uncaught_exception()) {
+      prm_.set_exception(std::current_exception());
+    }
+  }
+
   auto get_future() { return Future(prm_.get_future()); }
 
-  void set_value() { prm_.set_value(); }
+  void set_value() {
+    prm_.set_value();
+    is_value_set_ = true;
+  }
 
-  void set_value_at_thread_exit() { prm_.set_value_at_thread_exit(); }
+  void set_value_at_thread_exit() {
+    prm_.set_value_at_thread_exit();
+    is_value_set_ = true;
+  }
 
-  void set_exception(std::exception_ptr ptr) { prm_.set_exception(ptr); }
+  void set_exception(std::exception_ptr ptr) {
+    prm_.set_exception(ptr);
+    is_value_set_ = true;
+  }
 
   void set_exception_at_thread_exit(std::exception_ptr ptr) {
     prm_.set_exception_at_thread_exit(ptr);
+    is_value_set_ = true;
   }
 
 private:
+  bool is_value_set_ = false;
   std::promise<void> prm_;
 };
 
