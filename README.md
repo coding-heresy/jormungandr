@@ -495,7 +495,7 @@ exceptions and additions as outlined here
 
 These may or may not be controversial but they have served me well.
 
-* If it can be **const** then it should be **const**
+* If it can be `const` then it should be `const`
 * Impute semantic meaning to types using the _safe types_ framework
 * Use metaprogramming to make interfaces more robust
 * **Always** use exceptions, and rely on RAII for error handling
@@ -515,6 +515,9 @@ functions and classes:
 * always_insert - calls `insert` on a set and throws an exception if
   the insertion wasn't successful (i.e. the item is a duplicate of one
   that already exists in the set)
+* as_void_ptr - takes a pointer argument and converts it to a
+  non-`const` `void*`, which is useful when dealing with some
+  low-level code.
 
 ## Idioms
 

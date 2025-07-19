@@ -188,6 +188,20 @@ void always_insert(std::string_view description,
               description);
 }
 
+template<typename T>
+void* as_void_ptr(T* ptr) {
+  if constexpr (SameAsDecayedT<void, T>) {
+    if constexpr (std::is_const_v<T>) { return const_cast<void*>(ptr); }
+    else { return ptr; }
+  }
+  else {
+    if constexpr (std::is_const_v<T>) {
+      return const_cast<void*>(reinterpret_cast<const void*>(ptr));
+    }
+    else { return reinterpret_cast<void*>(ptr); }
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // misc helper functions
 ////////////////////////////////////////////////////////////////////////////////
