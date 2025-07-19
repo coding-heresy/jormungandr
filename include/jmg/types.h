@@ -204,6 +204,7 @@ JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(EventFd, int, SafeIdType);
 #endif
 inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);
+inline constexpr auto kStdoutFd = FileDescriptor(STDOUT_FILENO);
 
 /**
  * concept for any safe type which wraps an int that should be interpreted as a
