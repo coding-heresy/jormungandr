@@ -466,19 +466,89 @@ will also serve as a test bed for some features of interest:
     octets than the native encoding; otherwise, the mantissa octets
     should be copied without change.
 
-# Some longer-term goals
+# Type library
 
-## High performance event processing
+This consists of various useful types that are generally similar to
+existing types but with some improvement.
 
-Not much work here yet, but the idea is to mix the _standard
-interface_ style of messaging with a high performance event loop based
-on fibers and io_uring on Linux. This is a big lift, and the only work
-done so far is a bit of exploration and prototyping to try to find a
-clean interface that is consistent with a specific internal vision of
-how it should look from the user perspective. I may try to create
-something using existing boost tools that will produce the desired
-user-facing style and then work to steadily swap out the internals for
-improved performance.
+## Time points and durations
+
+### `jmg::TimePoint`
+
+Internal representation of a time point that is convertible to and
+from other common time point implementations, as described earlier in
+the documentation for `from`.
+
+The current system time can be retrieved in this format by calling
+`jmg::getCurrentTime()`.
+
+### `jmg::EpochSeconds`
+
+_Safe type_ wrapper around the POSIX `time_t` type that represents the
+number of seconds since the UNIX epoch (1970-01-01).
+
+#### `jmg::TimePointFmt`
+
+_Safe type_ wrapper for a string that describes the format used to
+parse and format time points as strings. See [the documentation on
+formatting Abseil
+Time](https://abseil.io/docs/cpp/guides/time#formatting-absltime)
+along with [the comments on the FormatTime() function in the time.h
+header
+file](https://github.com/abseil/abseil-cpp/blob/76bb24329e8bf5f39704eb10d21b9a80befa7c81/absl/time/time.h#L1469-L1504)
+for details.
+
+There are also constants for common formats:
+* `jmg::kIso8601Fmt` - [ISO
+  8601](https://en.wikipedia.org/wiki/ISO_8601)/[RFC3339](https://datatracker.ietf.org/doc/html/rfc3339)
+  format, without appended time zone specifier
+* `jmg::kIso8601WithZoneFmt` - [ISO
+  8601](https://en.wikipedia.org/wiki/ISO_8601)/[RFC3339](https://datatracker.ietf.org/doc/html/rfc3339)
+  format, with appended time zone specifier
+
+### `jmg::TimeZone`
+
+Internal representation of a time zone. The object for the UTC time
+zone can be retrieved by calling `jmg::utcTimeZone()`
+
+#### `jmg::TimeZoneName`
+
+_Safe type_ wrapper for a string containing a TZ database time zone
+name (c.f. [the list of TZ database time
+zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)).
+
+To get the time zone object corresponding to a given name, call the
+`jmg::getTimeZone()` function.
+
+### `jmg::Duration`
+
+Internal representation of a time duration that is also convertible to
+and from other common durations, per the `from` documentation.
+
+## `jmg::c_string_view`
+
+This is almost exactly like `std::string_view`, except that it is
+guaranteed to be a view on a string that is terminated by a `NUL`
+byte, and it consequently provides a `cstr()` member
+function. Generally useful when dealing with older interfaces that
+expect C-style strings. Defined in **include/jmg/types.h**
+
+## `jmg::Promise`/`jmg::Future`
+
+These are wrappers around the existing `std::promise`/`std::future`
+classes with some minor improvements:
+
+* For an instance of `jmg::Promise`, if no value has been set and no
+  exception was previously captured, and its destructor determines
+  that an exception is in flight, it will automatically capture that
+  exception so that it will be delivered by `Future` instead of
+  `std::broken_promise`
+* There is an overload of `jmg::Future::get` that takes a _duration_
+  parameter and an optional description parameter where the _duration_
+  is a timeout value; if no value is available before the timeout
+  expires, the function will throw an exception instead of requiring
+  the caller to use a separate `wait_for` function to enforce a
+  timeout
 
 # Coding standards
 
@@ -499,6 +569,61 @@ These may or may not be controversial but they have served me well.
 * Impute semantic meaning to types using the _safe types_ framework
 * Use metaprogramming to make interfaces more robust
 * **Always** use exceptions, and rely on RAII for error handling
+
+### Time point and duration handling
+
+Internally, time points should **always** be represented using
+`jmg::TimePoint` and `jmg::Duration`, respectively. `jmg::TimePoint`
+should be used for timeout deadlines and `jmg::Duration` should be
+used for timeout durations. In particular, time zones and human
+readable timestamps are presentation issues and should be pushed as
+far to the edges of a system as possible by parsing incoming strings
+before injecting them as well as formatting outgoing strings as late
+as possible. The internal time representation is effectively in the
+UTC time zone, but this detail should never be relied on directly, and
+time points should be viewed as black boxes.
+
+### Floating point number handling
+
+There several important rules for handling floating point numbers:
+
+* Never, **EVER** treat the value **NaN** as an equivalent to **NULL**
+  (i.e. no value present), *always* use `std::optional` to handle
+  situations in which a value may or may not be present. **NaN**
+  specificially represents a number that cannot be represented in the
+  given encoding (typically [IEEE
+  754](https://en.wikipedia.org/wiki/IEEE_754)), and can be the result
+  of a computation. Many systems have made the mistake of conflating
+  **NaN** with **NULL**
+  (e.g. [kdb+](https://code.kx.com/q/interfaces/capiref/#constants)
+  and
+  [pandas](https://pandas.pydata.org/docs/user_guide/integer_na.html)),
+  and it always ends in tears. This is the most important rule for
+  dealing with floating point numbers due to frequency with which it
+  is violated and the (long-term) consequences for doing so,
+  regardless of the emphasis more commonly placed on the following
+  rule.
+* Always use a tolerance (AKA _epsilon_) when comparing floating point
+  numbers. Everyone knows this, the rule is just to remind you.
+* Not commonly known: floating point numbers have a concept of
+  [normality](https://en.wikipedia.org/wiki/Normal_number_(computing)),
+  which is represented in C/C++ using
+  [std::isnormal](https://en.cppreference.com/w/cpp/numeric/math/isnormal.html). One
+  subtle and confounding point of this concept is the fact that **0 is
+  not considered a 'normal' number**. You should be aware of this if
+  you ever need to use `std::isnormal`.
+* Also not commonly known: [NaN
+  values](https://en.cppreference.com/w/cpp/numeric/math/nan.html)
+  (i.e. `std::nan`, `std::nanf` and `std::nanl`) cannot be compared
+  directly for equality, such comparisons (e.g. `if
+  (some_value_produced_by_a_computation == std::nan)`) will **always**
+  return `false`. In fact, as can be seen by the fact that functions
+  for creating **NaN** values take `const char*` parameters, there are
+  many types of **NaN** values, but the best you can hope to
+  accomplish is to use
+  [std::isnan](https://en.cppreference.com/w/cpp/numeric/math/isnan.html)
+  to determine if a floating point value does not represent an actual
+  number.
 
 ## Helpers
 
@@ -613,6 +738,23 @@ discerned when reading code
   name expresses the intent that the function will perform some
   initialization action the first time it is called and will otherwise
   do nothing.
+
+# Some longer-term goals
+
+## High performance event processing
+
+Not much work here yet, but the idea is to mix the _standard
+interface_ style of messaging with a high performance event loop based
+on fibers and io_uring on Linux. This is a big lift, and the only work
+done so far is a bit of exploration and prototyping to try to find a
+clean interface that is consistent with a specific internal vision of
+how it should look from the user perspective. I may try to create
+something using existing boost tools that will produce the desired
+user-facing style and then work to steadily swap out the internals for
+improved performance.
+
+NOTE: this work is currently under way in the experimental/reactor
+directory
 
 # Interesting ideas that may be developed further
 
