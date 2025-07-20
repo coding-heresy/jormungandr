@@ -167,6 +167,59 @@ reactor.start([&](Fiber& fbr) {
 
 ```
 
+# Design notes
+
+## `yield` function (stale, see scheduling algorithm below)
+* ~~if the _runnable_ list is not empty~~
+  * ~~grab the first element from the _runnable_ list and make it _next active_~~
+  * ~~store the current fiber context in its FCB~~
+  * ~~add the current fiber to the tail of the _runnable_ list~~
+  * ~~jump to the _next active_ fiber~~
+* ~~if the _runnable_ list is empty~~
+  * ~~poll the ring for the list of new events~~
+  * ~~if there are no new events, return to executing the yielded fiber~~
+  * ~~if there are new events, process them and restart the scheduling~~
+
+Should probably just set a flag marking the `current` fiber as
+`yielding`:
+
+* mark the `current` fiber as `yielding`
+* execute the scheduling algorithm
+
+## _request_ function
+
+* submit the request to the ring
+* execute the scheduling algorithm
+
+## scheduling algorithm
+Scheduler has 2 states: `polling` and `blocking`
+
+* mark the `state` as `polling`
+* `while (true)`
+  * if the `runnable` queue is not empty
+    * dequeue the first element as `next active`
+    * if the `active` fiber is yielding
+      * enqueue the `active` fiber at the end of the `runnable` queue
+    * store the current fiber context in its FCB
+      * execution will jump back to this point
+      * if the `active` fiber ID does not match the ID of the current fiber
+        * set the `active` fiber ID to the ID of the current fiber
+        * return from the scheduler function
+      * else (`active` fiber ID matches the ID of the current fiber, jumping away)
+        * jump to the `next active` fiber (does not return)
+  * else (`runnable` queue is empty)
+    * if `state` is `polling`
+      * mark the `state` as `blocking`
+      * poll the ring for the list of new events
+    * else
+      * wait for the ring to deliver new events
+    * process any events that have occurred
+      * handle the special case of loop shutdown request
+      * handle the special case of incoming work request
+      * handle completion events by adding the related fiber to the `runnable` queue
+        * also need to store the event in the FCB of the related thread
+        * NOTE: handling of the CQE result is the responsibility of the related fiber
+
 # TODO
 
 * ~~Complete the first test case: start the reactor and shut it down
