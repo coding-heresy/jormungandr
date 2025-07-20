@@ -40,21 +40,153 @@ e.g. HTTP servers and clients. The (likely vain) hope is that once the
 basics are in place, a lot of the higher-level implementations can be
 liberally cribbed from existing open source codebases.
 
-Anyway, with that said, I've started to dig in to building the fiber
-foundations for a class called `Reactor` that is intended to control a
-single io_uring event loop. Within `Reactor`, the programming style is
-expected to be informed by traditional operating systems constructs to
-drive better performance. This is going slowly, with some earlier
-false starts that foundered over the poor documentation and
-bewildering design choices of the System V context control
-API. However, I was finally able to grasp a couple of subtle points
-and prune away some of the more bizarre possible behaviors to arrive
-at a design that I can now attempt to carefully mesh with the io_uring
-API to produce something useful.
+Anyway, I've started to dig in to building the fiber foundations for a
+class called `Reactor` that is intended to control a single io_uring
+event loop. Within `Reactor`, the programming style is expected to be
+informed by traditional operating systems constructs to drive better
+performance. This is going slowly, with some earlier false starts that
+foundered over the poor documentation and bewildering design choices
+of the System V context control API. However, I was finally able to
+grasp a couple of subtle points and prune away some of the more
+bizarre possible behaviors to arrive at a design that I can now
+attempt to carefully mesh with the io_uring API to produce something
+useful.
+
+## Important design milestone
+
+I've always wanted a way to confine the operations performed within a
+fiber to those which are appropriate to the cooperative multitasking
+environment without being too intrusive about it. While it is
+basically impossible to absolutely forbid blocking operations
+(including logging via the standard streaming I/O operators), I have
+found a way to provide easy access to the restricted set of
+operations: I will code all of them as member functions of the `Fiber`
+class, and then have all callback functions (typically provided by the
+user as lambdas) take a non-`const` reference to the `Fiber` object
+associated with its logical _fiber_ of control. Within the callback,
+required operations within the reactor (such as reading/writing data,
+opening files, etc) will be accessed via the `Fiber`. An example of
+what low-level code might look like would be the following:
+```
+using ListenerFcn = std::function<void(Fiber&, Socket)>;
+//...
+Reactor reactor;
+
+// read configuration for the listener, such as the port number to
+// listen to, from some configuration source
+const auto listener_cfg = ListenerCfg(cfg);
+
+// start the reactor with a listener fiber that calls its callback in
+// a new fiber whenever a new connection is accepted
+
+reactor.start(listener_cfg, [](Fiber& fbr, Socket socket) {
+  auto msg_buf = Buffer<kMsgSz>;
+  fbr.read(socket, msg_buf);
+  const auto req = deserializeReq(msg_buf);
+  const auto rsp_buf = serializeRsp(processReq(req));
+  fbr.write(socket, rsp_buf);
+});
+
+```
+
+This feels like a good starting point, and could be used to construct
+higher-level abstractions.
+
+# Abstractions for distributed interactions
+
+## RPC
+
+### Server
+```
+// receive requests from clients, passing each one to a thread pool
+// for processing and sending the result back to the requesting
+// client
+
+auto worker_pool = ThreadPool(app_cfg);
+auto reactor = Reactor(worker_pool);
+auto svc_cfg = SvcCfg(app_cfg);
+reactor.start(svc_cfg, [](Fiber& fbr, const RpcReq& req) {
+  // fiber sends the work to worker_pool and is blocked while the work
+  // is happening
+  auto rsp = fbr.executeRemote([&] {
+    return processReq(req);
+  });
+  req.respondWith(rsp);
+});
+```
+
+### Client
+```
+// read a file of requests, sending each request to a compute server
+// and storing the compute responsess to a database
+
+auto compute_svc_cfg = ComputeSvcCfg(app_cfg);
+auto db_svc_cfg = DbSvcCfg(app_cfg);
+auto data_file_path = jmg::get<DataFilePathFld>(app_cfg);
+Reactor reactor;
+reactor.start([&](Fiber& fbr) {
+  auto compute_svc = ComputeSvc(fbr, compute_svc_cfg);
+  auto db_svc = DbSvc(fbr, db_svc_cfg);
+  auto fd = fbr.open(data_file_path);
+  auto deserialize_view = Deserializer();
+  for (const auto& req : LineReader(fd) | deserialize_view) {
+    // compute_svc returns a stream of multiple responses for each
+    // request
+    for (const auto& compute_rsp : compute_svc.rpc(req)) {
+      JMG_ENFORCE(pred(compute_rsp.isOk()), "compute request failed: [",
+                  compute_rsp.error(), "]");
+      const auto db_rsp = db_svc.rpc(makeDbUpdateFrom(rsp));
+      JMG_ENFORCE(pred(db_rsp.isOk()), "DB update failed: [",
+                  db_rsp.error(), "]");
+    }
+  }
+});
+```
+
+## Publish/Subscribe
+
+### Server
+```
+auto broker_cfg = BrokerCfg(app_cfg);
+auto_svc_cfg = SvcCfg(app_cfg);
+reactor.start([&](Fiber& fbr) {
+  auto broker_svc = BrokerSvc(fbr, broker_cfg);
+  auto topic1 = broker_svc.topicCnxn(jmg::get<Topic1Fld>(app_cfg));
+  auto topic2 = broker_svc.topicCnxn(jmg::get<Topic2Fld>(app_cfg));
+  // RPC listener takes over the fiber
+  fbr.listen(svc_cfg, [&](Fiber& fbr, const RpcReq& req) {
+    if (isForTopic1(req)) {
+      topic1.publish(getTopic1Data(req));
+    }
+    else {
+      JMG_ENFORCE(isForTopic2(req), "unknown topic destination for request");
+      topic2.publish(getTopic2Data(req));
+    }
+  });
+});
+
+```
 
 # TODO
 
-* Complete the first test case: start the reactor and shut it down
-  without having it explode violently.
+* ~~Complete the first test case: start the reactor and shut it down
+  without having it explode violently.~~
+* Add a list of _runnable_ fibers to the scheduler
+  * When a uring completion queue event that is associated with a
+    fiber arrives, perform any required bookkeeping and add the fiber
+    to the _runnable_ list
+  * How to handle the case where a completion queue event indicates a
+    failure?
+* Firm up the scheduling for the case where a fiber completes its
+  execution
+  * What is the precise behavior of the _root_ fiber (i.e. the fiber
+    created when the reactor is started, which has fiber ID 0)?
+  * Seems like the currently active fiber can process events in
+    batches whether or not its execution is complete
+  * Once a batch of events has been processed, execution should jump
+    to the first thread on the _runnable_ queue
+* test case: start the reactor, create a promise/future for
+  signalling, send the reactor a job that simply triggers the promise,
+  wait for the future, shut down the reactor
 * ...
 * Profit!
