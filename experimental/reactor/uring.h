@@ -288,6 +288,8 @@ JMG_NEW_SIMPLE_SAFE_TYPE(UringFlags, uint32_t);
 JMG_NEW_SIMPLE_SAFE_TYPE(UserData, uint64_t);
 #endif
 
+using IoVecView = std::span<const struct iovec>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // constants for uring
 ////////////////////////////////////////////////////////////////////////////////
@@ -389,6 +391,10 @@ public:
   void submitTimeoutReq(UserData data,
                         Duration timeout,
                         DelaySubmission isDelayed = DelaySubmission::kNoDelay);
+
+  void submitWriteReq(FileDescriptor fd,
+                      IoVecView io_vec,
+                      DelaySubmission isDelayed = DelaySubmission::kNoDelay);
 
 private:
   io_uring_sqe& getNextSqe();

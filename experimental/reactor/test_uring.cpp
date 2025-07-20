@@ -51,9 +51,9 @@ TEST(UringTests, SmokeTest) {
   uring.submitTimeoutReq(user_data, from(10ms));
   const auto begin_ts = getCurrentTime();
   const auto event = uring.awaitEvent(from(100ms));
-  const auto end_ts = getCurrentTime();
   EXPECT_TRUE(pred(event)) << "timed out waiting for event that should have "
                               "occurred before the timeout";
+  const auto end_ts = getCurrentTime();
   EXPECT_EQ(unsafe(user_data), unsafe(event.getUserData()));
 
   const auto diff = end_ts - begin_ts;
@@ -62,9 +62,18 @@ TEST(UringTests, SmokeTest) {
     << "event duration was less than expected timeout";
 }
 
+TEST(UringTests, TestTimeoutOnAwaitEvent) {
+  constexpr auto user_data = uring::UserData(42);
+  uring::Uring uring(uring::UringSz(256));
+  uring.submitTimeoutReq(user_data, from(100ms));
+  const auto event = uring.awaitEvent(from(10ms));
+  // NOTE: awaitEvent should time out and an empty event should be returned
+  EXPECT_FALSE(pred(event));
+}
+
 // test the ability to send messages to a uring owned by a worker thread via an
 // eventfd notifier registered with the uring
-TEST(UringTests, MsgTest) {
+TEST(UringTests, TestCrossUringMsg) {
   auto sync_prm = make_unique<Promise<void>>();
   auto sync_ftr = sync_prm->get_future();
   auto user_data_prm = make_unique<Promise<uint64_t>>();
@@ -123,4 +132,17 @@ TEST(UringTests, MsgTest) {
   // grab the response from the future
   const auto user_data = user_data_ftr.get(10ms);
   EXPECT_EQ(42, user_data);
+}
+
+TEST(UringTests, TestWrite) {
+  uring::Uring uring(uring::UringSz(256));
+  array<struct iovec, 1> io_array;
+  constexpr auto kMsg = "logged to stdout\n"sv;
+  io_array[0].iov_base = as_void_ptr(kMsg.data());
+  io_array[0].iov_len = kMsg.size();
+  uring.submitWriteReq(kStdoutFd, span(io_array));
+  const auto event = uring.awaitEvent(from(100ms));
+  JMG_ENFORCE(pred(event), "timed out waiting for event");
+  if (event->res < 0) { JMG_THROW_SYSTEM_ERROR(-event->res); }
+  EXPECT_EQ(kMsg.size(), static_cast<size_t>(event->res));
 }

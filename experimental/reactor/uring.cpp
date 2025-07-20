@@ -61,8 +61,8 @@ Uring::Uring(const UringSz sz) {
   // TODO(bd) are these flags correct?
 
   // only the reactor main thread should access
-  params.flags = IORING_SETUP_SINGLE_ISSUER;
-  params.flags |= IORING_SETUP_COOP_TASKRUN | IORING_SETUP_DEFER_TASKRUN;
+  params.flags = IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_COOP_TASKRUN
+                 | IORING_SETUP_DEFER_TASKRUN;
   JMG_SYSTEM(io_uring_queue_init_params(unsafe(sz), &ring_, &params),
              "unable to initialize io_uring");
   // save the channel file descriptor so other threads with access to separate
@@ -75,25 +75,22 @@ Uring::~Uring() { io_uring_queue_exit(&ring_); }
 Event Uring::awaitEvent(optional<Duration> timeout) {
   unique_ptr<UringDuration> wait_timeout;
   string is_timeout_str;
-  {
-    if (timeout) {
-      UringDuration duration = from(*timeout);
-      wait_timeout = make_unique<UringDuration>(duration);
-      is_timeout_str = " no";
-    }
-  }
-  // store and forward
   io_uring_cqe* cqe = nullptr;
-  int rc = 0;
-  JMG_SYSTEM_ERRNO_RETURN(
-    [&]() -> int {
-      rc = io_uring_wait_cqe_timeout(&ring_, &cqe, wait_timeout.get());
-      return rc;
-    }(),
-    "unable to wait for io_uring completion with", is_timeout_str, " timeout");
-  if (-ETIME == rc) {
-    // TODO(bd) confirm that cqe is still nullptr?
-    return Event();
+  if (timeout) {
+    UringDuration duration = from(*timeout);
+    auto rc = io_uring_wait_cqe_timeout(&ring_, &cqe, &duration);
+    if (-ETIME == rc) {
+      // timeout is not a failure, return empty event
+      return Event();
+    }
+    if (rc < 0) {}
+    JMG_SYSTEM_ERRNO_RETURN(
+      rc, "unable to wait for io_uring completion with timeout");
+  }
+  else {
+    JMG_SYSTEM_ERRNO_RETURN(
+      io_uring_wait_cqe(&ring_, &cqe),
+      "unable to wait for io_uring completion with no timeout");
   }
   JMG_ENFORCE(
     pred(cqe),
@@ -140,6 +137,17 @@ void Uring::submitTimeoutReq(UserData data,
   io_uring_prep_timeout(&sqe, &timeout_duration, 0 /* count */,
                         IORING_TIMEOUT_ETIME_SUCCESS);
   if (!unwrap(isDelayed)) { submitReq("timeout"sv); }
+}
+
+void Uring::submitWriteReq(const FileDescriptor fd,
+                           const IoVecView io_vec,
+                           DelaySubmission isDelayed) {
+  auto& sqe = getNextSqe();
+  // NOTE: offset is always 0 since io_vec is a std::span and can be used to
+  // generate an offset into a larger collection of iovec structures if needed
+  io_uring_prep_writev(&sqe, unsafe(fd), io_vec.data(), io_vec.size(),
+                       0 /* offset */);
+  if (!unwrap(isDelayed)) { submitReq("write"sv); }
 }
 
 io_uring_sqe& Uring::getNextSqe() {
