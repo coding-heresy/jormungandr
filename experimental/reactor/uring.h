@@ -324,7 +324,7 @@ public:
     return *cqe_;
   }
 
-  // TODO(bd) add definition of operator->
+  const io_uring_cqe* operator->() const { return cqe_; }
 
   UserData getUserData() const {
     // NOTE: using operator* to avoid SIGSEGV if the CQE pointer is not set
@@ -362,7 +362,7 @@ public:
   /**
    * wait for the next uring event to occur, or until the timeout, if any
    */
-  Event awaitEvent(std::optional<Duration> timeout);
+  Event awaitEvent(std::optional<Duration> timeout = std::nullopt);
 
   /**
    * call this after adding one or more requests to uring with delayed submission

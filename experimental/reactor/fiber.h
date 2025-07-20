@@ -40,7 +40,7 @@
 namespace jmg
 {
 
-enum class FiberState : uint8_t { kUnallocated, kActive, kTerminated };
+enum class FiberState : uint8_t { kUnallocated = 0, kActive, kTerminated };
 
 using FiberId = CtrlBlockId;
 

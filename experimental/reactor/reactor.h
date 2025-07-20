@@ -56,6 +56,10 @@ enum class Cmd : uint64_t {
 
 class Reactor {
 public:
+  // TODO(bd) uring size should be at settable at compile or run time
+  JMG_NON_COPYABLE(Reactor);
+  JMG_NON_MOVEABLE(Reactor);
+
   /**
    * start the reactor, takes control of the thread that calls it
    */
