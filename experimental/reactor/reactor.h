@@ -57,6 +57,7 @@ enum class Cmd : uint64_t {
 class Reactor {
 public:
   // TODO(bd) uring size should be at settable at compile or run time
+  Reactor();
   JMG_NON_COPYABLE(Reactor);
   JMG_NON_MOVEABLE(Reactor);
 
@@ -86,13 +87,6 @@ private:
    * an async operation
    */
   void schedule(const OptMillisec timeout = std::nullopt);
-
-  // /**
-  //  * perform some sketchy shenanigans to a allow a call to setcontext to
-  //  execute
-  //  * a capturing lambda
-  //  */
-  // static void workerTrampoline(const intptr_t lambda_ptr_val);
 
   /**
    * store the current checkpoint directly into a context buffer
@@ -127,17 +121,19 @@ private:
   /**
    * initialize a fiber that will execute a fiber function
    */
-  FiberCtrlBlock& initFbr(FiberFcn& fcn,
+  FiberCtrlBlock& initFbr(FiberFcn&& fcn,
                           const OptStrView operation = std::nullopt,
                           // TODO(bd) is this necessary?
                           ucontext_t* return_tgt = nullptr);
 
-  FiberId active_fiber_id_;
-  FiberCtrl fiber_ctrl_;
-  ucontext_t shutdown_chkpt_;
-  std::optional<EventFd> notifier_;
-  std::unique_ptr<uring::Uring> uring_;
+  void dbgLog(std::string_view str);
+
   std::atomic<bool> is_shutdown_ = false;
+  EventFd notifier_;
+  FiberCtrl fiber_ctrl_;
+  std::unique_ptr<uring::Uring> uring_;
+  ucontext_t shutdown_chkpt_;
+  FiberId active_fiber_id_;
 };
 
 } // namespace jmg

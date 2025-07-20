@@ -108,23 +108,26 @@ void fiberTrampoline(const int32_t lambda_ptr_high,
 namespace jmg
 {
 
-void Reactor::start() {
-  // create the eventfd
-  notifier_ = [&] {
+Reactor::Reactor()
+  // TODO(bd) uring size should be at settable at compile or run time
+  : notifier_([&] {
     // store and forward
     int fd;
     JMG_SYSTEM((fd = eventfd(0 /* initval */, EFD_NONBLOCK)),
                "unable to create eventfd");
     return EventFd(fd);
-  }();
+  }()) {}
 
-  // create the uring instance
-  // TODO(bd) make uring size a parameter
-  uring_ = make_unique<uring::Uring>(uring::UringSz(256));
+void Reactor::start() {
+  auto initiator = WorkerFcn([this] mutable {
+    // NOTE: uring must be created inside the worker function because only one
+    // thread can submit requests to it
 
-  uring_->registerEventNotifier(*notifier_);
+    // TODO(bd) uring size should be at settable at compile or run time
+    uring_ = make_unique<uring::Uring>(uring::UringSz(256));
 
-  auto initiator = WorkerFcn([this] {
+    uring_->registerEventNotifier(notifier_);
+
     // TODO(bd) any required initialization here before executing the scheduler
     schedule();
   });
@@ -148,6 +151,7 @@ void Reactor::start() {
       initFbr(initiator, "set up initial reactor fiber", &shutdown_chkpt_);
     fcb.body.state = FiberState::kActive;
     active_fiber_id_ = fcb.id;
+
     jumpTo(fcb, "initial reactor fiber");
   }
   // second return from getcontext, the reactor should be shut down at this point
@@ -162,8 +166,7 @@ void Reactor::start() {
 
 void Reactor::shutdown() {
   static constexpr auto kShutdownCmd = unwrap(Cmd::kShutdown);
-  JMG_ENFORCE_USING(logic_error, notifier_, "no notifier eventfd is available");
-  detail::write_all(*notifier_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
+  detail::write_all(notifier_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
 }
 
 void Reactor::post(FiberFcn&& fcn) {
@@ -171,12 +174,10 @@ void Reactor::post(FiberFcn&& fcn) {
   auto* lambda_ptr = new FiberFcn(fcn);
   // write the address of the lambda to the notifier eventfd to inform the
   // reactor of the work request
-  detail::write_all(*notifier_, buffer_from(lambda_ptr), "notifier eventfd");
+  detail::write_all(notifier_, buffer_from(lambda_ptr), "notifier eventfd");
 }
 
 void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
-  JMG_ENFORCE_USING(logic_error, uring_,
-                    "attempted to schedule fibers before starting the reactor");
   bool is_shutdown = false;
   while (!is_shutdown) {
     const auto event = [&] {
@@ -187,25 +188,41 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
 
     const auto& event_data = event.getUserData();
 
-    if (notifier_
-        && (static_cast<int>(unsafe(event_data)) == unsafe(*notifier_))) {
+    if (static_cast<int>(unsafe(event_data)) == unsafe(notifier_)) {
       // external thread has sent a message on the notifier event fd
       const auto data = [&] {
         uint64_t data;
-        detail::read_all(*notifier_, buffer_from(data), "notifier eventfd"sv);
+        detail::read_all(notifier_, buffer_from(data), "notifier eventfd"sv);
         return data;
       }();
       if (unwrap(Cmd::kShutdown) == data) { is_shutdown = true; }
       else {
         // work requested, data is a pointer to an instance of FiberFcn that the
         // reactor must take control of and execute
-        auto fcn = unique_ptr<FiberFcn>(reinterpret_cast<FiberFcn*>(data));
-
-        // initialize a new fiber object
+        auto fcn = shared_ptr<FiberFcn>(reinterpret_cast<FiberFcn*>(data));
 
         // create a wrapper FiberFcn that will include cleanup
+        auto wrapper = [this, fcn = std::move(fcn)](Fiber& fbr) mutable {
+          const auto fbr_id = fbr.getId();
+
+          // execute the wrapped handler
+          (*fcn)(fbr);
+
+          auto& fcb = fiber_ctrl_.getBlock(fbr_id);
+
+          // terminate the current fiber
+          fcb.body.state = FiberState::kTerminated;
+
+          fiber_ctrl_.release(fbr_id);
+
+          schedule();
+        };
+
+        // initialize a new fiber object
+        auto& fcb = initFbr(wrapper, "execute posted work");
 
         // jump to the wrapper FiberFcn
+        jumpTo(fcb, "posted work fiber");
       }
     }
   }
@@ -267,7 +284,7 @@ FiberCtrlBlock& Reactor::initFbr(WorkerFcn& fcn,
   return fcb;
 }
 
-FiberCtrlBlock& Reactor::initFbr(FiberFcn& fcn,
+FiberCtrlBlock& Reactor::initFbr(FiberFcn&& fcn,
                                  const OptStrView operation,
                                  ucontext_t* return_tgt) {
   // set up fiber control block
@@ -309,6 +326,26 @@ FiberCtrlBlock& Reactor::initFbr(FiberFcn& fcn,
                fcn_parts.first, fcn_parts.second, fbr_parts.first,
                fbr_parts.second);
   return fcb;
+}
+
+void Reactor::dbgLog(const string_view str) {
+  static constexpr auto kDbgPrefix = "DBG "sv;
+  static const auto kVecPrototype = [&] {
+    array<struct iovec, 2> rslt;
+    rslt[0].iov_base = as_void_ptr(kDbgPrefix.data());
+    rslt[0].iov_len = kDbgPrefix.size();
+    return rslt;
+  }();
+  auto io_array = kVecPrototype;
+  io_array[1].iov_base = as_void_ptr(str.data());
+  io_array[1].iov_len = str.size();
+  uring_->submitWriteReq(kStdoutFd, span(io_array));
+  // TODO(bd) this is dangerous because some other event could occur before the
+  // write, either use writev for a fully blocking write or make this function
+  // non-blocking
+  const auto event = uring_->awaitEvent(from(100ms));
+  JMG_ENFORCE(pred(event), "timed out waiting for event");
+  if (event->res < 0) { JMG_THROW_SYSTEM_ERROR(-event->res); }
 }
 
 } // namespace jmg
