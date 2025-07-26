@@ -312,7 +312,7 @@ enum class DelaySubmission : bool { kDelay = true, kNoDelay = false };
 class Event {
 public:
   Event() = default;
-  JMG_DEFAULT_COPYABLE(Event);
+  JMG_NON_COPYABLE(Event);
   JMG_DEFAULT_MOVEABLE(Event);
   Event(io_uring* ring, io_uring_cqe* cqe);
 
