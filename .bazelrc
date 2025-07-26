@@ -7,6 +7,10 @@ common --workspace_status_command=./githooks/install-pre-commit-hook.sh
 
 # builds with C++23
 build --action_env=BAZEL_CXXOPTS="-std=c++23"
+build --cxxopt='-std=c++23'
+
+# allow C++23 stack traces
+build --linkopt='-lstdc++exp'
 
 # be safe...
 build --cxxopt='-Wall'
@@ -24,9 +28,6 @@ build --action_env=CC=/usr/bin/gcc-14
 build --action_env=CXX=/usr/bin/g++-14
 # need to be able to diagnose severe errors in concepts
 build --cxxopt='-fconcepts-diagnostics-depth=10'
-# TODO(bd) remove this flag when gcc correctly handles anonymous lambdas
-# ignore spurious subobject-linkage warnings
-build --cxxopt='-Wno-subobject-linkage'
 
 # clang toolchain
 # build --repo_env=CC=/usr/bin/clang
@@ -44,17 +45,42 @@ build --features=external_include_paths
 build --cxxopt='-DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG'
 
 # debug builds
-build:dbg --cxxopt='-Og'
-build:dbg --cxxopt='-fno-inline'
-build:dbg --cxxopt='-g3'
-build:dbg --cxxopt='-fstack-protector-all'
+build:dbg --strip=never
+build:dbg --copt='-Og'
+build:dbg --copt='-fno-inline'
+build:dbg --copt='-g3'
+build:dbg --copt='-fstack-protector-all'
+build:dbg --copt='-fno-omit-frame-pointer'
 
 # optimized builds
-build:opt --cxxopt='-O3'
-build:opt --cxxopt='-g0'
-build:opt --cxxopt='-march=native'
-build:opt --cxxopt='-mtune=native'
-build:opt --cxxopt='-DNDEBUG'
+build:opt --copt='-O3'
+build:opt --copt='-g0'
+build:opt --copt='-march=native'
+build:opt --copt='-mtune=native'
+build:opt --copt='-DNDEBUG'
+# TODO(bd) should optimized builds omit the frame pointer?
+build:opt --copt='-fno-omit-frame-pointer'
+
+# TODO(bd) run sanitizer builds across multiple optimization levels?
+
+# address sanitizer builds
+build:asan --strip=never
+build:asan --copt='-fsanitize=address'
+build:asan --copt='-DADDRESS_SANITIZER'
+build:asan --copt='-O1'
+build:asan --copt='-g'
+build:asan --copt='-fno-omit-frame-pointer'
+build:asan --linkopt='-fsanitize=address'
+build:asan --linkopt='-static-libasan'
+
+# thread sanitizer builds
+build:tsan --strip=never
+build:tsan --copt='-fsanitize=thread'
+build:tsan --copt='-O2'
+build:tsan --copt='-g'
+build:asan --copt='-fno-omit-frame-pointer'
+build:tsan --linkopt='-fsanitize=thread'
+build:tsan --linkopt='-static-libtsan'
 
 # TODO flags to use for segmented stacks
 # -fsplit-stack

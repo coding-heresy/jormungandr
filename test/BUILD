@@ -183,6 +183,8 @@ genrule(
         '@quickfix//:fix_42_spec',
     ],
     outs = ['quickfix_42.h'],
+    # TODO(bd) run this command under control of 'setarch $$(uname -m) -R'
+    # for thread sanitizer builds?
     cmd = '$(location //jmgc:jmgc) -FIX $(location @quickfix//:fix_42_spec) > $@',
     tags = ['manual'],
 )
