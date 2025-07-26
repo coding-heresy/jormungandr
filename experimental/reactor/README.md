@@ -199,13 +199,17 @@ Scheduler has 2 states: `polling` and `blocking`
   * if the `runnable` queue is not empty
     * dequeue the first element as `next active`
     * if the `active` fiber is yielding
-      * enqueue the `active` fiber at the end of the `runnable` queue
+      * enqueue the `active` fiber in the `runnable` queue
+      * clear the flag that indicates whether the `active` fiber is yielding
+    * if the `active` fiber ID matches the ID of the current fiber
+      * return from the scheduler (`active` fiber is resuming)
     * store the current fiber context in its FCB
       * execution will jump back to this point
       * if the `active` fiber ID does not match the ID of the current fiber
         * set the `active` fiber ID to the ID of the current fiber
         * return from the scheduler function
       * else (`active` fiber ID matches the ID of the current fiber, jumping away)
+        * set the `active` fiber ID to the ID
         * jump to the `next active` fiber (does not return)
   * else (`runnable` queue is empty)
     * if `state` is `polling`
@@ -222,6 +226,14 @@ Scheduler has 2 states: `polling` and `blocking`
 
 # TODO
 
+* Add sanity checking of the state of the `active` and `next active`
+  fibers in the scheduler function
+  * Design idea: the only state change that should be made outside of
+    the scheduler function should be setting the state to
+    `kTerminated`, all other states should be managed by the scheduler
+    function
+  * The only allowable states for a fiber calling the scheduler
+    function should be kActive or kTerminated
 * ~~Complete the first test case: start the reactor and shut it down
   without having it explode violently.~~
 * Add a list of _runnable_ fibers to the scheduler
@@ -243,3 +255,10 @@ Scheduler has 2 states: `polling` and `blocking`
   wait for the future, shut down the reactor
 * ...
 * Profit!
+
+## Longer term
+* Try to come up with a better way to pass a fiber worker function
+  between threads. The current implementation requires that it be
+  allocated on the heap and passed as a pointer, which isn't the best
+* Should the implementation of type-erased functions be switched from
+  `std::function` to a moveable function type?
