@@ -266,3 +266,32 @@ cc_binary(
         '//:jmg_server_main',
     ],
 )
+
+# TODO(bd) restore this when rules_build_error works correctly
+
+# load('@rules_build_error//lang/cc:defs.bzl', 'cc_build_error')
+# load('@rules_build_error//matcher:defs.bzl', 'matcher')
+
+# cc_build_error(
+#     name = 'missing_time_format_in_conversion_fails_to_compile',
+#     src = 'test_conversion_compile_fails.cpp',
+#     local_defines = ['VERIFY_MISSING_TIME_FORMAT_FAILS'],
+#     deps = ['//:jmg'],
+#     compile_stderr = matcher.has_substr('static assertion failed: conversion between string and time point must have at least one extra argument for the format'),
+# )
+
+# cc_build_error(
+#     name = 'multiple_time_formats_in_conversion_fails_to_compile',
+#     src = 'test_conversion_compile_fails.cpp',
+#     local_defines = ['VERIFY_MULTIPLE_TIME_FORMATS_FAIL'],
+#     deps = ['//:jmg'],
+#     compile_stderr = matcher.has_substr('static assertion failed: more than one format specified when converting between string and time point'),
+# )
+
+# cc_build_error(
+#     name = 'multiple_time_zones_in_conversion_fails_to_compile',
+#     src = 'test_conversion_compile_fails.cpp',
+#     local_defines = ['VERIFY_MULTIPLE_TIME_ZONES_FAIL'],
+#     deps = ['//:jmg'],
+#     compile_stderr = matcher.has_substr('static assertion failed: more than one time zone was specified when converting between string and time point'),
+# )

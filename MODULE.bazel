@@ -105,3 +105,14 @@ archive_override(
     strip_prefix = 'strong_type-1.1.0',
     urls = ['https://github.com/coding-heresy/strong_type/archive/refs/tags/1.1.0.tar.gz'],
 )
+
+# TODO(bd) restore this when rules_build_error works correctly
+
+# ########################################
+# # rules to enforce build failures
+# ########################################
+
+# bazel_dep(
+#     name = 'rules_build_error',
+#     version = '0.8.4',
+# )
