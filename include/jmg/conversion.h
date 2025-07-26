@@ -287,6 +287,13 @@ private:
       static_assert(1 <= sizeof...(extras),
                     "conversion between string and time point must have at "
                     "least one extra argument for the format");
+      using ArgsList = meta::list<Extras...>;
+      static_assert(isUniqueMemberOfList<TimePointFmt, ArgsList>(),
+                    "more or less than one format string was specified when "
+                    "converting between string and time point");
+      static_assert(isAtMostOnceMemberOfList<TimeZone, ArgsList>(),
+                    "more than one time zone was specified when converting "
+                    "between string and time point");
       std::optional<std::string_view> opt_fmt;
       std::optional<TimeZone> opt_zone;
       auto processArg = [&]<typename T>(const T& arg) {

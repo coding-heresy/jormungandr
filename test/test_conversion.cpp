@@ -144,6 +144,12 @@ TEST(ConversionTests, TestStringFromTimePoint) {
     EXPECT_EQ(expected, actual_us_eastern);
   }
   {
+    // doesn't matter which order the format and timezone arguments are passed in
+    const std::string actual_us_eastern = from(tp, kUsEasternZone, kFmt);
+    const auto expected = "2007-06-25 09:00:00"s;
+    EXPECT_EQ(expected, actual_us_eastern);
+  }
+  {
     const std::string actual_gmt = from(tp, kFmt);
     const auto expected = "2007-06-25 13:00:00"s;
     EXPECT_EQ(expected, actual_gmt);

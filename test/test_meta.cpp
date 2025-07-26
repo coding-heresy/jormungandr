@@ -207,7 +207,7 @@ template<typename T, TypeListT Lst>
 using CountMatches =
   meta::fold<Lst, std::integral_constant<uint8_t, 0>, CountMatchesLambda<T>>;
 
-TEST(MetaprogrammingTests, TestIsMemberOfList) {
+TEST(MetaprogrammingTests, TestListMembershipHelpers) {
   using List = meta::list<int, double, string>;
   EXPECT_TRUE((isMemberOfList<int, List>()));
   EXPECT_FALSE((isMemberOfList<char, List>()));
@@ -231,6 +231,11 @@ TEST(MetaprogrammingTests, TestIsMemberOfList) {
   using DuplicateList = meta::list<int, double, string, int>;
   EXPECT_TRUE((isUniqueMemberOfList<double, DuplicateList>()));
   EXPECT_FALSE((isUniqueMemberOfList<int, DuplicateList>()));
+
+  // confirm that "at most once" membership test works
+  EXPECT_TRUE((isAtMostOnceMemberOfList<double, DuplicateList>()));
+  EXPECT_TRUE((isAtMostOnceMemberOfList<float, DuplicateList>()));
+  EXPECT_FALSE((isAtMostOnceMemberOfList<int, DuplicateList>()));
 
   // confirm that scoped enums work correctly
   enum class Enum { kFoo, kBar };

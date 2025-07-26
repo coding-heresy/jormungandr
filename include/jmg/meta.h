@@ -346,15 +346,16 @@ using CountMatches =
  */
 template<typename T, TypeListT Lst>
 inline constexpr bool isUniqueMemberOfList() {
-  return static_cast<size_t>(1) == detail::CountMatches<T, Lst>{};
+  return static_cast<size_t>(1)
+         == detail::CountMatches<Decay<T>, DecayAll<Lst>>{};
 }
 
 /**
- * count the number of times that a type appears in a list
+ * determine if a type occurs at most once in a list
  */
 template<typename T, TypeListT Lst>
-inline constexpr bool entryCount() {
-  return detail::CountMatches<T, Lst>{};
+inline constexpr bool isAtMostOnceMemberOfList() {
+  return detail::CountMatches<Decay<T>, DecayAll<Lst>>{} <= 1;
 }
 
 /**
