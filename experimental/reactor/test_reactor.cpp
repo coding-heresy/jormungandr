@@ -72,7 +72,7 @@ TEST(ReactorTests, SmokeTest) {
   JMG_SINK_ALL_EXCEPTIONS("top level")
 }
 
-#if 0
+#if 1
 // TODO(bd) current doesn't work
 TEST(ReactorTests, TestSignalShutdown) {
   Reactor reactor;
@@ -109,8 +109,6 @@ TEST(ReactorTests, TestSignalShutdown) {
   }
   JMG_SINK_ALL_EXCEPTIONS("top level")
   // should only get here if there was an exception
-  if (reactor_worker.joinable()) {
-    reactor_worker.join();
-  }
+  if (reactor_worker.joinable()) { reactor_worker.join(); }
 }
 #endif

@@ -41,6 +41,7 @@ cc_library(
     name = 'reactor',
     visibility = ['//visibility:public'],
     srcs = [
+        'fiber.cpp',
         'reactor.cpp',
     ],
     hdrs = [

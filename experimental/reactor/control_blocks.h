@@ -49,6 +49,7 @@
 
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
+#include "jmg/util.h"
 
 namespace jmg
 {
@@ -170,8 +171,62 @@ private:
 
   Id next_never_used_ = Id(0);
   Buckets buckets_;
-  Id free_ = Id(0);
   uint16_t counter_ = 0;
+
+  Id free_ = Id(0);
+};
+
+template<typename T>
+class CtrlBlockQueue {
+public:
+  using Block = typename ControlBlocks<T>::ControlBlock;
+  CtrlBlockQueue() = default;
+  JMG_NON_COPYABLE(CtrlBlockQueue);
+  JMG_NON_MOVEABLE(CtrlBlockQueue);
+
+  void enqueue(const Block& item) {
+    const auto id = item.id;
+    if (tail_) {
+      auto& tail_block = ctrl_blocks_.getBlock(*tail_);
+      tail_block.id = id;
+      tail_ = id;
+    }
+    else {
+      JMG_ENFORCE_USING(std::logic_error, pred(head_),
+                        "control block queue head is set but tail is not");
+      JMG_ENFORCE_USING(
+        std::logic_error, !counter_,
+        "control block queue head and tail are not set but counter is not 0");
+      tail_ = id;
+      head_ = id;
+    }
+    ++counter_;
+  }
+
+  Block& dequeue() {
+    JMG_ENFORCE_USING(std::logic_error, !empty(),
+                      "attempted to dequeue an item from an empty queue");
+    auto& rslt = ctrl_blocks_.getBlock(*head_);
+    if (1 == size()) {
+      head_ = std::nullopt;
+      tail_ = std::nullopt;
+    }
+    else { head_ = rslt.id; }
+    --counter_;
+    return rslt;
+  }
+
+  size_t size() const noexcept { return counter_; }
+
+  bool empty() const noexcept { return !counter_; }
+
+private:
+  using Id = CtrlBlockId;
+
+  ControlBlocks<T> ctrl_blocks_;
+  size_t counter_ = 0;
+  std::optional<Id> head_ = std::nullopt;
+  std::optional<Id> tail_ = std::nullopt;
 };
 
 } // namespace jmg
