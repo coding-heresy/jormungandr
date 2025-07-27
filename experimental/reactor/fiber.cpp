@@ -1,6 +1,6 @@
 /** -*- mode: c++ -*-
  *
- * Copyright (C) 2024 Brian Davis
+ * Copyright (C) 2025 Brian Davis
  * All Rights Reserved
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,65 +29,13 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
-#pragma once
 
-#include <array>
-
-#include <ucontext.h>
-
-#include "control_blocks.h"
+#include "fiber.h"
+#include "reactor.h"
 
 namespace jmg
 {
 
-class Reactor;
-
-enum class FiberState : uint8_t {
-  kUnallocated = 0,
-  kActive, // NOTE: only one thread at a time should be active
-  kBlocked,
-  kRunnable,
-  kTerminated
-};
-
-using FiberId = CtrlBlockId;
-
-/**
- * publicly accessible interface to a reactor fiber object
- */
-class Fiber {
-public:
-  Fiber() = default;
-  JMG_NON_COPYABLE(Fiber);
-  JMG_NON_MOVEABLE(Fiber);
-  ~Fiber() = default;
-
-  FiberId getId() const { return id_; }
-
-  void yield();
-
-private:
-  friend class Reactor;
-
-  Fiber(FiberId id, Reactor& reactor) : id_(id), reactor_(&reactor) {}
-
-  FiberId id_;
-  Reactor* reactor_ = nullptr;
-};
-
-// TODO(bd) support variable size segmented stacks
-static constexpr size_t kStackSz = 16384;
-struct FiberCtrlBlockBody {
-  ucontext_t chkpt;
-  std::array<uint8_t, kStackSz> stack;
-  FiberState state;
-  Fiber fbr;
-  bool is_fiber_yielding = false;
-};
-using FiberCtrl = ControlBlocks<FiberCtrlBlockBody>;
-using FiberCtrlBlock = FiberCtrl::ControlBlock;
-using FiberCtrlBlockQueue = CtrlBlockQueue<FiberCtrlBlockBody>;
-
-using FiberFcn = std::function<void(Fiber&)>;
+void Fiber::yield() { reactor_->yieldFbr(); }
 
 } // namespace jmg

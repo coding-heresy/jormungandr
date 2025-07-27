@@ -250,9 +250,9 @@ Scheduler has 2 states: `polling` and `blocking`
     batches whether or not its execution is complete
   * Once a batch of events has been processed, execution should jump
     to the first thread on the _runnable_ queue
-* test case: start the reactor, create a promise/future for
+* ~~test case: start the reactor, create a promise/future for
   signalling, send the reactor a job that simply triggers the promise,
-  wait for the future, shut down the reactor
+  wait for the future, shut down the reactor~~
 * ...
 * Profit!
 

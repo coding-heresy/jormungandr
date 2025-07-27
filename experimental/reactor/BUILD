@@ -12,6 +12,7 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         ':control_blocks'
     ],
+    size = 'small',
 )
 
 cc_library(
@@ -35,12 +36,24 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         ':uring'
     ],
+    size = 'small',
+)
+
+cc_test(
+    name = 'test_ucontext',
+    srcs = ['test_ucontext.cpp'],
+    deps = [
+        '@com_google_googletest//:gtest_main',
+        '//:jmg'
+    ],
+    size = 'small',
 )
 
 cc_library(
     name = 'reactor',
     visibility = ['//visibility:public'],
     srcs = [
+        'fiber.cpp',
         'reactor.cpp',
     ],
     hdrs = [
@@ -60,5 +73,5 @@ cc_test(
         '@com_google_googletest//:gtest_main',
         ':reactor'
     ],
-    tags = ['manual'],
+    size = 'small',
 )

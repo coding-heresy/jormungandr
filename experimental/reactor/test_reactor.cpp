@@ -30,7 +30,9 @@
  *
  */
 
+#include <atomic>
 #include <future>
+#include <stacktrace>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -44,16 +46,13 @@ using namespace jmg;
 using namespace std;
 
 TEST(ReactorTests, SmokeTest) {
-  using PromiseOwner = unique_ptr<Promise<void>>;
   Reactor reactor;
-  PromiseOwner shutdown_signaller = make_unique<Promise<void>>();
-  auto shutdown_barrier = shutdown_signaller->get_future();
-  thread reactor_worker([&reactor,
-                         signaller = std::move(shutdown_signaller)] mutable {
+  atomic<bool> clean_reactor_shutdown = false;
+  thread reactor_worker([&] mutable {
     try {
-      [&reactor, signaller = std::move(signaller)] mutable {
+      [&] mutable {
         reactor.start();
-        signaller->set_value();
+        clean_reactor_shutdown = true;
       }();
     }
     JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
@@ -65,22 +64,26 @@ TEST(ReactorTests, SmokeTest) {
 
     // wait until the reactor is actually running before shutting down
     this_thread::sleep_for(100ms);
+
+    // shut down the reactor immediately
     reactor.shutdown();
-    shutdown_barrier.get(2s, "shutdown barrier");
     reactor_worker.join();
   }
-  JMG_SINK_ALL_EXCEPTIONS("top level")
+  catch (...) {
+    if (reactor_worker.joinable()) { reactor_worker.join(); }
+    throw;
+  }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
 }
 
-#if 0
-// TODO(bd) current doesn't work
 TEST(ReactorTests, TestSignalShutdown) {
   Reactor reactor;
-  Promise<void> shutdown_signaller;
-  thread reactor_worker([&] {
+  atomic<bool> clean_reactor_shutdown = false;
+  thread reactor_worker([&] mutable {
     try {
       reactor.start();
-      shutdown_signaller.set_value();
+      clean_reactor_shutdown = true;
     }
     JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
   });
@@ -91,26 +94,24 @@ TEST(ReactorTests, TestSignalShutdown) {
 
     // wait until the reactor is actually running before sending work
     this_thread::sleep_for(100ms);
+
+    // request execution of a fiber function that will signal when it runs
     Promise<void> fbr_executed_signaller;
-    reactor.post([&](Fiber&) {
-      cout << "executing fiber" << endl;
-      fbr_executed_signaller.set_value();
-      cout << "done executing fiber" << endl;
-    });
-    cout << "waiting for posted work to complete" << endl;
+    reactor.post([&](Fiber&) { fbr_executed_signaller.set_value(); });
     auto fbr_executed_barrier = fbr_executed_signaller.get_future();
+
+    // 2 seconds is infinity
     fbr_executed_barrier.get(2s, "fiber executed barrier");
-    cout << "posted work completed, shutting down" << endl;
+
+    // shutdown the reactor after the fiber function has executed
     reactor.shutdown();
-    auto shutdown_barrier = shutdown_signaller.get_future();
-    shutdown_barrier.get(2s, "shutdown barrier");
     reactor_worker.join();
     return;
   }
-  JMG_SINK_ALL_EXCEPTIONS("top level")
-  // should only get here if there was an exception
-  if (reactor_worker.joinable()) {
-    reactor_worker.join();
+  catch (...) {
+    if (reactor_worker.joinable()) { reactor_worker.join(); }
+    throw;
   }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
 }
-#endif

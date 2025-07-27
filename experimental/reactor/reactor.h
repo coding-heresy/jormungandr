@@ -82,25 +82,13 @@ private:
   using OptStrView = std::optional<std::string_view>;
   using WorkerFcn = std::function<void(void)>;
 
+  friend class Fiber;
+
   /**
    * pass control from a fiber to the reactor scheduler when the fiber executes
    * an async operation
    */
   void schedule(const OptMillisec timeout = std::nullopt);
-
-  /**
-   * store the current checkpoint directly into a context buffer
-   */
-  static void saveChkpt(ucontext_t& chkpt,
-                        const OptStrView operation = std::nullopt);
-
-  /**
-   * store the current checkpoint into a fiber control block
-   */
-  static void saveChkpt(FiberCtrlBlock& fcb,
-                        const OptStrView operation = std::nullopt) {
-    saveChkpt(fcb.body.chkpt, operation);
-  }
 
   /**
    * jump to the checkpoint stored in a fiber control block
@@ -126,14 +114,37 @@ private:
                           // TODO(bd) is this necessary?
                           ucontext_t* return_tgt = nullptr);
 
-  void dbgLog(std::string_view str);
+  /**
+   * get the active fiber it, implemented as a function to deal with annoying
+   * issues related to the 'volatile' qualifier
+   */
+  FiberId getActiveFbrId() const noexcept {
+    return *((const FiberId*)(&active_fiber_id_));
+  }
+
+  /**
+   * set the active fiber it, implemented as a function to deal with annoying
+   * issues related to the 'volatile' qualifier
+   */
+  void setActiveFbrId(const FiberId id) noexcept {
+    (FiberId&)active_fiber_id_ = id;
+  }
+
+  /**
+   * yield the currently active fiber
+   */
+  void yieldFbr();
 
   std::atomic<bool> is_shutdown_ = false;
   EventFd notifier_;
   FiberCtrl fiber_ctrl_;
   std::unique_ptr<uring::Uring> uring_;
   ucontext_t shutdown_chkpt_;
-  FiberId active_fiber_id_;
+
+  FiberCtrlBlockQueue runnable_;
+  // NOTE: active_fiber_id_ is marked as volatile because it can change when
+  // jumping away from a context and then resuming it
+  volatile FiberId active_fiber_id_;
 };
 
 } // namespace jmg

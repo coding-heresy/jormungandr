@@ -49,6 +49,7 @@
 
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
+#include "jmg/util.h"
 
 namespace jmg
 {
@@ -101,6 +102,7 @@ public:
                       "free stack pointer exceeds counter");
     const auto never_used = (free_ == next_never_used_);
     if (never_used) {
+      // calculate bucket and index for the entry pointed to by the free list pointer
       const auto [bucket, idx] = decompose(free_);
       if ((bucket > 0) && (idx == 0)) {
         // allocate a new bucket
@@ -115,6 +117,7 @@ public:
     memset(static_cast<void*>(&body), 0, sizeof(body));
 
     if (never_used) {
+      // next free entry corresponds to the next ID
       ++free_;
       ++next_never_used_;
     }
@@ -170,8 +173,68 @@ private:
 
   Id next_never_used_ = Id(0);
   Buckets buckets_;
-  Id free_ = Id(0);
   uint16_t counter_ = 0;
+
+  Id free_ = Id(0);
+};
+
+/**
+ * singly linked list implementation for control blocks that uses the block ID
+ * and control block link fields instead of pointers
+ */
+template<typename T>
+class CtrlBlockQueue {
+public:
+  using Block = typename ControlBlocks<T>::ControlBlock;
+  CtrlBlockQueue() = delete;
+  JMG_NON_COPYABLE(CtrlBlockQueue);
+  JMG_NON_MOVEABLE(CtrlBlockQueue);
+
+  CtrlBlockQueue(ControlBlocks<T>& ctrl_blocks) : ctrl_blocks_(ctrl_blocks) {}
+
+  void enqueue(const Block& item) {
+    const auto id = item.id;
+    if (tail_) {
+      auto& tail_block = ctrl_blocks_.getBlock(*tail_);
+      tail_block.id = id;
+      tail_ = id;
+    }
+    else {
+      JMG_ENFORCE_USING(std::logic_error, pred(!head_),
+                        "control block queue head is set but tail is not");
+      JMG_ENFORCE_USING(
+        std::logic_error, !counter_,
+        "control block queue head and tail are not set but counter is not 0");
+      tail_ = id;
+      head_ = id;
+    }
+    ++counter_;
+  }
+
+  Block& dequeue() {
+    JMG_ENFORCE_USING(std::logic_error, !empty(),
+                      "attempted to dequeue an item from an empty queue");
+    auto& rslt = ctrl_blocks_.getBlock(*head_);
+    if (1 == size()) {
+      head_ = std::nullopt;
+      tail_ = std::nullopt;
+    }
+    else { head_ = rslt.id; }
+    --counter_;
+    return rslt;
+  }
+
+  size_t size() const noexcept { return counter_; }
+
+  bool empty() const noexcept { return !counter_; }
+
+private:
+  using Id = CtrlBlockId;
+
+  ControlBlocks<T>& ctrl_blocks_;
+  size_t counter_ = 0;
+  std::optional<Id> head_ = std::nullopt;
+  std::optional<Id> tail_ = std::nullopt;
 };
 
 } // namespace jmg

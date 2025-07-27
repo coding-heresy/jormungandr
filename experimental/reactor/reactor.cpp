@@ -56,51 +56,39 @@ using OptStrView = std::optional<std::string_view>;
 
 namespace
 {
-using PtrParts = std::pair<int32_t, int32_t>;
-
-/**
- * split 64 bit pointer up into 32 bit low and high chunks for use when calling
- * update_chkpt/makecontext
- */
-template<typename T>
-PtrParts split_ptr(T& ref) {
-  PtrParts rslt;
-  int64_t addr = reinterpret_cast<int64_t>(&ref);
-  rslt.first = static_cast<int32_t>(addr >> 32);
-  rslt.second = static_cast<int32_t>(addr & 0xFFFFFFFF);
-  return rslt;
-}
 
 template<typename T>
 concept ReactorFcnT = jmg::SameAsDecayedT<jmg::Reactor::WorkerFcn, T>
                       || jmg::SameAsDecayedT<jmg::FiberFcn, T>;
 
-// TODO(bd) understand why it appears that intptr_t can be used here while the
-// other trampoline requires 32 bit integers
+/**
+ * trampoline to a simple worker function that is called with no arguments and
+ * returns no value
+ */
 void workerTrampoline(const intptr_t lambda_ptr_val) {
   // NOTE: Google told me to do this, it's not my fault
   auto* lambda_ptr = reinterpret_cast<std::function<void()>*>(lambda_ptr_val);
-  JMG_ENFORCE(jmg::pred(lambda_ptr), "unable to trampoline to thread worker");
+  JMG_ENFORCE(jmg::pred(lambda_ptr), "unable to trampoline to simple worker");
   (*lambda_ptr)();
 }
 
-void fiberTrampoline(const int32_t lambda_ptr_high,
-                     const int32_t lambda_ptr_low,
-                     const int32_t fbr_ptr_high,
-                     const int32_t fbr_ptr_low) {
+/**
+ * trampoline to a "fiber" function that is called with a reference to a fiber
+ * and returns no value
+ */
+void fiberTrampoline(const intptr_t lambda_ptr_val, const intptr_t fbr_ptr_val) {
   using namespace jmg;
   // NOTE: Google told me to do this, it's not my fault
-  FiberFcn* lambda_ptr =
-    reinterpret_cast<FiberFcn*>((static_cast<uint64_t>(lambda_ptr_high) << 32)
-                                | lambda_ptr_low);
-  Fiber* fbr_ptr =
-    reinterpret_cast<Fiber*>((static_cast<uint64_t>(fbr_ptr_high) << 32)
-                             | fbr_ptr_low);
+  FiberFcn* lambda_ptr = reinterpret_cast<FiberFcn*>(lambda_ptr_val);
+  Fiber* fbr_ptr = reinterpret_cast<Fiber*>(fbr_ptr_val);
+  // take ownership of the lambda
+  auto lambda_owner = unique_ptr<FiberFcn>(lambda_ptr);
   JMG_ENFORCE(pred(lambda_ptr),
               "unable to trampoline to fiber: bad lambda pointer");
   JMG_ENFORCE(pred(fbr_ptr),
               "unable to trampoline to fiber: bad fiber pointer");
   (*lambda_ptr)(*fbr_ptr);
+  // NOTE: lambda is destroyed on scope exit
 }
 
 } // namespace
@@ -116,7 +104,8 @@ Reactor::Reactor()
     JMG_SYSTEM((fd = eventfd(0 /* initval */, EFD_NONBLOCK)),
                "unable to create eventfd");
     return EventFd(fd);
-  }()) {}
+  }())
+  , runnable_(fiber_ctrl_) {}
 
 void Reactor::start() {
   auto initiator = WorkerFcn([this] mutable {
@@ -135,7 +124,8 @@ void Reactor::start() {
   volatile bool was_started = false;
 
   // store the shutdown checkpoint
-  saveChkpt(shutdown_chkpt_, "store shutdown checkpoint");
+  JMG_SYSTEM(save_chkpt(&shutdown_chkpt_),
+             "unable to store shutdown checkpoint");
 
   if (!was_started) {
     // first return from getcontext, allocate the first fiber and jump to it
@@ -150,7 +140,7 @@ void Reactor::start() {
     auto& fcb =
       initFbr(initiator, "set up initial reactor fiber", &shutdown_chkpt_);
     fcb.body.state = FiberState::kActive;
-    active_fiber_id_ = fcb.id;
+    setActiveFbrId(fcb.id);
 
     jumpTo(fcb, "initial reactor fiber");
   }
@@ -179,58 +169,164 @@ void Reactor::post(FiberFcn&& fcn) {
 
 void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
   bool is_shutdown = false;
+  // NOTE: the polling behavior is to handle the case where a fiber yields but
+  // there are currently no other runnable fibers and no uring events have occurred
+  auto is_polling = true;
+  auto& active_fbr_fcb = fiber_ctrl_.getBlock(getActiveFbrId());
+
+  JMG_ENFORCE_USING(
+    logic_error,
+    (FiberState::kActive == active_fbr_fcb.body.state)
+      || (FiberState::kTerminated == active_fbr_fcb.body.state)
+      || (FiberState::kBlocked == active_fbr_fcb.body.state),
+    "scheduler invoked by a fiber that is not active, blocked or terminated");
+
+  // TODO(bd) can it be assumed that a fiber whose state is kActive
+  // when it calls schedule is yielding?
+
+  const auto is_active_fbr_terminating =
+    (active_fbr_fcb.body.state == FiberState::kTerminated);
+  // TODO(bd) think carefully about the shutdown case, any outstanding events
+  // should probably be allowed to drain
   while (!is_shutdown) {
-    const auto event = [&] {
-      std::optional<Duration> uring_timeout = nullopt;
-      if (timeout) { *uring_timeout = from(*timeout); }
-      return uring_->awaitEvent(uring_timeout);
-    }();
+    // TODO(bd) Do Something Smart(TM) to manage starvation risk
+    if (!runnable_.empty()) {
+      // resume execution of the first runnable fiber
+      auto& next_active_fcb = runnable_.dequeue();
+      const auto next_active_id = next_active_fcb.id;
 
-    const auto& event_data = event.getUserData();
+      if (active_fbr_fcb.body.is_fiber_yielding) {
+        JMG_ENFORCE_USING(logic_error, !is_active_fbr_terminating,
+                          "attempted to yield a terminated fiber");
+        JMG_ENFORCE_USING(logic_error,
+                          FiberState::kActive == active_fbr_fcb.body.state,
+                          "attempted to yield a non-active fiber");
 
-    if (static_cast<int>(unsafe(event_data)) == unsafe(notifier_)) {
-      // external thread has sent a message on the notifier event fd
-      const auto data = [&] {
-        uint64_t data;
-        detail::read_all(notifier_, buffer_from(data), "notifier eventfd"sv);
-        return data;
-      }();
-      if (unwrap(Cmd::kShutdown) == data) { is_shutdown = true; }
+        active_fbr_fcb.body.state = FiberState::kRunnable;
+        runnable_.enqueue(active_fbr_fcb);
+        active_fbr_fcb.body.is_fiber_yielding = false;
+      }
+      if (next_active_id == getActiveFbrId()) {
+        // active fiber is actually resuming without being blocked
+        JMG_ENFORCE_USING(logic_error, !is_active_fbr_terminating,
+                          "attempted to resume a terminated fiber");
+
+        active_fbr_fcb.body.state = FiberState::kActive;
+        return;
+      }
+      if (!is_active_fbr_terminating) {
+        // active fiber is being blocked
+
+        active_fbr_fcb.body.state = FiberState::kBlocked;
+        volatile auto pre_chkpt_id = unsafe(getActiveFbrId());
+        JMG_SYSTEM(save_chkpt(&(active_fbr_fcb.body.chkpt)),
+                   "unable to store checkpoint when blocking active fiber");
+        // NOTE: execution of a previously blocked fiber will return at this point
+        if (pre_chkpt_id != unsafe(getActiveFbrId())) {
+          ////////////////////
+          // this is the case where a blocked fiber is being resumed
+          ////////////////////
+          const auto resumed_id =
+            FiberId(static_cast<UnsafeTypeFromT<FiberId>>(pre_chkpt_id));
+          auto& resumed_fcb = fiber_ctrl_.getBlock(resumed_id);
+          resumed_fcb.body.state = FiberState::kActive;
+          setActiveFbrId(resumed_fcb.id);
+          return;
+        }
+      }
       else {
-        // work requested, data is a pointer to an instance of FiberFcn that the
-        // reactor must take control of and execute
-        auto fcn = shared_ptr<FiberFcn>(reinterpret_cast<FiberFcn*>(data));
+        // active fiber is being terminated, release its resources for reuse
+        fiber_ctrl_.release(getActiveFbrId());
+      }
+      ////////////////////
+      // execution should jump to the next active fiber
+      ////////////////////
+      jumpTo(next_active_fcb, "resuming blocked fiber"sv);
+      // jumpTo should NEVER return
+      JMG_THROW_EXCEPTION(logic_error, "unreachable");
+    }
+    else {
+      // TODO(bd) support awaiting a batch of events
+      // poll or wait for uring events
+      const auto event = [&] {
+        std::optional<Duration> uring_timeout = nullopt;
+        if (timeout && !is_polling) { *uring_timeout = from(*timeout); }
+        return uring_->awaitEvent(uring_timeout);
+      }();
+      // polling should only occur on the first iteration of the loop
+      is_polling = false;
 
-        // create a wrapper FiberFcn that will include cleanup
-        auto wrapper = [this, fcn = std::move(fcn)](Fiber& fbr) mutable {
-          const auto fbr_id = fbr.getId();
+      const auto& event_data = event.getUserData();
 
-          // execute the wrapped handler
-          (*fcn)(fbr);
+      if (static_cast<int>(unsafe(event_data)) == unsafe(notifier_)) {
+        ////////////////////
+        // external thread has sent a message on the notifier event fd
+        ////////////////////
+        const auto data = [&] {
+          uint64_t data;
+          detail::read_all(notifier_, buffer_from(data), "notifier eventfd"sv);
+          return data;
+        }();
+        if (unwrap(Cmd::kShutdown) == data) {
+          ////////////////////
+          // shutdown was requested
+          ////////////////////
+          is_shutdown = true;
+        }
+        else {
+          ////////////////////
+          // work requested, data is a pointer to an instance of FiberFcn that
+          // the reactor must take control of and execute
+          ////////////////////
 
-          auto& fcb = fiber_ctrl_.getBlock(fbr_id);
+          // TODO(bd) shared pointer is never a great solution, maybe use a
+          // moveable function object
+          auto fcn = shared_ptr<FiberFcn>(reinterpret_cast<FiberFcn*>(data));
 
-          // terminate the current fiber
-          fcb.body.state = FiberState::kTerminated;
+          // create a wrapper FiberFcn that will include cleanup
+          auto wrapper = [this, fcn = std::move(fcn)](Fiber& fbr) mutable {
+            const auto fbr_id = fbr.getId();
+            // execute the wrapped handler
+            (*fcn)(fbr);
+            auto& fcb = fiber_ctrl_.getBlock(fbr_id);
 
-          fiber_ctrl_.release(fbr_id);
+            // terminate the current fiber
+            fcb.body.state = FiberState::kTerminated;
 
-          schedule();
-        };
+            schedule();
+          };
 
-        // initialize a new fiber object
-        auto& fcb = initFbr(wrapper, "execute posted work");
+          // initialize a new fiber object
+          auto& fcb =
+            initFbr(std::move(wrapper), "execute externally requested work");
+          fcb.body.state = FiberState::kRunnable;
 
-        // jump to the wrapper FiberFcn
-        jumpTo(fcb, "posted work fiber");
+          // enqueue the new fiber control block on the runnable queue
+          runnable_.enqueue(fcb);
+        }
+      }
+      else {
+        ////////////////////
+        // uring event has occurred for a blocked fiber
+        ////////////////////
+        JMG_ENFORCE_USING(logic_error, unsafe(event_data) < fiber_ctrl_.count(),
+                          "internal corruption, uring event appears to be "
+                          "targeting a fiber with ID [",
+                          unsafe(event_data),
+                          "] but the largest available fiber ID is [",
+                          fiber_ctrl_.count() - 1, "]");
+        const auto fbr_id = FiberId(unsafe(event_data));
+        auto& fcb = fiber_ctrl_.getBlock(fbr_id);
+        JMG_ENFORCE_USING(logic_error, FiberState::kBlocked == fcb.body.state,
+                          "received uring event for fiber [", fbr_id,
+                          "] that was not blocked");
+        fcb.body.state = FiberState::kRunnable;
+        runnable_.enqueue(fcb);
+
+        // TODO(bd) store the event in the FCB of the associated fiber
       }
     }
   }
-}
-
-void Reactor::saveChkpt(ucontext_t& chkpt, const OptStrView operation) {
-  JMG_SYSTEM(save_chkpt(&chkpt), "unable to ",
-             operation ? *operation : "store checkpoint"sv);
 }
 
 void Reactor::jumpTo(FiberCtrlBlock& fcb, const OptStrView tgt) {
@@ -255,12 +351,11 @@ FiberCtrlBlock& Reactor::initFbr(WorkerFcn& fcn,
                                  ucontext_t* return_tgt) {
   // set up fiber control block
   auto [id, fcb] = fiber_ctrl_.getOrAllocate();
-  fcb.body.state = FiberState::kActive;
-  active_fiber_id_ = id;
 
   // for whatever reason, you need to store the current checkpoint using
   // getcontext and then modify it to point to the fiber function
-  saveChkpt(fcb, operation);
+  JMG_SYSTEM(save_chkpt(&fcb.body.chkpt), "unable to save checkpoint",
+             operation ? str_cat(" for ", *operation) : "");
 
   // point the updated context at the resources controlled by the provided fiber
   // control block
@@ -289,12 +384,11 @@ FiberCtrlBlock& Reactor::initFbr(FiberFcn&& fcn,
                                  ucontext_t* return_tgt) {
   // set up fiber control block
   auto [id, fcb] = fiber_ctrl_.getOrAllocate();
-  fcb.body.state = FiberState::kActive;
-  active_fiber_id_ = id;
 
   // for whatever reason, you need to store the current checkpoint using
   // getcontext and then modify it to point to the fiber function
-  saveChkpt(fcb, operation);
+  JMG_SYSTEM(save_chkpt(&fcb.body.chkpt), "unable to save checkpoint",
+             operation ? str_cat(" for ", *operation) : "");
 
   // point the updated context at the resources controlled by the provided fiber
   // control block
@@ -306,10 +400,10 @@ FiberCtrlBlock& Reactor::initFbr(FiberFcn&& fcn,
   // TODO(bd) avoid initializing the fiber more than once
 
   // initialize the Fiber using placement new
-  auto* fbr = new (fcb_fbr_ptr) Fiber(id);
+  auto* fbr = new (fcb_fbr_ptr) Fiber(id, *this);
 
-  auto fcn_parts = split_ptr(fcn);
-  auto fbr_parts = split_ptr(*fbr);
+  // take ownership of the fiber function
+  auto fcn_owner = make_unique<FiberFcn>(std::move(fcn));
 
   // update the previously stored checkpoint to cause it to jump to the provided
   // fiber function
@@ -322,30 +416,21 @@ FiberCtrlBlock& Reactor::initFbr(FiberFcn&& fcn,
   // trampoline function is required by the interface so there's no
   // way around the sketchiness, but that doesn't mean that I'm happy
   // about it
-  update_chkpt(&(fcb.body.chkpt), (void (*)())fiberTrampoline, 4 /* argc */,
-               fcn_parts.first, fcn_parts.second, fbr_parts.first,
-               fbr_parts.second);
+  update_chkpt(&(fcb.body.chkpt), (void (*)())fiberTrampoline, 2 /* argc */,
+               reinterpret_cast<intptr_t>(fcn_owner.release()),
+               reinterpret_cast<intptr_t>(fbr));
+
+  // fiber function is now owned by the context and will be destroyed by the
+  // jump target
+  fcn_owner.release();
+
   return fcb;
 }
 
-void Reactor::dbgLog(const string_view str) {
-  static constexpr auto kDbgPrefix = "DBG "sv;
-  static const auto kVecPrototype = [&] {
-    array<struct iovec, 2> rslt;
-    rslt[0].iov_base = as_void_ptr(kDbgPrefix.data());
-    rslt[0].iov_len = kDbgPrefix.size();
-    return rslt;
-  }();
-  auto io_array = kVecPrototype;
-  io_array[1].iov_base = as_void_ptr(str.data());
-  io_array[1].iov_len = str.size();
-  uring_->submitWriteReq(kStdoutFd, span(io_array));
-  // TODO(bd) this is dangerous because some other event could occur before the
-  // write, either use writev for a fully blocking write or make this function
-  // non-blocking
-  const auto event = uring_->awaitEvent(from(100ms));
-  JMG_ENFORCE(pred(event), "timed out waiting for event");
-  if (event->res < 0) { JMG_THROW_SYSTEM_ERROR(-event->res); }
+void Reactor::yieldFbr() {
+  auto& fcb = fiber_ctrl_.getBlock(getActiveFbrId());
+  fcb.body.is_fiber_yielding = true;
+  schedule();
 }
 
 } // namespace jmg
