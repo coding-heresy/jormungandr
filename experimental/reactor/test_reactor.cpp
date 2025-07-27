@@ -45,73 +45,61 @@
 using namespace jmg;
 using namespace std;
 
-TEST(ReactorTests, SmokeTest) {
-  Reactor reactor;
-  atomic<bool> clean_reactor_shutdown = false;
-  thread reactor_worker([&] mutable {
-    try {
-      [&] mutable {
+////////////////////////////////////////////////////////////////////////////////
+// test fixture
+////////////////////////////////////////////////////////////////////////////////
+
+class ReactorTests : public ::testing::Test {
+protected:
+  void SetUp() override {
+    reactor_worker = make_unique<thread>([&] {
+      try {
         reactor.start();
         clean_reactor_shutdown = true;
-      }();
-    }
-    JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
-  });
-
-  try {
+      }
+      JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
+    });
     // TODO(bd) handle startup timing better in the case where the
     // reactor starts at idle and is then instructed to perform work
 
     // wait until the reactor is actually running before shutting down
     this_thread::sleep_for(100ms);
-
-    // shut down the reactor immediately
-    reactor.shutdown();
-    reactor_worker.join();
   }
-  catch (...) {
-    if (reactor_worker.joinable()) { reactor_worker.join(); }
-    throw;
+  void TearDown() override {
+    // try to join the worker thread, just in case...
+    if (reactor_worker && reactor_worker->joinable()) {
+      reactor_worker->join();
+    }
   }
 
+  Reactor reactor;
+  unique_ptr<thread> reactor_worker;
+  atomic<bool> clean_reactor_shutdown = false;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// test cases
+////////////////////////////////////////////////////////////////////////////////
+
+TEST_F(ReactorTests, SmokeTest) {
+  // shut down the reactor immediately
+  reactor.shutdown();
+  reactor_worker->join();
   EXPECT_TRUE(clean_reactor_shutdown);
 }
 
-TEST(ReactorTests, TestSignalShutdown) {
-  Reactor reactor;
-  atomic<bool> clean_reactor_shutdown = false;
-  thread reactor_worker([&] mutable {
-    try {
-      reactor.start();
-      clean_reactor_shutdown = true;
-    }
-    JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
-  });
+TEST_F(ReactorTests, TestSignalShutdown) {
+  // request execution of a fiber function that will signal when it runs
+  Promise<void> fbr_executed_signaller;
+  reactor.post([&](Fiber&) { fbr_executed_signaller.set_value(); });
 
-  try {
-    // TODO(bd) handle startup timing better in the case where the
-    // reactor starts at idle and is then instructed to perform work
+  // wait until the fiber function completes before proceeding
+  auto fbr_executed_barrier = fbr_executed_signaller.get_future();
+  // 2 seconds is infinity
+  fbr_executed_barrier.get(2s, "fiber executed barrier");
 
-    // wait until the reactor is actually running before sending work
-    this_thread::sleep_for(100ms);
-
-    // request execution of a fiber function that will signal when it runs
-    Promise<void> fbr_executed_signaller;
-    reactor.post([&](Fiber&) { fbr_executed_signaller.set_value(); });
-    auto fbr_executed_barrier = fbr_executed_signaller.get_future();
-
-    // 2 seconds is infinity
-    fbr_executed_barrier.get(2s, "fiber executed barrier");
-
-    // shutdown the reactor after the fiber function has executed
-    reactor.shutdown();
-    reactor_worker.join();
-    return;
-  }
-  catch (...) {
-    if (reactor_worker.joinable()) { reactor_worker.join(); }
-    throw;
-  }
-
+  // shutdown the reactor after the fiber function has executed
+  reactor.shutdown();
+  reactor_worker->join();
   EXPECT_TRUE(clean_reactor_shutdown);
 }
