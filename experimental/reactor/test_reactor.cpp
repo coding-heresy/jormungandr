@@ -77,6 +77,8 @@ protected:
   atomic<bool> clean_reactor_shutdown = false;
 };
 
+using Signaller = Promise<void>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // test cases
 ////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +92,7 @@ TEST_F(ReactorTests, SmokeTest) {
 
 TEST_F(ReactorTests, TestSignalShutdown) {
   // request execution of a fiber function that will signal when it runs
-  Promise<void> fbr_executed_signaller;
+  Signaller fbr_executed_signaller;
   reactor.post([&](Fiber&) { fbr_executed_signaller.set_value(); });
 
   // wait until the fiber function completes before proceeding
@@ -100,6 +102,12 @@ TEST_F(ReactorTests, TestSignalShutdown) {
 
   // shutdown the reactor after the fiber function has executed
   reactor.shutdown();
+  JMG_ENFORCE(reactor_worker, "reactor worker thread does not exist");
+  JMG_ENFORCE(reactor_worker->joinable(), "reactor worker is not joinable");
+  reactor_worker->join();
+  EXPECT_TRUE(clean_reactor_shutdown);
+}
+
   reactor_worker->join();
   EXPECT_TRUE(clean_reactor_shutdown);
 }
