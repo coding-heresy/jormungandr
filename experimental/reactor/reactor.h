@@ -31,6 +31,8 @@
  */
 #pragma once
 
+#define TMP_USE_NEW_FIBER_TRAMP
+
 #include <span>
 
 #include "jmg/preprocessor.h"
@@ -53,6 +55,13 @@ enum class Cmd : uint64_t {
   kShutdown = 1,
   kPost = 2
 };
+
+#if defined(TMP_USE_NEW_FIBER_TRAMP)
+namespace detail
+{
+void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val);
+} // namespace detail
+#endif
 
 class Reactor {
 public:
@@ -83,6 +92,10 @@ private:
   using WorkerFcn = std::function<void(void)>;
 
   friend class Fiber;
+#if defined(TMP_USE_NEW_FIBER_TRAMP)
+  friend void detail::fiberTrampoline(const intptr_t reactor_ptr_val,
+                                      const intptr_t fbr_id_val);
+#endif
 
   /**
    * pass control from a fiber to the reactor scheduler when the fiber executes

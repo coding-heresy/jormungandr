@@ -75,6 +75,8 @@ private:
   Reactor* reactor_ = nullptr;
 };
 
+using FiberFcn = std::function<void(Fiber&)>;
+
 // TODO(bd) support variable size segmented stacks
 static constexpr size_t kStackSz = 16384;
 struct FiberCtrlBlockBody {
@@ -83,11 +85,10 @@ struct FiberCtrlBlockBody {
   FiberState state;
   Fiber fbr;
   bool is_fiber_yielding = false;
+  std::unique_ptr<FiberFcn> fbr_fcn;
 };
 using FiberCtrl = ControlBlocks<FiberCtrlBlockBody>;
 using FiberCtrlBlock = FiberCtrl::ControlBlock;
 using FiberCtrlBlockQueue = CtrlBlockQueue<FiberCtrlBlockBody>;
-
-using FiberFcn = std::function<void(Fiber&)>;
 
 } // namespace jmg
