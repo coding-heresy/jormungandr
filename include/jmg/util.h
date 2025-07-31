@@ -104,6 +104,8 @@ struct OctetFmt {
 
 static constexpr auto kOctetFmt = OctetFmt();
 
+inline Octet octetify(const uint8_t arg) { return Octet(arg); }
+
 // TODO(bd) create a utility to print buffer contents as bitwise octets
 
 ////////////////////////////////////////////////////////////////////////////////
