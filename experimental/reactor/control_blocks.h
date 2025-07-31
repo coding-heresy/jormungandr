@@ -88,6 +88,10 @@ public:
    * get a reference to the block with a given identifier
    */
   ControlBlock& getBlock(const Id id) {
+    JMG_ENFORCE_USING(std::logic_error, id <= next_never_used_,
+                      "requested block ID [", id,
+                      "] is larger than the largest block ID ever allocated (",
+                      counter_, "]");
     const auto [bucket, idx] = decompose(id);
     return (*(buckets_[bucket]))[idx];
   }
