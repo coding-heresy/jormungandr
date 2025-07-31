@@ -29,6 +29,7 @@ cc_library(
     srcs = [
         'src/cbe.cpp',
         'src/server.cpp',
+        'src/system.cpp',
     ],
     includes = ['include'],
     linkstatic = True,

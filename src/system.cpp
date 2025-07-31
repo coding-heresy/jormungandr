@@ -1,6 +1,6 @@
 /** -*- mode: c++ -*-
  *
- * Copyright (C) 2024 Brian Davis
+ * Copyright (C) 2025 Brian Davis
  * All Rights Reserved
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,49 +29,21 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
-#pragma once
 
-/**
- * system utilities
- */
+#include <array>
 
-#include <sys/types.h>
-#include <unistd.h>
+#include "jmg/system.h"
 
-#include <csignal>
-
-#include "jmg/preprocessor.h"
+using namespace std;
 
 namespace jmg
 {
-
-/**
- * create a POSIX sigset_t with a specific set of signals added
- */
-template<size_t kSz>
-sigset_t makeSigSet(const std::array<int, kSz>& signals) {
-  sigset_t rslt;
-  JMG_SYSTEM(sigemptyset(&rslt), "failed to clear signal set object");
-  for (const auto sig : signals) {
-    JMG_SYSTEM(sigaddset(&rslt, sig), "failed to add signal [", sig,
-               "] to signal set");
-  }
-  return rslt;
+void blockAllSignals() {
+  // standard set of signals to block for all servers
+  static constexpr auto kSignals =
+    array{SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGUSR2, SIGPIPE, SIGTERM};
+  const auto sig_set = makeSigSet(kSignals);
+  JMG_SYSTEM_ERRNO_RETURN(pthread_sigmask(SIG_BLOCK, &sig_set, nullptr),
+                          "failed to block signals");
 }
-
-/**
- * block a set of relevant signals to avoid having them be delivered to a
- * process/thread
- */
-void blockAllSignals();
-
-/**
- * deliver a SIGTERM signal to the current process
- *
- * NOTE: used to initiate a clean shutdown in abnormal circumstances
- */
-inline void send_shutdown_signal() {
-  JMG_SYSTEM(kill(getpid(), SIGTERM), "failed to send shutdown signal");
-}
-
 } // namespace jmg

@@ -58,26 +58,6 @@ using namespace jmg;
 namespace
 {
 
-template<size_t kSz>
-sigset_t makeSigSet(const std::array<int, kSz>& signals) {
-  sigset_t rslt;
-  JMG_SYSTEM(sigemptyset(&rslt), "failed to clear signal set object");
-  for (const auto sig : signals) {
-    JMG_SYSTEM(sigaddset(&rslt, sig), "failed to add signal [", sig,
-               "] to signal set");
-  }
-  return rslt;
-}
-
-void blockAllSignals() {
-  // standard set of signals to block for all servers
-  static constexpr auto kSignals =
-    array{SIGHUP, SIGINT, SIGQUIT, SIGUSR1, SIGUSR2, SIGPIPE, SIGTERM};
-  const auto sig_set = makeSigSet(kSignals);
-  JMG_SYSTEM_ERRNO_RETURN(pthread_sigmask(SIG_BLOCK, &sig_set, nullptr),
-                          "failed to block signals");
-}
-
 thread awaitShutdown(Server& srvr) {
   // standard set of shutdown signals for all servers
   static constexpr auto kSignals = array{
