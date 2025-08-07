@@ -42,6 +42,7 @@ namespace jmg
 
 class Reactor;
 
+// TODO(bd) add a 'kYielding' state?
 enum class FiberState : uint8_t {
   kUnallocated = 0,
   kActive, // NOTE: only one thread at a time should be active
@@ -79,13 +80,17 @@ using FiberFcn = std::function<void(Fiber&)>;
 
 // TODO(bd) support variable size segmented stacks
 static constexpr size_t kStackSz = 16384;
+
 struct FiberCtrlBlockBody {
   ucontext_t chkpt;
   std::array<uint8_t, kStackSz> stack;
-  FiberState state;
   Fiber fbr;
-  bool is_fiber_yielding = false;
   std::unique_ptr<FiberFcn> fbr_fcn;
+  // TODO(bd) is it really necessary for these variables to be volatile?
+  volatile FiberState state;
+  // TODO(bd) these flags can probably be converted to specific state values
+  volatile bool is_fiber_yielding = false;
+  volatile bool is_fiber_handling_event = false;
 };
 using FiberCtrl = ControlBlocks<FiberCtrlBlockBody>;
 using FiberCtrlBlock = FiberCtrl::ControlBlock;

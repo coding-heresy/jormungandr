@@ -41,15 +41,46 @@
 namespace jmg::detail
 {
 
+// TODO(bd) remove debugging output once the code is confirmed stable
+
+// namespace
+// {
+// template<typename... Args>
+// void dbgOut(Args&&... args) {
+//   using namespace std;
+// #if defined(ENABLE_REACTOR_DEBUGGING_OUTPUT)
+//   cout << ">>>>> DBG ";
+//   (cout << ... << args);
+//   cout << endl;
+// #else
+//   ignore = make_tuple(std::forward<Args>(args)...);
+// #endif
+// }
+// } // namespace
+
+/**
+ * create a pipe, return safely typed endpoints
+ */
+std::tuple<PipeReadFd, PipeWriteFd> make_pipe() {
+  int pipe_fds[2];
+  JMG_SYSTEM(pipe(pipe_fds), "unable to create a pipe");
+  return std::make_tuple(PipeReadFd(pipe_fds[0]), PipeWriteFd(pipe_fds[1]));
+}
+
 /**
  * write all bytes from a buffer to a file descriptor, throwing exception if
  * they cannot all be written in one call
  */
-template<DescriptorT FD>
+template<WritableDescriptorT FD>
 void write_all(const FD fd,
                const BufferView buf,
                const std::string_view description) {
+  namespace vws = std::ranges::views;
+  using namespace std::string_view_literals;
   int sz;
+  // dbgOut("writing [", buf.size(), "] raw octets [",
+  //        str_join(buf | vws::transform(octetify), " "sv, kOctetFmt),
+  //        "] to file descriptor [", fd, "]");
   JMG_SYSTEM((sz = write(unsafe(fd), buf.data(), buf.size())),
              "unable to write all data to ", description);
   JMG_ENFORCE(buf.size() == static_cast<size_t>(sz),
@@ -62,10 +93,15 @@ void write_all(const FD fd,
  * read all bytes that a buffer can hold from a file descriptor, throwing
  * exception if they cannot all be read in one call
  */
-template<DescriptorT FD>
+template<ReadableDescriptorT FD>
 void read_all(const FD fd,
               const BufferProxy buf,
               const std::string_view description) {
+  // dbgOut("reading [", buf.size(), "] octets of data from file descriptor [",
+  // fd,
+  //        "]");
+  namespace vws = std::ranges::views;
+  using namespace std::string_view_literals;
   int sz;
   JMG_SYSTEM((sz = read(unsafe(fd), buf.data(), buf.size())),
              "unable to read all data from ", description);

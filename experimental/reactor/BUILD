@@ -74,7 +74,4 @@ cc_test(
         ":reactor"
     ],
     size = "small",
-    # TODO(bd) temporarily marked as "manual" because it is currently
-    # failing
-    tags = ["manual"],
 )
