@@ -16,10 +16,13 @@ build --linkopt='-lstdc++exp'
 build --cxxopt='-Wall'
 build --cxxopt='-Wextra'
 build --cxxopt='-Werror'
-build --cxxopt='-Wpedantic'
-build --cxxopt='-pedantic-errors'
 
-# TODO(davisb) use hermetic toolchain
+# TODO(bd) gcc is angrily yeeting out pedantic errors over some abseil
+# code that is using non-standard SIMD type __int128
+#build --cxxopt='-Wpedantic'
+#build --cxxopt='-pedantic-errors'
+
+# TODO(bd) use hermetic toolchain
 
 # gcc toolchain
 build --repo_env=CC=/usr/bin/gcc-14
@@ -34,7 +37,7 @@ build --cxxopt='-fconcepts-diagnostics-depth=10'
 # build --repo_env=CXX=/usr/bin/clang++
 # build --action_env=CC=/usr/bin/clang
 # build --action_env=CXX=/usr/bin/clang++
-# # TODO(davisb) compiler flag is specific to clang and prevents an
+# # TODO(bd) compiler flag is specific to clang and prevents an
 # # error that seems to be caused by the abseil library insisting on
 # # building its files with clang instead of clang++
 # build --cxxopt='-Wno-gcc-compat'
