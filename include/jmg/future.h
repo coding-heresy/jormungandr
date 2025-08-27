@@ -135,14 +135,9 @@ template<typename T>
 class Promise {
 public:
   Promise() = default;
+  ~Promise() = default;
   JMG_DEFAULT_MOVEABLE(Promise);
   JMG_NON_COPYABLE(Promise);
-
-  ~Promise() {
-    if (!is_value_set_ && std::uncaught_exception()) {
-      prm_.set_exception(std::current_exception());
-    }
-  }
 
   auto get_future() { return Future(prm_.get_future()); }
 
@@ -188,14 +183,9 @@ template<>
 class Promise<void> {
 public:
   Promise() = default;
+  ~Promise() = default;
   JMG_DEFAULT_MOVEABLE(Promise);
   JMG_NON_COPYABLE(Promise);
-
-  ~Promise() {
-    if (!is_value_set_ && std::uncaught_exception()) {
-      prm_.set_exception(std::current_exception());
-    }
-  }
 
   auto get_future() { return Future(prm_.get_future()); }
 
