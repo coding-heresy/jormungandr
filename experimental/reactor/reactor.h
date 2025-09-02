@@ -149,7 +149,11 @@ private:
   void yieldFbr();
 
   std::atomic<bool> is_shutdown_ = false;
-  EventFd notifier_;
+  // EventFd notifier_;
+  PipeReadFd post_tgt_;
+  PipeWriteFd post_src_;
+  uint64_t notifier_data_;
+  struct iovec notifier_vec_[1];
   FiberCtrl fiber_ctrl_;
   std::unique_ptr<uring::Uring> uring_;
   ucontext_t shutdown_chkpt_;

@@ -183,14 +183,20 @@ void fiberTrampoline(const intptr_t lambda_ptr_val, const intptr_t fbr_ptr_val) 
 
 Reactor::Reactor()
   // TODO(bd) uring size should be at settable at compile or run time
-  : notifier_([&] {
-    // store and forward
-    int fd;
-    JMG_SYSTEM((fd = eventfd(0 /* initval */, EFD_NONBLOCK)),
-               "unable to create eventfd");
-    return EventFd(fd);
-  }())
-  , runnable_(fiber_ctrl_) {}
+  : // notifier_([&] {
+    //   // store and forward
+    //   int fd;
+    //   JMG_SYSTEM((fd = eventfd(0 /* initval */, EFD_NONBLOCK)),
+    //              "unable to create eventfd");
+    //   return EventFd(fd);
+    // }()),
+  runnable_(fiber_ctrl_) {
+  const auto [read_fd, write_fd] = detail::make_pipe();
+  post_tgt_ = read_fd;
+  post_src_ = write_fd;
+  notifier_vec_[0].iov_base = reinterpret_cast<void*>(&notifier_data_);
+  notifier_vec_[0].iov_len = sizeof(notifier_data_);
+}
 
 void Reactor::start() {
   auto initiator = WorkerFcn([this] mutable {
@@ -200,7 +206,8 @@ void Reactor::start() {
     // TODO(bd) uring size should be at settable at compile or run time
     uring_ = make_unique<uring::Uring>(uring::UringSz(256));
 
-    uring_->registerEventNotifier(notifier_);
+    // uring_->registerEventNotifier(notifier_);
+    uring_->submitReadReq(post_tgt_, span(notifier_vec_));
 
     // TODO(bd) any required initialization here before executing the scheduler
 
@@ -252,7 +259,8 @@ void Reactor::start() {
 
 void Reactor::shutdown() {
   static constexpr auto kShutdownCmd = unwrap(Cmd::kShutdown);
-  detail::write_all(notifier_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
+  // detail::write_all(notifier_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
+  detail::write_all(post_src_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
 }
 
 void Reactor::post(FiberFcn&& fcn) {
@@ -271,7 +279,7 @@ void Reactor::post(FiberFcn&& fcn) {
 
   // write the address of the lambda to the notifier eventfd to inform the
   // reactor of the work request
-  detail::write_all(notifier_, buffer_from(lambda_ptr.get()),
+  detail::write_all(post_src_, buffer_from(lambda_ptr.get()),
                     "notifier eventfd");
   lambda_ptr.release();
 }
@@ -389,7 +397,7 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
 
       const auto& event_data = event.getUserData();
 
-      if (static_cast<int>(unsafe(event_data)) == unsafe(notifier_)) {
+      if (static_cast<int>(unsafe(event_data)) == unsafe(post_tgt_)) {
         dbgOut("notification event detected by fiber [", active_fbr_id, "]");
 
         ////////////////////
@@ -397,7 +405,7 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
         ////////////////////
         const auto data = [&] {
           uint64_t data;
-          detail::read_all(notifier_, buffer_from(data), "notifier eventfd"sv);
+          detail::read_all(post_tgt_, buffer_from(data), "notifier eventfd"sv);
           dbgOut("incoming data as octets [",
                  str_join(buffer_from(data) | vws::transform(octetify), " "sv,
                           kOctetFmt),

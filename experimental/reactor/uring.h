@@ -390,14 +390,28 @@ public:
    */
   void submitTimeoutReq(UserData data,
                         Duration timeout,
-                        DelaySubmission isDelayed = DelaySubmission::kNoDelay);
+                        DelaySubmission is_delayed = DelaySubmission::kNoDelay);
 
-  void submitWriteReq(FileDescriptor fd,
+  template<WritableDescriptorT Fd>
+  void submitWriteReq(Fd fd,
                       IoVecView io_vec,
-                      DelaySubmission isDelayed = DelaySubmission::kNoDelay);
+                      DelaySubmission is_delayed = DelaySubmission::kNoDelay) {
+    submitWriteReq(unsafe(fd), io_vec, is_delayed);
+  }
+
+  template<ReadableDescriptorT Fd>
+  void submitReadReq(Fd fd,
+                     IoVecView io_vec,
+                     DelaySubmission is_delayed = DelaySubmission::kNoDelay) {
+    submitReadReq(unsafe(fd), io_vec, is_delayed);
+  }
 
 private:
   io_uring_sqe& getNextSqe();
+
+  void submitWriteReq(int fd, IoVecView io_vec, DelaySubmission is_delayed);
+
+  void submitReadReq(int fd, IoVecView io_vec, DelaySubmission is_delayed);
 
   std::optional<EventFd> notifier_;
   io_uring ring_;
