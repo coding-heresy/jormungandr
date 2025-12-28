@@ -16,8 +16,9 @@ build --linkopt='-lstdc++exp'
 build --cxxopt='-Wall'
 build --cxxopt='-Wextra'
 build --cxxopt='-Werror'
-build --cxxopt='-Wpedantic'
-build --cxxopt='-pedantic-errors'
+# TODO(bd) this is currently causing a build failure in abseil code
+# build --cxxopt='-Wpedantic'
+# build --cxxopt='-pedantic-errors'
 
 # TODO(davisb) use hermetic toolchain
 

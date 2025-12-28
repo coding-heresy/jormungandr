@@ -101,7 +101,7 @@ cc_test(
     name = 'test_ptree',
     srcs = ['test_ptree.cpp'],
     deps = [
-        '@boost//:property_tree',
+        '@boost.property_tree',
         '@com_google_googletest//:gtest_main',
         '//:jmg',
     ],

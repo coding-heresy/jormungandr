@@ -19,7 +19,7 @@ cc_library(
         'include/jmg/types.h',
         'include/jmg/union.h',
         'include/jmg/util.h',
-        # object types
+        # jmg language object types below here
         'include/jmg/cbe/cbe.h',
         'include/jmg/ptree/ptree.h',
         'include/jmg/quickfix/quickfix.h',
@@ -34,8 +34,8 @@ cc_library(
     includes = ['include'],
     linkstatic = True,
     deps = [
-        '@boost//:date_time',
-        '@boost//:property_tree',
+        '@boost.date_time',
+        '@boost.property_tree',
         '@com_google_abseil//absl/container:btree',
         '@com_google_abseil//absl/container:flat_hash_map',
         '@com_google_abseil//absl/container:flat_hash_set',
