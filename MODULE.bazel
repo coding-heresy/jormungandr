@@ -1,8 +1,8 @@
 
 module(
-    name = 'jormungandr',
-    repo_name = 'coding_heresy_jormungandr',
-    version = '0.1.0',
+    name = "jormungandr",
+    repo_name = "coding_heresy_jormungandr",
+    version = "0.1.0",
 )
 
 ########################################
@@ -10,9 +10,9 @@ module(
 ########################################
 
 bazel_dep(
-    name = 'abseil-cpp',
-    version = '20250814.1',
-    repo_name = 'com_google_abseil',
+    name = "abseil-cpp",
+    version = "20250814.1",
+    repo_name = "com_google_abseil",
 )
 
 ########################################
@@ -20,13 +20,13 @@ bazel_dep(
 ########################################
 
 bazel_dep(
-    name = 'boost.date_time',
-    version = '1.87.0',
+    name = "boost.date_time",
+    version = "1.87.0",
 )
 
 bazel_dep(
-    name = 'boost.property_tree',
-    version = '1.87.0',
+    name = "boost.property_tree",
+    version = "1.87.0",
 )
 
 ########################################
@@ -34,9 +34,9 @@ bazel_dep(
 ########################################
 
 bazel_dep(
-    name = 'googletest',
-    version = '1.14.0.bcr.1',
-    repo_name = 'com_google_googletest',
+    name = "googletest",
+    version = "1.14.0.bcr.1",
+    repo_name = "com_google_googletest",
     dev_dependency = True,
 )
 
@@ -45,8 +45,8 @@ bazel_dep(
 ########################################
 
 bazel_dep(
-    name = 'liburing',
-    version = '2.5',
+    name = "liburing",
+    version = "2.5",
 )
 
 ########################################
@@ -54,17 +54,17 @@ bazel_dep(
 ########################################
 
 bazel_dep(
-    name = 'ericniebler_meta',
-    version = '1.0.0',
+    name = "ericniebler_meta",
+    version = "1.0.0",
 )
 
 # TODO issue pull request to https://github.com/ericniebler/meta and
 # update here if it is accepted
 archive_override(
-    module_name = 'ericniebler_meta',
-    integrity = 'sha256-KIf+Iv4VFewjAybyqR0XlDDLSUCLWEVXbcZeFLWmOaQ=',
-    strip_prefix = 'meta-1.0.0',
-    urls = ['https://github.com/coding-heresy/meta/archive/refs/tags/1.0.0.tar.gz'],
+    module_name = "ericniebler_meta",
+    integrity = "sha256-KIf+Iv4VFewjAybyqR0XlDDLSUCLWEVXbcZeFLWmOaQ=",
+    strip_prefix = "meta-1.0.0",
+    urls = ["https://github.com/coding-heresy/meta/archive/refs/tags/1.0.0.tar.gz"],
 )
 
 ########################################
@@ -72,17 +72,17 @@ archive_override(
 ########################################
 
 bazel_dep(
-    name = 'doom_strong_type',
-    version = '1.1.0',
+    name = "doom_strong_type",
+    version = "1.1.0",
 )
 
 # TODO issue pull request to https://github.com/doom/strong_type and
 # update here if it is accepted
 archive_override(
-    module_name = 'doom_strong_type',
-    integrity = 'sha256-CyRxFGE9/t9PCBw2T7pddmOwy6z6QaYq+F6QH1rfAeo=',
-    strip_prefix = 'strong_type-1.1.0',
-    urls = ['https://github.com/coding-heresy/strong_type/archive/refs/tags/1.1.0.tar.gz'],
+    module_name = "doom_strong_type",
+    integrity = "sha256-CyRxFGE9/t9PCBw2T7pddmOwy6z6QaYq+F6QH1rfAeo=",
+    strip_prefix = "strong_type-1.1.0",
+    urls = ["https://github.com/coding-heresy/strong_type/archive/refs/tags/1.1.0.tar.gz"],
 )
 
 ########################################
@@ -90,8 +90,8 @@ archive_override(
 ########################################
 
 bazel_dep(
-    name = 'yaml-cpp',
-    version = '0.8.0',
+    name = "yaml-cpp",
+    version = "0.8.0",
 )
 
 # TODO(bd) restore this when rules_build_error works correctly
@@ -101,6 +101,6 @@ bazel_dep(
 # ########################################
 
 # bazel_dep(
-#     name = 'rules_build_error',
-#     version = '0.8.4',
+#     name = "rules_build_error",
+#     version = "0.8.4",
 # )
