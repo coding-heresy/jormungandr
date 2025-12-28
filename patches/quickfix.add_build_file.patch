@@ -1,0 +1,12 @@
+--- BUILD	1969-12-31 19:00:00.000000000 -0500
++++ BUILD	2025-12-28 10:33:06.230269417 -0500
+@@ -0,0 +1,9 @@
++
++# start off by just getting the FIX4.2 spec without building the library
++filegroup(
++    name = "fix_42_spec",
++    visibility = ["//visibility:public"],
++    srcs = [
++        "spec/FIX42.xml",
++    ],
++)

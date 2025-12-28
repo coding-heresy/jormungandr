@@ -68,6 +68,24 @@ archive_override(
 )
 
 ########################################
+# quickfix
+########################################
+
+bazel_dep(name = "quickfix")
+
+archive_override(
+    module_name = "quickfix",
+    integrity = "sha256-HEMipocEUmyj0fIT57Dc0w4GeogVvip5sqsRl+9w3Pc=",
+    strip_prefix = "quickfix-1.15.1",
+    urls = ["https://github.com/quickfix/quickfix/archive/refs/tags/v1.15.1.tar.gz"],
+    patches = [
+        "//patches:quickfix.module.bazel.patch",
+        "//patches:quickfix.add_build_file.patch",
+    ],
+    patch_strip = 0,
+)
+
+########################################
 # strong type aliases from Doom
 ########################################
 
