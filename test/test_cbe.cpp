@@ -82,6 +82,9 @@ struct CheckTypeSelect<double> {
 template<ArithmeticT T>
 using CheckTypeForT = detail::CheckTypeSelect<T>::type;
 
+// buffer large enough to hold any numeric value
+using NumericBuffer = array<uint8_t, 11>;
+
 } // namespace
 
 /**
@@ -108,7 +111,7 @@ using CheckTypeForT = detail::CheckTypeSelect<T>::type;
   do {                                                                  \
     const auto val = (arg);                                             \
     using Decayed = remove_cvref_t<decltype(val)>;                      \
-    array<uint8_t, 11> buffer = {0};                                    \
+    NumericBuffer buffer = {0};                                         \
     const auto consumed_by_encoding = cbe::impl::encode(buffer, (val)); \
     EXPECT_EQ(consumed_by_encoding, expected_consumed);                 \
     const auto [decoded, consumed_by_decoding] =                        \
@@ -127,7 +130,7 @@ using CheckTypeForT = detail::CheckTypeSelect<T>::type;
   do {                                                                  \
     const auto val = (arg);                                             \
     using Decayed = remove_cvref_t<decltype(val)>;                      \
-    array<uint8_t, 11> buffer = {0};                                    \
+    NumericBuffer buffer = {0};                                         \
     cbe::impl::encode(buffer, (val));                                   \
     const auto [decoded, _] = cbe::impl::decode<Decayed>(buffer);       \
     if (FloatingPointT<Decayed>) { VERIFY_SAME_VALUE((val), decoded); } \
@@ -197,7 +200,7 @@ TEST(CbeTest, TestFloat64) {
 TEST(CbeTest, TestSafeTypes) {
   using SafeId = SafeId32<>;
   const auto id = SafeId(20010911);
-  array<uint8_t, 11> buffer = {0};
+  NumericBuffer buffer = {0};
   {
     const auto consumed = cbe::impl::encode(buffer, id);
     EXPECT_EQ(consumed, 4);

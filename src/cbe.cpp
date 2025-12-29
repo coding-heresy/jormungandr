@@ -177,6 +177,17 @@ tuple<T, size_t, bool> decodeInt(BufferView src,
 // encode/decode for floating point numbers
 ////////////////////////////////////////////////////////////////////////////////
 
+////////////////////
+// IEEE 754
+
+// single precision (32 bits) has 1 sign bit (position 31), 8 exponent
+// bits (positions 23 through 30) and 23 fraction bits (positions 0
+// through 22)
+
+// double precision (64 bits) has 1 sign bit (position 63), 11
+// exponent bits (positions 52 through 62) and 52 fraction bit
+// (positions 0 through 51)
+
 namespace detail
 {
 

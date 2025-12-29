@@ -451,14 +451,7 @@ will also serve as a test bed for some features of interest:
     the existing implementation to explore the performance tradeoffs.
 * Rethink floating point compaction: the current implementation isn't
   very effective (e.g. the default encoding of 42.0 requires 10
-  octets) and this seems to indicate that perhaps specifically
-  encoding the mantissa in chunks from highest to lowest will produce
-  much better results than simply treating it as an integer. It also
-  makes sense to have a compiler flag that disables floating point
-  compression.
-  * More thoughts on this: reversing the direction of scanning
-    mantissa octets does seem to make sense based on experimental
-    evidence, although more samples should be viewed
+  octets).
   * There are extra bits available in the exponents to allow the
     addition of another metadata bit that would indicate whether or
     not the mantissa was compressed: if the bit is set, the mantissa
