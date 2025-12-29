@@ -48,6 +48,43 @@
  * the protocol buffers varint and FIX-FAST stop-bit algorithms by
  * also compressing floating point data using its structural
  * characteristics
+ *
+ * The serialization algorithm works as follows:
+ *
+ * 1. Fields of a JMG object are encoded in the order in which they
+ *    are declared.
+ *   a. Optional fields with no value set in the object are skipped.
+ * 2. Each present field is encoded by first encoding its field ID
+ *    number as an integer and then encoding the value using the
+ *    method appropriate to it.
+ *   a. Integer fields are encoded using the stop-bit algorithm (see
+ *      below), but the value of signed integers is first modified to
+ *      avoid extraneous bits related to 2s complement encoding as
+ *      follows:
+ *     i.  Save the sign bit and then convert any negative value to
+ *         positive.
+ *     ii. Shift the entire value left by 1 place and then set the
+ *         least significant bit to the value from the sign bit.
+ *   b. Floating point fields are encoded as follows:
+ *     i.   Mask off the exponent and encode it as an integer.
+ *     ii.  Mask off the fraction/mantissa bits, shift them to the
+ *          left by 1 place and set the lowest order bit to the value
+ *          of the sign bit.
+ *     iii. Encode the resulting value as an integer.
+ *   c. Array fields (including strings, AKA character arrays) are
+ *      encoded by first encoding and storing their size as an integer
+ *      and then iterating over the entries and encoding each using
+ *      the method appropriate to it.
+ *
+ * The stop bit algorithm consists of executing the following steps as
+ * long as there are any remaining set bits:
+ *
+ * 1. Mask off the low order 7 bits and copy them to a byte.
+ * 2. If the remaining bits are all 0, set the high order bit of the
+ *    byte, otherwise clear it.
+ * 3. Store the byte in the next location in the serialization buffer.
+ * 4. If there are remaining bits in the value, shift them left by 7
+ *    places and then return to step 1.
  */
 
 #include <algorithm>
