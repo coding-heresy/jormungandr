@@ -31,8 +31,8 @@
  */
 #pragma once
 
+#include <absl/random/random.h>
 #include <concepts>
-#include <random>
 
 namespace jmg
 {
@@ -44,14 +44,18 @@ template<std::integral T>
 class RandomInRange {
 public:
   RandomInRange(const T rng_begin, const T rng_end)
-    : generator_(dev_()), distribution_(rng_begin, rng_end) {}
+    : distribution_(rng_begin, rng_end) {}
 
+  /**
+   * get a uniformly distributed random value in the range
+   *
+   * @warning: this function is not thread-safe
+   */
   T get() { return distribution_(generator_); }
 
 private:
-  std::random_device dev_;
-  std::mt19937 generator_;
-  std::uniform_int_distribution<T> distribution_;
+  absl::BitGen generator_;
+  absl::uniform_int_distribution<T> distribution_;
 };
 
 } // namespace jmg
