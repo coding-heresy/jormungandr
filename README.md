@@ -675,6 +675,14 @@ inform the user of it) and to handle the complexity of time zones.
 **TODO** support optional single-letter versions of named parameters
 whose names contain more than one letter?
 
+## Scope Exit Cleanup Handling
+
+**include/jmg/util.h** provides the `jmg::Cleanup` class template which
+is a simplified ripoff of `absl::Cleanup`. This is basically a guard
+class that takes an _invokable_ with no arguments, which is executed
+when the object is destroyed unless the object's `cancel()` member
+function is called.
+
 # Coding Standards
 
 A corollary to the philosophy of expecting that users will be familiar
