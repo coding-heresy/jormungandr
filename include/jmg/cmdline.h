@@ -171,8 +171,9 @@ class CmdLineArgs : public ObjectDef<Params...> {
 public:
   CmdLineArgs() = delete;
   CmdLineArgs(const int argc, const char* argv[]) {
-    JMG_ENFORCE_USING(std::logic_error, argc >= 1,
-                      "argument vector must have at least 1 element");
+    JMG_ENFORCE_USING(
+      std::logic_error, argc >= 1,
+      "internal error, argument vector must have at least 1 element");
     try {
       program_ = argv[0];
       const auto args = std::span(argv + 1, argc - 1);

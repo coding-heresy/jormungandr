@@ -79,7 +79,7 @@ int main(const int argc, const char** argv) {
                                                 kSupportedFlagsStr,
                                                 "] may be specified")));
       // generate header file for FIX specification
-      quickfix_spec::process(get<SrcFile>(cmdline));
+      quickfix_spec::process(jmg::get<SrcFile>(cmdline));
     }
     else if (jmg::get<JmgCbeFlag>(cmdline)) {
       JMG_ENFORCE_CMDLINE(!jmg::get<JmgYamlFlag>(cmdline),
