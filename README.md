@@ -568,7 +568,7 @@ ranges, and then call its `get()` member function. Defined in
 **TODO** Add support for generating random floating point numbers.
 
 **TODO** Add support for random number distributions other than
-  uniform?
+uniform?
 
 ## Command Line Parameter Handling
 
@@ -652,28 +652,28 @@ hopefully be easier to use than existing libraries such as
     to result in exceptions of type `jmg::CmdLineError`.
 
 **TODO** automatic type conversions should be supported for any type
-  that has a `std::string` type conversion operator or is supported by
-  `jmg::from`, parameter fields specified with types that cannot be
-  converted should be prevented from compiling.
+that has a `std::string` type conversion operator or is supported by
+`jmg::from`, parameter fields specified with types that cannot be
+converted should be prevented from compiling.
 
 **TODO** providing more than one named parameter field that has the
-  same name when specializing `jmg::CmdLineArgs` should fail to
-  compile (currently does not, and the result may be very
-  confusing). This doesn't matter as much for positional parameters,
-  but duplicate parameter names should be prevented in general.
+same name when specializing `jmg::CmdLineArgs` should fail to
+compile (currently does not, and the result may be very
+confusing). This doesn't matter as much for positional parameters,
+but duplicate parameter names should be prevented in general.
 
 **TODO** support `-help` and `-h` arguments that automatically
-  generate usage?
+generate usage?
 
 **TODO** use `std::string_view` instead of `std::string` for all
-  string parameters?
+string parameters?
 
 **TODO** provide support for time point command line arguments? This
-  is problematic due to the need to specify a conversion format (and
-  inform the user of it) and to handle the complexity of time zones.
+is problematic due to the need to specify a conversion format (and
+inform the user of it) and to handle the complexity of time zones.
 
 **TODO** support optional single-letter versions of named parameters
-  whose names contain more than one letter?
+whose names contain more than one letter?
 
 # Coding Standards
 
