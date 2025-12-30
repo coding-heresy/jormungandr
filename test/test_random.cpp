@@ -45,3 +45,9 @@ TEST(RandomNumberGenerationTests, SmokeTest) {
     EXPECT_LE(val, 10);
   }
 }
+
+TEST(RandomNumberGenerationTests, BadRangeTest) {
+  EXPECT_THROW([[maybe_unused]] auto random_in_rng =
+                 RandomInRange<size_t>(10, 0),
+               runtime_error);
+}

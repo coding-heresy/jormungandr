@@ -31,8 +31,11 @@
  */
 #pragma once
 
-#include <absl/random/random.h>
 #include <concepts>
+
+#include <absl/random/random.h>
+
+#include "jmg/preprocessor.h"
 
 namespace jmg
 {
@@ -42,9 +45,16 @@ namespace jmg
  */
 template<std::integral T>
 class RandomInRange {
+  using Distribution = absl::uniform_int_distribution<T>;
+
 public:
   RandomInRange(const T rng_begin, const T rng_end)
-    : distribution_(rng_begin, rng_end) {}
+    : distribution_([&]() -> Distribution {
+      JMG_ENFORCE(rng_begin < rng_end, "bad range in constructor, end value [",
+                  rng_end, "] is less than or equal to begin value [",
+                  rng_begin, "]");
+      return Distribution(rng_begin, rng_end);
+    }()) {}
 
   /**
    * get a uniformly distributed random value in the range
