@@ -683,6 +683,25 @@ class that takes an _invokable_ with no arguments, which is executed
 when the object is destroyed unless the object's `cancel()` member
 function is called.
 
+## Helpers
+
+There are a few helper functions used in the code to simplify certain
+awkward interactions that regularly occur when using standard library
+functions and classes:
+* key_of - get the `key_type` from the `value_type` object stored in a
+  dictionary
+* value_of - get the `mapped_type` from the `value_type` object stored
+  in a dictionary
+* always_emplace - calls `try_emplace` on a dictionary and throws an
+  exception if the insertion wasn't successful (i.e. the key is a
+  duplicate of one that already exists in the dictionary)
+* always_insert - calls `insert` on a set and throws an exception if
+  the insertion wasn't successful (i.e. the item is a duplicate of one
+  that already exists in the set)
+* as_void_ptr - takes a pointer argument and converts it to a
+  non-`const` `void*`, which is useful when dealing with some
+  low-level code.
+
 # Coding Standards
 
 A corollary to the philosophy of expecting that users will be familiar
@@ -703,7 +722,6 @@ These may or may not be controversial but they have served me well.
 * Use metaprogramming to make interfaces more robust
 * **Always** use exceptions, and rely on RAII for error handling
 
-### Time Point and Duration Handling
 ## Exception Handling
 
 Exceptions are a very controversial topic among practitioners of
@@ -785,6 +803,7 @@ sinks):
   extra effort to do this instead of e.g. relying on a timeout handler
   to deliver a generic failure message back to the client.
 
+## Time Point and Duration Handling
 
 Internally, time points should **always** be represented using
 `jmg::TimePoint` and `jmg::Duration`, respectively. `jmg::TimePoint`
@@ -797,7 +816,7 @@ as possible. The internal time representation is effectively in the
 UTC time zone, but this detail should never be relied on directly, and
 time points should be viewed as black boxes.
 
-### Floating Point Number Handling
+## Floating Point Number Handling
 
 There several important rules for handling floating point numbers:
 
@@ -839,24 +858,18 @@ There several important rules for handling floating point numbers:
   to determine if a floating point value does not represent an actual
   number.
 
-## Helpers
+## Thread Handling
 
-There are a few helper functions used in the code to simplify certain
-awkward interactions that regularly occur when using standard library
-functions and classes:
-* key_of - get the `key_type` from the `value_type` object stored in a
-  dictionary
-* value_of - get the `mapped_type` from the `value_type` object stored
-  in a dictionary
-* always_emplace - calls `try_emplace` on a dictionary and throws an
-  exception if the insertion wasn't successful (i.e. the key is a
-  duplicate of one that already exists in the dictionary)
-* always_insert - calls `insert` on a set and throws an exception if
-  the insertion wasn't successful (i.e. the item is a duplicate of one
-  that already exists in the set)
-* as_void_ptr - takes a pointer argument and converts it to a
-  non-`const` `void*`, which is useful when dealing with some
-  low-level code.
+**TODO** explain why threads should never be canceled
+
+**TODO** explain why threads should never be detached
+
+## Concurrency
+
+*TODO** explain why the approach of using a single thread event loop or
+serializer thread along with one or more thread pools is superior to
+sprinkling critical section controls like mutexes all over the code,
+and why embedding mutexes in library code is a particularly bad idea.
 
 ## Idioms
 
@@ -878,6 +891,27 @@ are less common or non-existent in other codebases.
     message, to throw an instance of `std::system_error`. There are
     also several variants of this to handle other common patterns of
     POSIX failure reporting bone-headedness.
+* Exception sinking - the `JMG_SINK_ALL_EXCEPTIONS` macro is provided
+  as a shorthand for the following actions:
+  * Catching all exception types that derive from `std::exception` and
+    logging the output of calling `what()` on the instance to _stdout_
+    along with some context.
+  * Catching `...` and logging the demangled type name of caught
+    object to _stdout_ along with some context. The fact that
+    `std::exception` has been part of the standard for a long time is
+    no guarantee that someone won't decide to `throw` an `int`
+    (e.g. the value of `errno` after some POSIX function has returned
+    `-1`) or some other unexpected and unwelcome type (such as an
+    internal hierarchy of exception types that don't derive from
+    `std::exception`, who has the time to read documentation carefully
+    enough to find this if it's buried in the fine print) from deep
+    within a library. Without _a priori_ knowledge of such
+    possibilities, logging the type name at least provides an
+    opportunity to investigate further when such shenanigans occur.
+  The macro takes a single parameter that should be a string providing
+  a general description of the activities covered by the associated
+  `try` block. c.f. the concept of _exception sink points_ in the
+  coding standards.
 * _Immediately Invoked Lambda Expression_ (IIFE) - in this idiom, an
   unnamed lambda is defined and immediately executed, with its result
   assigned to a variable or passed as a function argument. The purpose
