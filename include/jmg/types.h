@@ -122,9 +122,10 @@ using OrderedSet = absl::btree_set<Ts...>;
 // time point/duration/zone
 ////////////////////////////////////////////////////////////////////////////////
 
+// TODO(bd) use std::chrono::nanoseconds instead of absl::Time
 using TimePoint = absl::Time;
 using TimeZone = absl::TimeZone;
-// TODO(bd) use std::chrono duration instead of absl::Duration?
+// TODO(bd) use std::chrono duration instead of absl::Duration
 using Duration = absl::Duration;
 
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
