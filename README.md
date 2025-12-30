@@ -88,7 +88,7 @@ documentation whose meaning may not be immediately obvious.
   and ODBC as exemplars of internet protocols and database protocols,
   respectively.
 
-# _Avant Garde_ techniques
+# _Avant Garde_ Techniques
 
 ## Return Type Overloading
 
@@ -179,7 +179,7 @@ and a generous helping of `if constexpr`.
 
 **TODO**
 
-# Subsystems
+# Major Frameworks and Subsystems
 
 ## _Safe Types_ Framework
 
@@ -210,7 +210,7 @@ libraries available which implement this functionality, so I chose
 [what I found to be the best one](https://github.com/doom/strong_type)
 and based my solution on it.
 
-### Declaring a _Safe type_
+### Declaring a _Safe Type_
 
 **WARNING:** this implementation is currently affected by a
 long-standing bug in gcc where the compiler fails to ensure that all
@@ -331,11 +331,11 @@ and conversion of interfaces, Jormungandr has a simple IDL called
 JMG that is specified in YAML to avoid needing to write a separate
 parser, and a compiler named **jmgc** that generates 'stubs'.
 
-#### JMG IDL language specification
+#### JMG IDL Language Specification
 
 **TODO**
 
-#### jmgc - IDL compiler
+#### jmgc - IDL Compiler
 
 The compiler generates definition header files from IDL specifications
 written as YAML files because that format is serviceable (if a bit
@@ -459,12 +459,12 @@ will also serve as a test bed for some features of interest:
     octets than the native encoding; otherwise, the mantissa octets
     should be copied without change.
 
-# Type library
+# Type Library
 
 This consists of various useful types that are generally similar to
 existing types but with some improvement.
 
-## Time points and durations
+## Time Points and Durations
 
 ### `jmg::TimePoint`
 
@@ -543,7 +543,7 @@ classes with some minor improvements:
   the caller to use a separate `wait_for` function to enforce a
   timeout
 
-# Coding standards
+# Coding Standards
 
 A corollary to the philosophy of expecting that users will be familiar
 with the code base is the requirement to make the familiarization
@@ -554,7 +554,7 @@ project, especially those that may differ from expected practice.
 In general, code should follow the C++ core guidelines, with a few
 exceptions and additions as outlined here
 
-## General principles
+## General Principles
 
 These may or may not be controversial but they have served me well.
 
@@ -563,7 +563,7 @@ These may or may not be controversial but they have served me well.
 * Use metaprogramming to make interfaces more robust
 * **Always** use exceptions, and rely on RAII for error handling
 
-### Time point and duration handling
+### Time Point and Duration Handling
 
 Internally, time points should **always** be represented using
 `jmg::TimePoint` and `jmg::Duration`, respectively. `jmg::TimePoint`
@@ -576,7 +576,7 @@ as possible. The internal time representation is effectively in the
 UTC time zone, but this detail should never be relied on directly, and
 time points should be viewed as black boxes.
 
-### Floating point number handling
+### Floating Point Number Handling
 
 There several important rules for handling floating point numbers:
 
@@ -675,7 +675,7 @@ are less common or non-existent in other codebases.
   to do its work while leaving the value available for later use if no
   failure is detected.
 
-## Standard abbreviations
+## Standard Abbreviations
 
 Naming is well known to be one of the hard problems in software
 engineering. To facilitate the appropriate naming of things while
@@ -708,9 +708,9 @@ please use these abbreviations where appropriate.
 * tp    - time point
 * ts    - timestamp
 
-## Some other naming standards
+## Some Other Naming Standards
 
-### Common prefixes
+### Common Prefixes
 
 These prefixes are intended to allow intent/function to be easily
 discerned when reading code
@@ -732,9 +732,9 @@ discerned when reading code
   initialization action the first time it is called and will otherwise
   do nothing.
 
-# Some longer-term goals
+# Some Longer-term Goals
 
-## High performance event processing
+## High Performance Event Processing
 
 Not much work here yet, but the idea is to mix the _standard
 interface_ style of messaging with a high performance event loop based
@@ -749,24 +749,27 @@ improved performance.
 NOTE: this work is currently under way in the experimental/reactor
 directory
 
-# Interesting ideas that may be developed further
+# Interesting Ideas That May Be Developed Further
 
-## Systematically handle currency values with proper base units
+## Systematically Handle Currency Values With Proper Base Units
 
 The goal is to avoid the use of floating point for prices (i.e. use
 cents instead of dollars as the base unit for USD prices). This idea
 is drawn from boost.units although it probably won't be productive to
 try to create another unit system for boost.units.
 
-## Systematically handle a multi-currency environment.
+## Systematically Handle a Multi-Currency Environment.
 
 Is there an efficient way to tag the currency value (i.e. price) with
 currency it is being expressed in? Would it make sense to use safe
 types to encode the currency for a price into the type system?
 
-# Other overall TODO itmes
+# Other Overall TODO Items
 
 * Add test cases for code that should fail to compile using
   `cc_build_error` rules from `rules_build_error`
+  * There appear to be some bugs in `rules_build_error` that need to
+    be worked out, an initial attemp at adding this functionality
+    failed.
 * Standardize naming of all concepts and type metafunctions
 * Document coding standards for concepts and type metafunctions
