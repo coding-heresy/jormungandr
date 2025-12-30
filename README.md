@@ -543,6 +543,24 @@ classes with some minor improvements:
   the caller to use a separate `wait_for` function to enforce a
   timeout
 
+# Utility library
+
+## Random Number Generation
+
+To generate random integers over a range with a starting and ending
+value using a uniform distribution, instantiate an object of type
+`jmg::RandomInRange`, which is a class template parameterized on the
+(integral) return type whose constructor takes the starting and ending
+ranges, and then call its `get()` member function. Defined in
+**include/jmg/random.h**.
+
+**WARNING:** `jmg::RandomInRange` objects are not thread safe.
+
+**TODO** Add support for generating random floating point numbers.
+
+**TODO** Add support for random number distributions other than
+  uniform?
+
 # Coding Standards
 
 A corollary to the philosophy of expecting that users will be familiar
