@@ -293,3 +293,33 @@ TEST(CmdLineParamTests, TestExtraneousArgument) {
 }
 
 #undef EXPECT_CMDLINE_ERROR
+
+// TODO(bd) initial cut of a test case that should not compile
+// correctly because CmdLineArgs has been specialized with more than
+// one field that has the same field name
+//
+// TEST(CmdLineParamTests, TestHandlingDuplicateParameterFieldNames) {
+//   using DupPosnParam1 = PosnParam<int, "dup_name", "a parameter whose name
+//   will be duplicated">; using DupPosnParam2 = PosnParam<double, "dup_name",
+//   "a parameter whose name is a duplicate">; using CmdLine =
+//   CmdLineArgs<DupPosnParam1, DupPosnParam2>; std::array argv{"test_program",
+//   "20010911", "42.0"}; const auto cmdline = CmdLine(argv.size(),
+//   argv.data());
+// }
+
+// TODO(bd) initial cut of a test case that should not compile
+// correctly because an optional positional parameter is provided
+// before a required positional parameter when CmdLineArgs is
+// specialized
+//
+// TEST(CmdLineParamTests,
+//      TestCompileFailsIfOptionalPositionalParamProvidedBeforeRequired) {
+//   using OptPosnFlt =
+//     PosnParam<float, "opt_posn_float",
+//               "the second position param, which is optional", Optional>;
+//   using PosnDbl = PosnParam<double, "posn_double",
+//                             "the first position param, which is required">;
+//   using CmdLine = CmdLineArgs<OptPosnFlt, PosnDbl>;
+//   std::array argv{"test_program", "42.0"};
+//   const auto cmdline = CmdLine(argv.size(), argv.data());
+// }

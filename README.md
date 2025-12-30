@@ -174,11 +174,6 @@ and a generous helping of `if constexpr`.
 
 **TODO**
 
-## Documentation placeholders
-### Command Line Parameter Handling
-
-**TODO**
-
 # Major Frameworks and Subsystems
 
 ## _Safe Types_ Framework
@@ -281,9 +276,10 @@ of key/value bindings. Many concepts can be viewed in this way:
   locally or as part of a distributed system.
 
 The first of these (command line paramters) has already been
-completely converted to the _standard interface_ style, mostly because I
-was deeply dissatisfied by the available options for solving this
-problem.
+completely converted to the _standard interface_ style, mostly because
+I was deeply dissatisfied by the available options for solving this
+problem. See the documentation of this interface in the **Utility
+Library** section.
 
 There is also support for accessing data from XML and YAML files using
 the _standard interface_ style, although it has not yet been used
@@ -560,6 +556,111 @@ ranges, and then call its `get()` member function. Defined in
 
 **TODO** Add support for random number distributions other than
   uniform?
+
+## Command Line Parameter Handling
+
+Yet another implementation of command line parameter handling support
+implemented using the _standard interface_ for _objects_, which will
+hopefully be easier to use than existing libraries such as
+**boost.program_options**. Usage is as follows:
+
+* Named parameters and positional parameters are specified using
+  _standard interface_ fields.
+  * An optional parameter that is a boolean flag is declared by
+    specializing the `jmg::NamedFlag` class template, with the first
+    parameter being the string to be used to specify the flag on the
+    command line (preceded by a single dash `-`), and the second
+    parameter being a description of flag, which is used to generate
+    the _help_ message. For example, the type alias `using NamedParam2
+    = NamedFlag<"flag", "a flag">;` specifies a flag option that is
+    enabled by passing the string `-flag` on the command line.
+  * A named parameter that provides a typed value is declared by
+    specializing the `jmg::NamedParam` class template, with the first
+    parameter being the type of the value, the second parameter being
+    the string used to specify the flag (proceeded by a single dash
+    `-` similarly to `jmg::NamedFlag` above), the third parameter
+    being the description string and the fourth parameter being either
+    `jmg::Optional` or `jmg::Required`.
+    * For example, the type alias `using Ratio = NamedParam<double,
+      "ratio", "the ratio to use", Optional>;` specifies that passing
+      the string `-ratio` followed by a floating point value will
+      allow the program to use the value, but this is not required to
+      be provided.
+    * The string value provided on the command line is automatically
+      converted to the specified type, with the first conversion error
+      encountered resulting in a thrown exception.
+    * If a named parameter is specified with `jmg::Required` in the
+      fourth parameter, an exception will be thrown if the named
+      parameter is not provided.
+  * A positional parameter also provides a typed value, and is
+    declared by specializing the `jmg::PosnParam` class template, with
+    the first parameter being the type of the value, the second
+    parameter being a string that is used to show the positional
+    placeholder in the _help_ message and the third parameter being
+    the description string. There is also an optional third parameter
+    that can be set to either `jmg::Optional` or `jmg::Required` and
+    defaults to `jmg::Required`.
+    * For example, the type alias `using IterationCount =
+      PosnParam<unsigned, "iteration count", "the number of iterations
+      to execute">;` specifies that the string value passed at a
+      specific position in the arguments will be converted to an
+      `unsigned` value for use by the program.
+    * The order in which positional parameter fields are provided when
+      specializing `jmg::CmdLineArgs` (see below) will determine the
+      order in which the values should be provided on the command
+      line.
+    * All optional positional parameters must be specified after all
+      required positional parameters when specializing
+      `jmg::CmdLineArgs` or else the code will fail to compile.
+* Once all named and positional parameter fields have been declared,
+  the `jmg::CmdLineArgs` class template can then be specialized using
+  a variadic pack of the parameter field aliases.
+  * In the parameter pack, all named parameter fields should be
+    provided before any position parameter fields; the order of named
+    parameter fields is otherwise irrelevant but the order of the
+    positional parameter fields is significant, as noted previously.
+* To process the arguments provided to the `main` function, an
+  instance of the specialized `jmg::CmdLineArgs` type can then be
+  constructed using `argc` and `argv`, with any failures in processing
+  the arguments (e.g. failure to convert the string value to the
+  expected type) resulting in exceptions being thrown from the
+  constructor.
+  * In nearly all cases, exceptions thrown by the constructor will be
+    of type `jmg::CmdLineError`, which is a subclass of
+    `std::exception`. In some unusual/pathalogical cases,
+    `std::logic_error` will be thrown.
+  * Once constructed, the instance of the `jmg::CmdLineArgs`
+    instantiation behaves like any other _standard interface_ object,
+    with the values being retrieved using `jmg::get` and/or
+    `jmg::try_get`.
+  * A `JMG_ENFORCE_CMDLINE` macro is provided to allow failures in
+    further argument processing (e.g. converted argument value being
+    outside of a limited range or incompatible argument combinations)
+    to result in exceptions of type `jmg::CmdLineError`.
+
+**TODO** automatic type conversions should be supported for any type
+  that has a `std::string` type conversion operator or is supported by
+  `jmg::from`, parameter fields specified with types that cannot be
+  converted should be prevented from compiling.
+
+**TODO** providing more than one named parameter field that has the
+  same name when specializing `jmg::CmdLineArgs` should fail to
+  compile (currently does not, and the result may be very
+  confusing). This doesn't matter as much for positional parameters,
+  but duplicate parameter names should be prevented in general.
+
+**TODO** support `-help` and `-h` arguments that automatically
+  generate usage?
+
+**TODO** use `std::string_view` instead of `std::string` for all
+  string parameters?
+
+**TODO** provide support for time point command line arguments? This
+  is problematic due to the need to specify a conversion format (and
+  inform the user of it) and to handle the complexity of time zones.
+
+**TODO** support optional single-letter versions of named parameters
+  whose names contain more than one letter?
 
 # Coding Standards
 
