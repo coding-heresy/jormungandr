@@ -527,17 +527,30 @@ expect C-style strings. Defined in **include/jmg/types.h**
 These are wrappers around the existing `std::promise`/`std::future`
 classes with some minor improvements:
 
-* For an instance of `jmg::Promise`, if no value has been set and no
+* ~~For an instance of `jmg::Promise`, if no value has been set and no
   exception was previously captured, and its destructor determines
   that an exception is in flight, it will automatically capture that
   exception so that it will be delivered by `Future` instead of
-  `std::broken_promise`
+  `std::broken_promise`~~ **see following TODO item**
 * There is an overload of `jmg::Future::get` that takes a _duration_
   parameter and an optional description parameter where the _duration_
   is a timeout value; if no value is available before the timeout
   expires, the function will throw an exception instead of requiring
   the caller to use a separate `wait_for` function to enforce a
   timeout
+
+**TODO** Automatically capture any exception that is in flight when an
+instance of `jmg::Promise` is destroyed and deliver it to the
+related future. This would be very easy to implement in the
+destructor except for the fact that `std::current_exception` always
+returns `nullptr` when called outside of a `catch` block, even if
+there are one or more exceptions currently in flight. This behavior
+does not appear to be required by the standard (which is ambiguous
+on this point) and it also appears (from reviewing the code for
+libstdc++) that this should be fairly straightforward to
+implement. Perhaps I'll report the ambiguity to the committee as a
+spec bug and create an implementation on a branch of the gcc code to
+see if I can get this patched.
 
 # Utility library
 
