@@ -704,6 +704,87 @@ These may or may not be controversial but they have served me well.
 * **Always** use exceptions, and rely on RAII for error handling
 
 ### Time Point and Duration Handling
+## Exception Handling
+
+Exceptions are a very controversial topic among practitioners of
+software engineering. From experience, the combination of exceptions
+and RAII can be used as a secret C++ superweapon for code correctness
+but this requires good does of both (healthy) paranoia and
+discipine. It should also be noted that this claim is made for the use
+case of writing programs meant to be run on fairly powerful hardware
+(especially services) that are not safety-critical (i.e. not
+military/aerospace or medical) and that performance deficiencies in
+the runtime process of handling exceptions can be a problem in some
+rare cases (although there is evidence that this could be
+substantially improved, which will hopefully be undertaken at some
+point based on the core C++ precept of "you should only have to pay
+for what you use").
+
+### Using RAII Effectively
+
+This requires a change of mindset. Engineers often seem to look at
+code through the lens of trying to understand which parts of the code
+(i.e. specific lines and function calls) can fail and how to handle
+such failures close to their source. Consider the idea that this
+approach is incorrect because it ignores the vast complexity of the
+failures that can occur in modern distributed system and the futility
+of trying to handle all such failures. In particular, engineers should
+never expect to understand which functions will throw exceptions (with
+the obvious _exception_ of functions marked as `noexcept`). Instead,
+it should be assumed that **every** line can throw an exception and
+that the only course of action in 99% of cases is allow that exception
+to propagate up the stack through the normal unwinding mechanism. RAII
+(and classes like `boost::scope_exit`, `absl::Cleanup` and
+`jmg::Cleanup` specifically) should be used to insert code that will
+perform necessary actions regardless of how a scope is exited. As an
+example, consider the case where some inconsistency has been
+temporarily introduced into a data structure but will be resolved
+later in the scope. In order to prevent excetions from transforming
+this inconsistency into corruption, an instance of `jmg::Cleanup`
+should be created **immediately** after the inconsistency is
+introduced and should contain code to undo the changes. Once the
+normal program flow has eliminated the inconsistency, the cleanup
+object's `cancel()` member function should be called. The key here is
+to carefully identify all cases of inconsistency (paranoia) and to apply the RAII
+cleanup strategy to each of them (discipline).
+
+### Exception Sink Points
+
+Effective use of RAII eliminates the need to use `try`/`catch`
+haphazardly throughout the program, but exceptions should also not be
+allowed to propagate without any control in order to avoid having
+programs randomly explode. In fact, programs generally have sections
+of code where it is "natural" to employ `try` along with `catch`
+blocks that cover **all** possible thrown classes (AKA exception
+sinks):
+* The `main` function - wrap the entire body, or just use the server
+  framework provided by Jormungandr to avoid having to worry about
+  this and the subtle problems that system signals can cause.
+* Thread worker functions - again, wrap the entire body, but care is
+  required due to the subtle case of the `std::thread` constructor
+  throwing an exception and this should always be considered when
+  creating threads.
+* Message handlers - when an exception occurs while a service is
+  handling a message such as an RPC, the best approach is to wrap the
+  handler body and drop the message on the floor after logging an
+  error or failing a span. This can often even handle the case of the
+  dreaded `std::bad_alloc` despite the common assumption that it
+  should be a death sentence for a program. That's only the case when
+  there is a memory leak, and engineers should be aware of the
+  possibility that **ulimit** (or similar) might be employed to
+  strictly control memory limits instead of relying on the Out of
+  Memory Killer. The gold standard here is to preallocate an error
+  response that can be sent back to the client in all but the most
+  catastrophic of failures.
+* Callbacks - the superset of message handlers, and very common in
+  services written to be asynchronous for better performance. The
+  usual approach applies here, although there is often the added
+  difficulty of correctly propagating failure information across
+  thread boundaries, especially in the case where _promise_ and
+  _future_ are not being used. It is often preferable to take the
+  extra effort to do this instead of e.g. relying on a timeout handler
+  to deliver a generic failure message back to the client.
+
 
 Internally, time points should **always** be represented using
 `jmg::TimePoint` and `jmg::Duration`, respectively. `jmg::TimePoint`
