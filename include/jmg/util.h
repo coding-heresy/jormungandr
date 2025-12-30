@@ -263,6 +263,9 @@ std::optional<Tgt> tryGetFromArgs(Args&&... args) {
  * canceled
  *
  * shamelessly stolen from Google Abseil
+ *
+ * TODO(bd) using the 'invokable' concept to constrain the type
+ * parameter?
  */
 template<typename Fcn>
 struct Cleanup {
