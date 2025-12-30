@@ -103,12 +103,6 @@ int main(const int argc, const char** argv) {
   catch (const CmdLineError& e) {
     cerr << e.what() << "\n";
   }
-  catch (const exception& e) {
-    cerr << "exception: " << e.what() << "\n";
-  }
-  catch (...) {
-    cerr << "unexpected exception type [" << current_exception_type_name()
-         << "]\n";
-  }
+  JMG_SINK_ALL_EXCEPTIONS("top level")
   return EXIT_FAILURE;
 }

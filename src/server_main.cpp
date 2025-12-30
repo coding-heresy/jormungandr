@@ -77,29 +77,14 @@ thread awaitShutdown(Server& srvr) {
     }
     // sink all exceptions here but always attempt to shut down the
     // server if unable to wait for the server
-    catch (const exception& e) {
-      cerr << "ERROR: caught exception in signal handler thread: " << e.what()
-           << "\n";
-    }
-    catch (...) {
-      cerr << "ERROR: caught unexpected exception type ["
-           << current_exception_type_name() << "] in signal handler thread\n";
-    }
+    JMG_SINK_ALL_EXCEPTIONS("signal handler thread")
 
     try {
       srvr.shutdown();
     }
     // sink any exceptions that might occur when attempting to shut
     // down the server
-    catch (const exception& e) {
-      cerr << "ERROR: caught exception when shutting down the server: "
-           << e.what() << "\n";
-    }
-    catch (...) {
-      cerr << "ERROR: caught unexpected exception type ["
-           << current_exception_type_name()
-           << "] when shutting down the server\n";
-    }
+    JMG_SINK_ALL_EXCEPTIONS("server shutdown")
   });
 }
 
@@ -124,12 +109,6 @@ int main(const int argc, const char** argv) {
     }
     return EXIT_SUCCESS;
   }
-  catch (const exception& e) {
-    cerr << "ERROR: caught exception at top level: " << e.what() << "\n";
-  }
-  catch (...) {
-    cerr << "ERROR: caught unexpected exception type ["
-         << current_exception_type_name() << "] at top level\n";
-  }
+  JMG_SINK_ALL_EXCEPTIONS("top level")
   return EXIT_FAILURE;
 }

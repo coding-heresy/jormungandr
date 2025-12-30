@@ -91,17 +91,7 @@ void workerTrampoline(const intptr_t lambda_ptr_val) {
   }
   // TODO(bd) seems likely that any exception in this function is inescapably
   // fatal but maybe there's a better way to handle it than this...
-  catch (const exception& e) {
-    std::cout << "ERROR: caught exception when jumping to worker function: "
-              << e.what() << std::endl;
-    throw;
-  }
-  catch (...) {
-    std::cout << "ERROR: caught unexpected exception type ["
-              << jmg::current_exception_type_name()
-              << "] when jumping to worker function" << std::endl;
-    throw;
-  }
+  JMG_SINK_ALL_EXCEPTIONS("worker function jump")
 }
 
 } // namespace
@@ -143,17 +133,7 @@ void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val) 
   }
   // TODO(bd) seems likely that any exception in this function is inescapably
   // fatal but maybe there's a better way to handle it than this...
-  catch (const exception& e) {
-    std::cout << "ERROR: caught exception when jumping to fiber function: "
-              << e.what() << std::endl;
-    throw;
-  }
-  catch (...) {
-    std::cout << "ERROR: caught unexpected exception type ["
-              << current_exception_type_name()
-              << "] when jumping to fiber function" << std::endl;
-    throw;
-  }
+  JMG_SINK_ALL_EXCEPTIONS("fiber function jump")
 }
 
 } // namespace detail

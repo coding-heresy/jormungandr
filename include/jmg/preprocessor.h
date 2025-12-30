@@ -175,13 +175,15 @@
 // helper macros for sinking exceptions
 ////////////////////////////////////////////////////////////////////////////////
 
-#define JMG_SINK_ALL_EXCEPTIONS(location)                                   \
-  catch (const std::exception& e) {                                         \
-    cout << "caught exception at " << location << ": " << e.what() << endl; \
-  }                                                                         \
-  catch (...) {                                                             \
-    cout << "caught exception of type [" << current_exception_type_name()   \
-         << "] at " << location << endl;                                    \
+#define JMG_SINK_ALL_EXCEPTIONS(location)                                  \
+  catch (const std::exception& e) {                                        \
+    std::cout << "caught exception at " << location << ": " << e.what()    \
+              << "\n";                                                     \
+  }                                                                        \
+  catch (...) {                                                            \
+    std::cout << "caught exception of type ["                              \
+              << jmg::current_exception_type_name() << "] at " << location \
+              << "\n";                                                     \
   }
 
 ////////////////////////////////////////////////////////////////////////////////
