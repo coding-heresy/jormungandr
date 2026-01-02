@@ -198,11 +198,15 @@ using Octet = SafeType<uint8_t, st::arithmetic>;
 // safe types wrapping various file descriptors
 using FileDescriptor = SafeType<int, SafeIdType>;
 using EventFd = SafeType<int, SafeIdType>;
+using PipeReadFd = SafeType<int, SafeIdType>;
+using PipeWriteFd = SafeType<int, SafeIdType>;
 #else
 JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
 JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(EventFd, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(PipeReadFd, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(PipeWriteFd, int, SafeIdType);
 #endif
 inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);
 inline constexpr auto kStdoutFd = FileDescriptor(STDOUT_FILENO);
@@ -214,6 +218,16 @@ inline constexpr auto kStdoutFd = FileDescriptor(STDOUT_FILENO);
 template<typename T>
 concept DescriptorT =
   SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>;
+
+template<typename T>
+concept ReadableDescriptorT =
+  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
+  || SameAsDecayedT<PipeReadFd, T>;
+
+template<typename T>
+concept WritableDescriptorT =
+  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
+  || SameAsDecayedT<PipeWriteFd, T>;
 
 using BufferView = std::span<const uint8_t, std::dynamic_extent>;
 using BufferProxy = std::span<uint8_t, std::dynamic_extent>;
