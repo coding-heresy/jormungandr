@@ -31,6 +31,7 @@
  */
 #pragma once
 
+#include <fcntl.h>
 #include <sys/time.h>
 
 #include <ctime>
@@ -210,6 +211,20 @@ JMG_NEW_SAFE_TYPE(PipeWriteFd, int, SafeIdType);
 #endif
 inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);
 inline constexpr auto kStdoutFd = FileDescriptor(STDOUT_FILENO);
+
+/**
+ * file open modes
+ *
+ * TODO(bd) rework this to allow combinations where permissable
+ */
+enum class FileOpenFlags : uint16_t {
+  kRead = O_RDONLY,
+  kWrite = O_WRONLY,
+  kReadWrite = O_RDWR,
+  kCreate = O_CREAT,
+  kTruncate = O_TRUNC,
+  kAppend = O_APPEND,
+};
 
 /**
  * concept for any safe type which wraps an int that should be interpreted as a

@@ -146,3 +146,6 @@ TEST(UringTests, TestWrite) {
   if (event->res < 0) { JMG_THROW_SYSTEM_ERROR(-event->res); }
   EXPECT_EQ(kMsg.size(), static_cast<size_t>(event->res));
 }
+
+// TODO(bd) test that moving an instance of uring::Event does not break its
+// destructor

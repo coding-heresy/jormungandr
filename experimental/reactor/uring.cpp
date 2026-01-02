@@ -139,6 +139,17 @@ void Uring::submitTimeoutReq(UserData data,
   if (!unwrap(isDelayed)) { submitReq("timeout"sv); }
 }
 
+void Uring::submitFileOpenReq(const c_string_view file_path,
+                              const FileOpenFlags flags,
+                              mode_t permissions,
+                              const UserData user_data) {
+  JMG_ENFORCE_USING(logic_error, !file_path.empty(), "empty file path");
+  auto& sqe = getNextSqe();
+  io_uring_prep_openat(&sqe, AT_FDCWD, file_path.c_str(),
+                       static_cast<uint16_t>(flags), permissions);
+  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+}
+
 void Uring::submitWriteReq(const int fd,
                            const IoVecView io_vec,
                            DelaySubmission is_delayed,

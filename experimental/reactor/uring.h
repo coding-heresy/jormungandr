@@ -430,6 +430,14 @@ public:
     submitReadReq(unsafe(fd), io_vec, is_delayed, user_data);
   }
 
+  /**
+   * submit a request to open a file
+   */
+  void submitFileOpenReq(c_string_view file_path,
+                         FileOpenFlags flags,
+                         mode_t permissions,
+                         UserData user_data);
+
 private:
   io_uring_sqe& getNextSqe();
 
