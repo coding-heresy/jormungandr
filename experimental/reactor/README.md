@@ -236,12 +236,12 @@ Scheduler has 2 states: `polling` and `blocking`
     function should be kActive or kTerminated
 * ~~Complete the first test case: start the reactor and shut it down
   without having it explode violently.~~
-* Add a list of _runnable_ fibers to the scheduler
+* ~~Add a list of _runnable_ fibers to the scheduler
   * When a uring completion queue event that is associated with a
     fiber arrives, perform any required bookkeeping and add the fiber
     to the _runnable_ list
   * How to handle the case where a completion queue event indicates a
-    failure?
+    failure?~~
 * Firm up the scheduling for the case where a fiber completes its
   execution
   * What is the precise behavior of the _root_ fiber (i.e. the fiber

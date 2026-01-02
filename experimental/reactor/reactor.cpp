@@ -330,7 +330,7 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
 
       // TODO(bd) support awaiting a batch of events
       // poll or wait for uring events
-      const auto event = [&] {
+      auto event = [&] {
         std::optional<Duration> uring_timeout = nullopt;
         if (timeout && !is_polling) { *uring_timeout = from(*timeout); }
         return uring_->awaitEvent(uring_timeout);
@@ -340,7 +340,7 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
 
       const auto& event_data = event.getUserData();
 
-      if (static_cast<int>(unsafe(event_data)) == unsafe(post_tgt_)) {
+      if (static_cast<int>(unsafe(event_data)) == -unsafe(post_tgt_)) {
         dbgOut("notification event detected by fiber [", active_fbr_id, "]");
 
         ////////////////////
@@ -430,9 +430,8 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
                           "] that was not blocked");
         fcb.body.state = FiberState::kRunnable;
         fcb.body.is_fiber_handling_event = true;
+        fcb.body.event = std::move(event);
         runnable_.enqueue(fcb);
-
-        // TODO(bd) store the event in the FCB of the associated fiber
       }
     }
   }
@@ -548,8 +547,12 @@ void Reactor::yieldFbr() {
 }
 
 void Reactor::resetNotifier() {
+  // NOTE: use the negative value of the post_tgt_ file descriptor for the user
+  // data to ensure that there is no collision with set of fiber IDs, which are
+  // passed as user data to operations that need to be mapped back to a specific
+  // fiber
   uring_->submitReadReq(post_tgt_, span(notifier_vec_),
-                        uring::UserData(unsafe(post_tgt_)));
+                        uring::UserData(-unsafe(post_tgt_)));
 }
 
 } // namespace jmg

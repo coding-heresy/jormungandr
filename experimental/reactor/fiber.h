@@ -32,10 +32,12 @@
 #pragma once
 
 #include <array>
+#include <filesystem>
 
 #include <ucontext.h>
 
 #include "control_blocks.h"
+#include "uring.h"
 
 namespace jmg
 {
@@ -53,6 +55,8 @@ enum class FiberState : uint8_t {
 
 using FiberId = CtrlBlockId;
 
+struct FiberCtrlBlockBody;
+
 /**
  * publicly accessible interface to a reactor fiber object
  */
@@ -67,13 +71,18 @@ public:
 
   void yield();
 
+  FileDescriptor open_file(const std::filesystem::path& filePath,
+                           FileOpenFlags flags,
+                           std::optional<mode_t> permissions);
+
 private:
   friend class Reactor;
 
-  Fiber(FiberId id, Reactor& reactor) : id_(id), reactor_(&reactor) {}
+  Fiber(FiberId id, Reactor& reactor);
 
   FiberId id_;
   Reactor* reactor_ = nullptr;
+  FiberCtrlBlockBody* fcb_body_ = nullptr;
 };
 
 using FiberFcn = std::function<void(Fiber&)>;
@@ -86,6 +95,7 @@ struct FiberCtrlBlockBody {
   std::array<uint8_t, kStackSz> stack;
   Fiber fbr;
   std::unique_ptr<FiberFcn> fbr_fcn;
+  uring::Event event;
   // TODO(bd) is it really necessary for these variables to be volatile?
   volatile FiberState state;
   // TODO(bd) these flags can probably be converted to specific state values
