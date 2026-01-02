@@ -99,7 +99,6 @@ private:
 
   /**
    * jump to the checkpoint stored in a fiber control block
-
    */
   void jumpTo(FiberCtrlBlock& fcb, const OptStrView tgt = std::nullopt);
 
