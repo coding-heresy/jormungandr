@@ -141,21 +141,29 @@ void Uring::submitTimeoutReq(UserData data,
 
 void Uring::submitWriteReq(const int fd,
                            const IoVecView io_vec,
-                           DelaySubmission is_delayed) {
+                           DelaySubmission is_delayed,
+                           optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
   io_uring_prep_writev(&sqe, fd, io_vec.data(), io_vec.size(), 0 /* offset */);
+  if (user_data) {
+    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
+  }
   if (!unwrap(is_delayed)) { submitReq("write"sv); }
 }
 
 void Uring::submitReadReq(const int fd,
                           const IoVecView io_vec,
-                          DelaySubmission is_delayed) {
+                          DelaySubmission is_delayed,
+                          optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
   io_uring_prep_readv(&sqe, fd, io_vec.data(), io_vec.size(), 0 /* offset */);
+  if (user_data) {
+    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
+  }
   if (!unwrap(is_delayed)) { submitReq("read"sv); }
 }
 

@@ -41,22 +41,22 @@
 namespace jmg::detail
 {
 
-namespace
-{
+// TODO(bd) remove debugging output once the code is confirmed stable
 
-template<typename... Args>
-void dbgOut(Args&&... args) {
-  using namespace std;
-#if defined(ENABLE_REACTOR_DEBUGGING_OUTPUT)
-  cout << ">>>>> DBG ";
-  (cout << ... << args);
-  cout << endl;
-#else
-  ignore = make_tuple(std::forward<Args>(args)...);
-#endif
-}
-
-} // namespace
+// namespace
+// {
+// template<typename... Args>
+// void dbgOut(Args&&... args) {
+//   using namespace std;
+// #if defined(ENABLE_REACTOR_DEBUGGING_OUTPUT)
+//   cout << ">>>>> DBG ";
+//   (cout << ... << args);
+//   cout << endl;
+// #else
+//   ignore = make_tuple(std::forward<Args>(args)...);
+// #endif
+// }
+// } // namespace
 
 /**
  * create a pipe, return safely typed endpoints
@@ -78,8 +78,9 @@ void write_all(const FD fd,
   namespace vws = std::ranges::views;
   using namespace std::string_view_literals;
   int sz;
-  dbgOut("writing [", buf.size(), "] raw octets [",
-         str_join(buf | vws::transform(octetify), " "sv, kOctetFmt), "]");
+  // dbgOut("writing [", buf.size(), "] raw octets [",
+  //        str_join(buf | vws::transform(octetify), " "sv, kOctetFmt),
+  //        "] to file descriptor [", fd, "]");
   JMG_SYSTEM((sz = write(unsafe(fd), buf.data(), buf.size())),
              "unable to write all data to ", description);
   JMG_ENFORCE(buf.size() == static_cast<size_t>(sz),
@@ -96,6 +97,9 @@ template<ReadableDescriptorT FD>
 void read_all(const FD fd,
               const BufferProxy buf,
               const std::string_view description) {
+  // dbgOut("reading [", buf.size(), "] octets of data from file descriptor [",
+  // fd,
+  //        "]");
   namespace vws = std::ranges::views;
   using namespace std::string_view_literals;
   int sz;
@@ -105,7 +109,5 @@ void read_all(const FD fd,
               "size mismatch reading from ", description,
               ", should have read [", buf.size(), "] but actually read [", sz,
               "]");
-  dbgOut("read [", sz, "] raw octets [",
-         str_join(buf | vws::transform(octetify), " "sv, kOctetFmt), "]");
 }
 } // namespace jmg::detail

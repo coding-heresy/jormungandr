@@ -31,8 +31,6 @@
  */
 #pragma once
 
-#define TMP_USE_NEW_FIBER_TRAMP
-
 #include <span>
 
 #include "jmg/preprocessor.h"
@@ -56,12 +54,10 @@ enum class Cmd : uint64_t {
   kPost = 2
 };
 
-#if defined(TMP_USE_NEW_FIBER_TRAMP)
 namespace detail
 {
 void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val);
 } // namespace detail
-#endif
 
 class Reactor {
 public:
@@ -92,10 +88,8 @@ private:
   using WorkerFcn = std::function<void(void)>;
 
   friend class Fiber;
-#if defined(TMP_USE_NEW_FIBER_TRAMP)
   friend void detail::fiberTrampoline(const intptr_t reactor_ptr_val,
                                       const intptr_t fbr_id_val);
-#endif
 
   /**
    * pass control from a fiber to the reactor scheduler when the fiber executes
@@ -105,12 +99,8 @@ private:
 
   /**
    * jump to the checkpoint stored in a fiber control block
-   *
-   * @warning the actual call to setcontext should never be placed in a separate
-   * function inside this one because it will smash the stack for some reason
    */
-  [[noreturn]] void jumpTo(FiberCtrlBlock& fcb,
-                           const OptStrView tgt = std::nullopt);
+  void jumpTo(FiberCtrlBlock& fcb, const OptStrView tgt = std::nullopt);
 
   /**
    * initialize a fiber that will execute a thread worker function
@@ -148,12 +138,13 @@ private:
    */
   void yieldFbr();
 
+  /**
+   * reset the notifier mechanism used by external threads to post work to the
+   * reactor after a work request has been read
+   */
+  void resetNotifier();
+
   std::atomic<bool> is_shutdown_ = false;
-  // EventFd notifier_;
-  PipeReadFd post_tgt_;
-  PipeWriteFd post_src_;
-  uint64_t notifier_data_;
-  struct iovec notifier_vec_[1];
   FiberCtrl fiber_ctrl_;
   std::unique_ptr<uring::Uring> uring_;
   ucontext_t shutdown_chkpt_;
@@ -162,6 +153,19 @@ private:
   // NOTE: active_fiber_id_ is marked as volatile because it can change when
   // jumping away from a context and then resuming it
   volatile FiberId active_fiber_id_;
+
+  // TODO(bd) there is almost certainly a better/faster way to support
+  // having external threads send work requests to the reactor, but
+  // this will do for now
+  //
+  // notifier mechanism below here, which consists of an old-school
+  // pipe whose read fd is used to receive requests and write fd is
+  // used to send requests from external threads by writing the
+  // address of a function object to be executed
+  PipeReadFd post_tgt_;
+  PipeWriteFd post_src_;
+  uint64_t notifier_data_;
+  struct iovec notifier_vec_[1];
 };
 
 } // namespace jmg

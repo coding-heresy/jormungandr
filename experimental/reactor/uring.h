@@ -392,26 +392,62 @@ public:
                         Duration timeout,
                         DelaySubmission is_delayed = DelaySubmission::kNoDelay);
 
-  template<WritableDescriptorT Fd>
-  void submitWriteReq(Fd fd,
-                      IoVecView io_vec,
-                      DelaySubmission is_delayed = DelaySubmission::kNoDelay) {
-    submitWriteReq(unsafe(fd), io_vec, is_delayed);
+  /**
+   * submit a request for data, referenced via a view into an iovec object, to
+   * be written to a file descriptor
+   */
+  template<WritableDescriptorT Fd, typename... Extras>
+  void submitWriteReq(Fd fd, IoVecView io_vec, Extras&&... extras) {
+    DelaySubmission is_delayed = DelaySubmission::kNoDelay;
+    std::optional<UserData> user_data = std::nullopt;
+    [[maybe_unused]]
+    auto processParam = [&]<typename T>(const T arg) {
+      if constexpr (jmg::DecayedSameAsT<T, DelaySubmission>) {
+        is_delayed = arg;
+      }
+      else if constexpr (jmg::DecayedSameAsT<T, UserData>) { user_data = arg; }
+    };
+    (processParam(std::forward<Extras>(extras)), ...);
+    submitWriteReq(unsafe(fd), io_vec, is_delayed, user_data);
   }
 
-  template<ReadableDescriptorT Fd>
-  void submitReadReq(Fd fd,
-                     IoVecView io_vec,
-                     DelaySubmission is_delayed = DelaySubmission::kNoDelay) {
-    submitReadReq(unsafe(fd), io_vec, is_delayed);
+  /**
+   * submit a request for data, whose 'shape' is determined by an iovec object
+   * referenced by a view, to be read from a file descriptor
+   */
+  template<ReadableDescriptorT Fd, typename... Extras>
+  void submitReadReq(Fd fd, IoVecView io_vec, Extras&&... extras) {
+    DelaySubmission is_delayed = DelaySubmission::kNoDelay;
+    std::optional<UserData> user_data = std::nullopt;
+    [[maybe_unused]]
+    auto processParam = [&]<typename T>(const T arg) {
+      if constexpr (jmg::DecayedSameAsT<T, DelaySubmission>) {
+        is_delayed = arg;
+      }
+      else if constexpr (jmg::DecayedSameAsT<T, UserData>) { user_data = arg; }
+    };
+    (processParam(std::forward<Extras>(extras)), ...);
+    submitReadReq(unsafe(fd), io_vec, is_delayed, user_data);
   }
 
 private:
   io_uring_sqe& getNextSqe();
 
-  void submitWriteReq(int fd, IoVecView io_vec, DelaySubmission is_delayed);
+  /**
+   * actual implementation of write request submission
+   */
+  void submitWriteReq(int fd,
+                      IoVecView io_vec,
+                      DelaySubmission is_delayed,
+                      std::optional<UserData> user_data);
 
-  void submitReadReq(int fd, IoVecView io_vec, DelaySubmission is_delayed);
+  /**
+   * actual implementation of read request submission
+   */
+  void submitReadReq(int fd,
+                     IoVecView io_vec,
+                     DelaySubmission is_delayed,
+                     std::optional<UserData> user_data);
 
   std::optional<EventFd> notifier_;
   io_uring ring_;

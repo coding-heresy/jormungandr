@@ -36,11 +36,6 @@
 namespace jmg
 {
 
-void Fiber::yield() {
-  std::cout
-    << "=====>>>>> fiber is requesting that it be yielded in the reactor"
-    << std::endl;
-  reactor_->yieldFbr();
-}
+void Fiber::yield() { reactor_->yieldFbr(); }
 
 } // namespace jmg
