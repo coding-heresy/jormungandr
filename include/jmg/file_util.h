@@ -101,9 +101,9 @@ public:
   /**
    * constructor
    *
-   * @param data to write to the file after creation
+   * @param contents - data to write to the file after creation
    */
-  explicit TmpFile(const std::string_view contents) {
+  explicit TmpFile(const std::string_view contents = std::string_view()) {
     char fileName[1024];
     memset(fileName, 0, sizeof(fileName));
     {
@@ -118,15 +118,21 @@ public:
     // descriptor or -1?
     const int fd = mkstemp(fileName);
     if (-1 == fd) { JMG_THROW_SYSTEM_ERROR("unable to create temporary file"); }
-    auto tmpBuf = __gnu_cxx::stdio_filebuf<char>(fd, std::ios::out);
-    auto strm = std::ostream(&tmpBuf);
-    strm.exceptions(std::ofstream::badbit);
-    strm << contents;
+    if (!contents.empty()) {
+      // write any provided contents to the file
+      auto tmpBuf = __gnu_cxx::stdio_filebuf<char>(fd, std::ios::out);
+      auto strm = std::ostream(&tmpBuf);
+      strm.exceptions(std::ofstream::badbit);
+      strm << contents;
+    }
+    close(fd);
     path_ = fileName;
     native_ = path_.native();
   }
 
   std::string_view name() const { return native_; }
+
+  const std::filesystem::path& path() const { return path_; }
 
   ~TmpFile() { std::filesystem::remove(path_); }
 
