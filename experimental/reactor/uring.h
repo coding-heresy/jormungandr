@@ -313,7 +313,10 @@ class Event {
 public:
   Event() = default;
   JMG_NON_COPYABLE(Event);
-  JMG_DEFAULT_MOVEABLE(Event);
+  // move operations are defined explicitly
+  Event(Event&& src);
+  Event& operator=(Event&& src);
+
   Event(io_uring* ring, io_uring_cqe* cqe);
 
   ~Event();
@@ -336,7 +339,6 @@ public:
 private:
   io_uring* ring_ = nullptr;
   io_uring_cqe* cqe_ = nullptr;
-  bool is_cleanup_canceled_ = false;
 };
 
 /**
