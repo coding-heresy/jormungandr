@@ -395,6 +395,14 @@ public:
                         DelaySubmission is_delayed = DelaySubmission::kNoDelay);
 
   /**
+   * submit a request to open a file
+   */
+  void submitFileOpenReq(c_string_view file_path,
+                         FileOpenFlags flags,
+                         mode_t permissions,
+                         UserData user_data);
+
+  /**
    * submit a request for data, referenced via a view into an iovec object, to
    * be written to a file descriptor
    */
@@ -431,14 +439,6 @@ public:
     (processParam(std::forward<Extras>(extras)), ...);
     submitReadReq(unsafe(fd), io_vec, is_delayed, user_data);
   }
-
-  /**
-   * submit a request to open a file
-   */
-  void submitFileOpenReq(c_string_view file_path,
-                         FileOpenFlags flags,
-                         mode_t permissions,
-                         UserData user_data);
 
 private:
   io_uring_sqe& getNextSqe();
