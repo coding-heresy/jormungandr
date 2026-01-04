@@ -39,6 +39,8 @@
 
 using namespace jmg;
 using namespace std;
+using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 constexpr char kTestStr[] = "test";
 
@@ -70,4 +72,19 @@ TEST(TypesTest, TestCStringView) {
     const auto str_view = c_string_view(str);
     EXPECT_STREQ(kTestStr, str_view.c_str());
   }
+}
+
+TEST(TypesTest, TestBufferView) {
+  const auto uint64 = uint64_t(20010911);
+  const auto str = "test string"s;
+
+  const auto uint64_buf = buffer_from(uint64);
+  EXPECT_EQ(8, uint64_buf.size());
+
+  const auto str_buf = buffer_from(str);
+  EXPECT_EQ(str.size(), str_buf.size());
+
+  const auto str_view = string_view(str);
+  const auto str_view_buf = buffer_from(str_view);
+  EXPECT_EQ(str_view.size(), str_view_buf.size());
 }
