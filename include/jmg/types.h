@@ -253,7 +253,12 @@ using BufferProxy = std::span<uint8_t, std::dynamic_extent>;
  */
 template<typename T>
 BufferView buffer_from(const T& ref) {
-  return BufferView(reinterpret_cast<const uint8_t*>(&ref), sizeof(ref));
+  if constexpr (StdStringLikeT<T>) {
+    return BufferView(reinterpret_cast<const uint8_t*>(ref.data()), ref.size());
+  }
+  else {
+    return BufferView(reinterpret_cast<const uint8_t*>(&ref), sizeof(ref));
+  }
 }
 
 /**

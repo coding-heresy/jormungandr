@@ -205,6 +205,10 @@ concept CStyleStringT =
   || std::same_as<std::remove_extent_t<Decay<T>>, const char>;
 
 template<typename T>
+concept StdStringLikeT =
+  SameAsDecayedT<std::string, T> || SameAsDecayedT<std::string_view, T>;
+
+template<typename T>
 concept StringLikeT =
   SameAsDecayedT<std::string, T> || SameAsDecayedT<std::string_view, T>
   || CStyleStringT<T>;
