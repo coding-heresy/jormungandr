@@ -78,6 +78,16 @@ public:
   void yield();
 
   /**
+   * write output to stdout
+   */
+  template<typename... Args>
+  void log(Args&&... args) {
+    const auto output = str_cat(std::forward<Args&&>(args)...);
+    // NOTE: this assumes that file descriptor 1 is always used for stdout
+    write(FileDescriptor(1), buffer_from(output));
+  }
+
+  /**
    * open a file
    */
   FileDescriptor openFile(const std::filesystem::path& filePath,
