@@ -50,8 +50,24 @@ Event::Event(io_uring* ring, io_uring_cqe* cqe) : ring_(ring), cqe_(cqe) {
   }
 }
 
+Event::Event(Event&& src) {
+  this->ring_ = src.ring_;
+  this->cqe_ = src.cqe_;
+  src.ring_ = nullptr;
+  src.cqe_ = nullptr;
+}
+
+Event& Event::operator=(Event&& src) {
+  if (this == &src) { return *this; }
+  this->ring_ = src.ring_;
+  this->cqe_ = src.cqe_;
+  src.ring_ = nullptr;
+  src.cqe_ = nullptr;
+  return *this;
+}
+
 Event::~Event() {
-  if (cqe_ && !is_cleanup_canceled_) { io_uring_cqe_seen(ring_, cqe_); }
+  if (ring_ && cqe_) { io_uring_cqe_seen(ring_, cqe_); }
 }
 
 Uring::Uring(const UringSz sz) {
