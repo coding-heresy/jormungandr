@@ -167,6 +167,15 @@ void Uring::submitFileOpenReq(const c_string_view file_path,
   submitReq("open file"sv);
 }
 
+void Uring::submitFdCloseReq(const FileDescriptor fd, const UserData user_data) {
+  JMG_ENFORCE_USING(logic_error, unsafe(fd) > -1,
+                    "invalid file descriptor value [", fd, "]");
+  auto& sqe = getNextSqe();
+  io_uring_prep_close(&sqe, unsafe(fd));
+  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  submitReq("close file descriptor"sv);
+}
+
 void Uring::submitWriteReq(const int fd,
                            const IoVecView io_vec,
                            DelaySubmission is_delayed,

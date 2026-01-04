@@ -403,6 +403,11 @@ public:
                          UserData user_data);
 
   /**
+   * submit a request to close an open file descriptor
+   */
+  void submitFdCloseReq(FileDescriptor fd, UserData user_data);
+
+  /**
    * submit a request for data, referenced via a view into an iovec object, to
    * be written to a file descriptor
    */
