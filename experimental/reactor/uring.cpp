@@ -164,6 +164,7 @@ void Uring::submitFileOpenReq(const c_string_view file_path,
   io_uring_prep_openat(&sqe, AT_FDCWD, file_path.c_str(),
                        static_cast<uint16_t>(flags), permissions);
   io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  submitReq("open file"sv);
 }
 
 void Uring::submitWriteReq(const int fd,
