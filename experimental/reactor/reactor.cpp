@@ -30,9 +30,6 @@
  *
  */
 
-// TODO(bd) remove reactor debugging output once the code is confirmed stable
-// #define ENABLE_REACTOR_DEBUGGING_OUTPUT
-
 #include <sys/eventfd.h>
 
 #include <cstdint>
@@ -63,17 +60,6 @@ using OptStrView = std::optional<std::string_view>;
 
 namespace
 {
-
-template<typename... Args>
-void dbgOut(Args&&... args) {
-#if defined(ENABLE_REACTOR_DEBUGGING_OUTPUT)
-  cout << ">>>>> DBG ";
-  (cout << ... << args);
-  cout << endl;
-#else
-  ignore = make_tuple(std::forward<Args>(args)...);
-#endif
-}
 
 template<typename T>
 concept ReactorFcnT = jmg::SameAsDecayedT<jmg::Reactor::WorkerFcn, T>
@@ -123,6 +109,8 @@ void chkptStoreAndJump(ucontext_t& src,
 namespace jmg
 {
 
+using namespace reactor;
+
 namespace detail
 {
 
@@ -164,7 +152,7 @@ void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val) 
 Reactor::Reactor()
   // TODO(bd) uring size should be at settable at compile or run time
   : runnable_(fiber_ctrl_) {
-  const auto [read_fd, write_fd] = detail::make_pipe();
+  const auto [read_fd, write_fd] = make_pipe();
   post_tgt_ = read_fd;
   post_src_ = write_fd;
   notifier_vec_[0].iov_base = reinterpret_cast<void*>(&notifier_data_);
@@ -221,7 +209,7 @@ void Reactor::start() {
 
 void Reactor::shutdown() {
   static constexpr auto kShutdownCmd = unwrap(Cmd::kShutdown);
-  detail::write_all(post_src_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
+  write_all(post_src_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
 }
 
 void Reactor::post(FiberFcn&& fcn) {
@@ -240,8 +228,7 @@ void Reactor::post(FiberFcn&& fcn) {
 
   // write the address of the lambda to the notifier eventfd to inform the
   // reactor of the work request
-  detail::write_all(post_src_, buffer_from(lambda_ptr.get()),
-                    "notifier eventfd");
+  write_all(post_src_, buffer_from(lambda_ptr.get()), "notifier eventfd");
   lambda_ptr.release();
 }
 
@@ -251,10 +238,10 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
   // there are currently no other runnable fibers and no uring events have occurred
   auto is_polling = true;
   const auto active_fbr_id = getActiveFbrId();
-
-  dbgOut("fiber [", active_fbr_id, "] is entering the scheduler");
-
   auto& active_fbr_fcb = fiber_ctrl_.getBlock(active_fbr_id);
+
+  dbgOut("fiber [", active_fbr_id, "] is entering the scheduler in state [",
+         static_cast<int>(active_fbr_fcb.body.state), "]");
 
   JMG_ENFORCE_USING(
     logic_error,
@@ -270,19 +257,27 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
     (active_fbr_fcb.body.state == FiberState::kTerminated);
   // TODO(bd) think carefully about the shutdown case, any outstanding events
   // should probably be allowed to drain
+
   while (!is_shutdown) {
+    dbgOut("entering scheduler loop for fiber [", active_fbr_id, "]");
+
     // TODO(bd) Do Something Smart(TM) to manage starvation risk
     if (!runnable_.empty()) {
       // resume execution of the first runnable fiber
       auto& next_active_fcb = runnable_.dequeue();
       const auto next_active_id = next_active_fcb.id;
 
+      dbgOut("fiber [", next_active_id,
+             "] was retrieved from the run queue, which now has [",
+             runnable_.size(), "] entries");
+      dbgOut("current fiber [", active_fbr_id, "] is yielding [",
+             active_fbr_fcb.body.is_fiber_yielding,
+             "] is handling uring envent [",
+             active_fbr_fcb.body.is_fiber_handling_event, "]");
+
       if (active_fbr_fcb.body.is_fiber_yielding) {
         JMG_ENFORCE_USING(logic_error, !is_active_fbr_terminating,
                           "attempted to yield a terminated fiber");
-        JMG_ENFORCE_USING(logic_error,
-                          FiberState::kActive == active_fbr_fcb.body.state,
-                          "attempted to yield a non-active fiber");
 
         dbgOut("yielding fiber [", active_fbr_id, "]");
 
@@ -292,6 +287,8 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
       }
       if ((next_active_id == active_fbr_id)
           && !active_fbr_fcb.body.is_fiber_handling_event) {
+        dbgOut("resuming fiber [", next_active_id, "]");
+
         // active fiber is actually resuming without being blocked
         JMG_ENFORCE_USING(logic_error, !is_active_fbr_terminating,
                           "attempted to resume a terminated fiber");
@@ -302,6 +299,9 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
         active_fbr_fcb.body.state = FiberState::kActive;
         return;
       }
+
+      active_fbr_fcb.body.is_fiber_yielding = false;
+      active_fbr_fcb.body.state = FiberState::kBlocked;
 
       if (is_active_fbr_terminating) {
         // active fiber is being terminated, mark its resources for reuse before
@@ -327,6 +327,8 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
     }
     else {
       dbgOut("fiber [", active_fbr_id, "] is waiting for uring events");
+
+      active_fbr_fcb.body.state = FiberState::kBlocked;
 
       // TODO(bd) support awaiting a batch of events
       // poll or wait for uring events
@@ -431,8 +433,13 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
         fcb.body.state = FiberState::kRunnable;
         fcb.body.is_fiber_handling_event = true;
         fcb.body.event = std::move(event);
+
+        dbgOut("adding fiber [", fbr_id, "] to the run queue");
+
         runnable_.enqueue(fcb);
       }
+
+      dbgOut("fiber [", active_fbr_id, "] is done waiting for uring events");
     }
   }
 

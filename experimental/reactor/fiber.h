@@ -67,18 +67,44 @@ public:
   JMG_NON_MOVEABLE(Fiber);
   ~Fiber() = default;
 
+  /**
+   * get the fiber ID associated with the fiber object
+   */
   FiberId getId() const { return id_; }
 
+  /**
+   * explicitly yield execution to other currently runnable fibers
+   */
   void yield();
 
-  FileDescriptor open_file(const std::filesystem::path& filePath,
-                           FileOpenFlags flags,
-                           std::optional<mode_t> permissions);
+  /**
+   * open a file
+   */
+  FileDescriptor openFile(const std::filesystem::path& filePath,
+                          FileOpenFlags flags,
+                          std::optional<mode_t> permissions = std::nullopt);
+
+  /**
+   * close an open file descriptor
+   */
+  void close(FileDescriptor fd);
+
+  /**
+   * write data to an open file descriptor
+   */
+  void write(FileDescriptor fd, BufferView data);
 
 private:
   friend class Reactor;
 
   Fiber(FiberId id, Reactor& reactor);
+
+  /**
+   * get the outstanding Event object associated with the fiber
+   *
+   * also performs several sanity checks
+   */
+  uring::Event getEvent(const std::string_view op);
 
   FiberId id_;
   Reactor* reactor_ = nullptr;
