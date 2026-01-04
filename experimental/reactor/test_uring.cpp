@@ -100,7 +100,7 @@ TEST(UringTests, TestCrossUringMsg) {
                   "incoming event did reference notifier as expected");
 
       uint64_t data;
-      detail::read_all(notifier, buffer_from(data), "eventfd"sv);
+      reactor::read_all(notifier, buffer_from(data), "eventfd"sv);
 
       // send the user data back to the main thread
       user_data_prm->set_value(data);

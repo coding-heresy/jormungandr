@@ -38,30 +38,28 @@
 #include "jmg/preprocessor.h"
 #include "jmg/types.h"
 
-namespace jmg::detail
+namespace jmg::reactor
 {
 
 // TODO(bd) remove debugging output once the code is confirmed stable
+// #define ENABLE_REACTOR_DEBUGGING_OUTPUT
 
-// namespace
-// {
-// template<typename... Args>
-// void dbgOut(Args&&... args) {
-//   using namespace std;
-// #if defined(ENABLE_REACTOR_DEBUGGING_OUTPUT)
-//   cout << ">>>>> DBG ";
-//   (cout << ... << args);
-//   cout << endl;
-// #else
-//   ignore = make_tuple(std::forward<Args>(args)...);
-// #endif
-// }
-// } // namespace
+template<typename... Args>
+inline void dbgOut(Args&&... args) {
+  using namespace std;
+#if defined(ENABLE_REACTOR_DEBUGGING_OUTPUT)
+  cout << ">>>>> DBG ";
+  (cout << ... << args);
+  cout << endl;
+#else
+  ignore = make_tuple(std::forward<Args>(args)...);
+#endif
+}
 
 /**
  * create a pipe, return safely typed endpoints
  */
-std::tuple<PipeReadFd, PipeWriteFd> make_pipe() {
+inline std::tuple<PipeReadFd, PipeWriteFd> make_pipe() {
   int pipe_fds[2];
   JMG_SYSTEM(pipe(pipe_fds), "unable to create a pipe");
   return std::make_tuple(PipeReadFd(pipe_fds[0]), PipeWriteFd(pipe_fds[1]));
@@ -72,9 +70,9 @@ std::tuple<PipeReadFd, PipeWriteFd> make_pipe() {
  * they cannot all be written in one call
  */
 template<WritableDescriptorT FD>
-void write_all(const FD fd,
-               const BufferView buf,
-               const std::string_view description) {
+inline void write_all(const FD fd,
+                      const BufferView buf,
+                      const std::string_view description) {
   namespace vws = std::ranges::views;
   using namespace std::string_view_literals;
   int sz;
@@ -94,9 +92,9 @@ void write_all(const FD fd,
  * exception if they cannot all be read in one call
  */
 template<ReadableDescriptorT FD>
-void read_all(const FD fd,
-              const BufferProxy buf,
-              const std::string_view description) {
+inline void read_all(const FD fd,
+                     const BufferProxy buf,
+                     const std::string_view description) {
   // dbgOut("reading [", buf.size(), "] octets of data from file descriptor [",
   // fd,
   //        "]");
@@ -110,4 +108,4 @@ void read_all(const FD fd,
               ", should have read [", buf.size(), "] but actually read [", sz,
               "]");
 }
-} // namespace jmg::detail
+} // namespace jmg::reactor

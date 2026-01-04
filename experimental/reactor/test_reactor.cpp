@@ -37,6 +37,7 @@
 
 #include <gtest/gtest.h>
 
+#include "jmg/file_util.h"
 #include "jmg/future.h"
 #include "jmg/system.h"
 #include "jmg/util.h"
@@ -159,6 +160,96 @@ TEST_F(ReactorTests, TestFiberYielding) {
     // 2 seconds is infinity
     fbr_executed_barrier1.get(2s, "fiber executed barrier 1");
     fbr_executed_barrier2.get(2s, "fiber executed barrier 2");
+  }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
+}
+
+TEST_F(ReactorTests, TestFileOpenFailure) {
+  Signaller fbr_executed_signaller;
+  reactor.post([&](Fiber& fbr) {
+    cout << "executing 'open_file' operation that should fail\n";
+
+    EXPECT_THROW([[maybe_unused]] auto fd =
+                   fbr.openFile("/no/such/file", FileOpenFlags::kRead),
+                 system_error);
+
+    cout << "done executing 'open file' operation that should fail\n";
+    fbr_executed_signaller.set_value();
+  });
+
+  auto fbr_executed_barrier = fbr_executed_signaller.get_future();
+  {
+    auto guard = Cleanup([&]() {
+      // shutdown the reactor after the fiber functions have executed
+      cout << "shutting down the reactor\n";
+      reactor.shutdown();
+      if (!uncaught_exceptions()) {
+        JMG_ENFORCE(reactor_worker, "reactor worker thread does not exist");
+        JMG_ENFORCE(reactor_worker->joinable(),
+                    "reactor worker is not joinable");
+      }
+      reactor_worker->join();
+    });
+    cout << "awaiting completion of reactor operation\n";
+    // 2 seconds is infinity
+    fbr_executed_barrier.get(2s, "fiber executed barrier");
+    cout << "reactor operation complete\n";
+  }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
+}
+
+TEST_F(ReactorTests, TestWriteDataToFile) {
+  const auto test_data = "some test data"s;
+  TmpFile tmpFile;
+  Signaller fbr_executed_signaller;
+  reactor.post([&](Fiber& fbr) {
+    cout << "opening temporary file [" << tmpFile.name() << "] for writing\n";
+    const auto fd = fbr.openFile(tmpFile.name(), FileOpenFlags::kWrite, 0644);
+    {
+      auto guard = Cleanup([&]() { fbr.close(fd); });
+
+      cout << "executing 'write' operation on temporary file ["
+           << tmpFile.name() << "]\n";
+      fbr.write(fd, buffer_from(test_data));
+
+      cout << "done writing data to temporary file [" << tmpFile.name()
+           << "]\n";
+    }
+    fbr_executed_signaller.set_value();
+  });
+
+  auto fbr_executed_barrier = fbr_executed_signaller.get_future();
+  {
+    auto guard = Cleanup([&]() {
+      // shutdown the reactor after the fiber functions have executed
+      cout << "shutting down the reactor\n";
+      reactor.shutdown();
+      if (!uncaught_exceptions()) {
+        JMG_ENFORCE(reactor_worker, "reactor worker thread does not exist");
+        JMG_ENFORCE(reactor_worker->joinable(),
+                    "reactor worker is not joinable");
+      }
+      reactor_worker->join();
+    });
+    cout << "awaiting completion of fiber work\n";
+    // 2 seconds is infinity
+    fbr_executed_barrier.get(2s, "fiber executed barrier");
+
+    {
+      // validate the data written to the file
+      const auto sz = filesystem::file_size(tmpFile.path());
+      EXPECT_EQ(sz, test_data.size());
+      auto file_data = [&]() -> string {
+        auto strm = open_file<ifstream>(tmpFile.path());
+        string rslt;
+        rslt.resize(sz);
+        strm.read(rslt.data(), static_cast<std::streamsize>(sz));
+        return rslt;
+      }();
+      EXPECT_EQ(file_data, test_data);
+    }
   }
 
   EXPECT_TRUE(clean_reactor_shutdown);
