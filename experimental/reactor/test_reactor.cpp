@@ -75,6 +75,18 @@ protected:
     }
   }
 
+  /**
+   * helper function to shut down the reactor when a test is complete
+   */
+  void shutdown() {
+    reactor.shutdown();
+    if (!uncaught_exceptions()) {
+      JMG_ENFORCE(reactor_worker, "reactor worker thread does not exist");
+      JMG_ENFORCE(reactor_worker->joinable(), "reactor worker is not joinable");
+    }
+    reactor_worker->join();
+  }
+
   Reactor reactor;
   unique_ptr<thread> reactor_worker;
   atomic<bool> clean_reactor_shutdown = false;
@@ -101,16 +113,7 @@ TEST_F(ReactorTests, TestSignalShutdown) {
   // wait until the fiber function completes before proceeding
   auto fbr_executed_barrier = fbr_executed_signaller.get_future();
   {
-    auto guard = Cleanup([&]() {
-      // shutdown the reactor after the fiber functions have executed
-      reactor.shutdown();
-      if (!uncaught_exceptions()) {
-        JMG_ENFORCE(reactor_worker, "reactor worker thread does not exist");
-        JMG_ENFORCE(reactor_worker->joinable(),
-                    "reactor worker is not joinable");
-      }
-      reactor_worker->join();
-    });
+    auto guard = Cleanup([&]() { shutdown(); });
     // 2 seconds is infinity
     fbr_executed_barrier.get(2s, "fiber executed barrier");
   }
@@ -125,15 +128,7 @@ TEST_F(ReactorTests, TestFiberYielding) {
   using SignallerPtr = shared_ptr<Signaller>;
   auto make_fbr_fcn = [](SignallerPtr&& signaller) mutable {
     return [signaller = std::move(signaller)](Fiber& fbr) mutable {
-      cout << "starting work for fiber [" << fbr.getId() << "]" << endl;
-      for (int step : views::iota(1, 3)) {
-        cout << "fiber [" << fbr.getId() << "] will now yield at step [" << step
-             << "]" << endl;
-        fbr.yield();
-        cout << str_cat("fiber [", fbr.getId(),
-                        "] has finished yielding at step [", step, "]")
-             << endl;
-      }
+      for (int step : views::iota(1, 3)) { fbr.yield(); }
       signaller->set_value();
     };
   };
@@ -168,33 +163,17 @@ TEST_F(ReactorTests, TestFiberYielding) {
 TEST_F(ReactorTests, TestFileOpenFailure) {
   Signaller fbr_executed_signaller;
   reactor.post([&](Fiber& fbr) {
-    cout << "executing 'open_file' operation that should fail\n";
-
     EXPECT_THROW([[maybe_unused]] auto fd =
                    fbr.openFile("/no/such/file", FileOpenFlags::kRead),
                  system_error);
-
-    cout << "done executing 'open file' operation that should fail\n";
     fbr_executed_signaller.set_value();
   });
 
   auto fbr_executed_barrier = fbr_executed_signaller.get_future();
   {
-    auto guard = Cleanup([&]() {
-      // shutdown the reactor after the fiber functions have executed
-      cout << "shutting down the reactor\n";
-      reactor.shutdown();
-      if (!uncaught_exceptions()) {
-        JMG_ENFORCE(reactor_worker, "reactor worker thread does not exist");
-        JMG_ENFORCE(reactor_worker->joinable(),
-                    "reactor worker is not joinable");
-      }
-      reactor_worker->join();
-    });
-    cout << "awaiting completion of reactor operation\n";
+    auto guard = Cleanup([&]() { shutdown(); });
     // 2 seconds is infinity
     fbr_executed_barrier.get(2s, "fiber executed barrier");
-    cout << "reactor operation complete\n";
   }
 
   EXPECT_TRUE(clean_reactor_shutdown);
@@ -205,35 +184,17 @@ TEST_F(ReactorTests, TestWriteDataToFile) {
   TmpFile tmpFile;
   Signaller fbr_executed_signaller;
   reactor.post([&](Fiber& fbr) {
-    cout << "opening temporary file [" << tmpFile.name() << "] for writing\n";
     const auto fd = fbr.openFile(tmpFile.name(), FileOpenFlags::kWrite, 0644);
     {
       auto guard = Cleanup([&]() { fbr.close(fd); });
-
-      cout << "executing 'write' operation on temporary file ["
-           << tmpFile.name() << "]\n";
       fbr.write(fd, buffer_from(test_data));
-
-      cout << "done writing data to temporary file [" << tmpFile.name()
-           << "]\n";
     }
     fbr_executed_signaller.set_value();
   });
 
   auto fbr_executed_barrier = fbr_executed_signaller.get_future();
   {
-    auto guard = Cleanup([&]() {
-      // shutdown the reactor after the fiber functions have executed
-      cout << "shutting down the reactor\n";
-      reactor.shutdown();
-      if (!uncaught_exceptions()) {
-        JMG_ENFORCE(reactor_worker, "reactor worker thread does not exist");
-        JMG_ENFORCE(reactor_worker->joinable(),
-                    "reactor worker is not joinable");
-      }
-      reactor_worker->join();
-    });
-    cout << "awaiting completion of fiber work\n";
+    auto guard = Cleanup([&]() { shutdown(); });
     // 2 seconds is infinity
     fbr_executed_barrier.get(2s, "fiber executed barrier");
 
