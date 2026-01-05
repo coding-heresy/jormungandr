@@ -226,6 +226,11 @@ enum class FileOpenFlags : uint16_t {
   kAppend = O_APPEND,
 };
 
+enum class SocketTypes : uint8_t {
+  kTcp,
+  kUdp,
+};
+
 /**
  * concept for any safe type which wraps an int that should be interpreted as a
  * file descriptor
