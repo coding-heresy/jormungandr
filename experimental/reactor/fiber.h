@@ -100,6 +100,11 @@ public:
   void close(FileDescriptor fd);
 
   /**
+   * read data from an open file descriptor
+   */
+  size_t read(FileDescriptor fd, BufferProxy buf);
+
+  /**
    * write data to an open file descriptor
    */
   void write(FileDescriptor fd, BufferView data);

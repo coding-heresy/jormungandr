@@ -69,10 +69,6 @@ FileDescriptor Fiber::openFile(const std::filesystem::path& file_path,
   const auto event = getEvent("open file"sv);
 
   const auto& cqe = *(event);
-  if (cqe.res < 0) {
-    JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(-cqe.res, "failed to open file [",
-                                      file_path.native(), "]");
-  }
 
   return FileDescriptor(cqe.res);
 }
@@ -89,11 +85,40 @@ void Fiber::close(FileDescriptor fd) {
   // complete
   reactor_->schedule();
 
+  ////////////////////
+  // return from scheduler
   const auto event = getEvent("close file descriptor");
 
   // NOTE: there is no return value and all checks have been performed by
   // getEvent, no need for further action and destructor for Event will take
   // care of cleanup
+}
+
+size_t Fiber::read(const FileDescriptor fd, const BufferProxy buf) {
+  using namespace uring;
+  if (buf.empty()) { return 0; }
+  auto& uring = *(reactor_->uring_);
+
+  struct iovec iov[1];
+  iov[0].iov_base = (void*)buf.data();
+  iov[0].iov_len = buf.size();
+
+  // set the user data to the fiber ID so the completion event gets routed back
+  // to this thread
+  uring.submitReadReq(fd, iov, DelaySubmission::kNoDelay, UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reactor_->schedule();
+
+  ////////////////////
+  // return from scheduler
+  const auto event = getEvent("read data");
+
+  const auto& cqe = *(event);
+
+  return static_cast<size_t>(cqe.res);
 }
 
 void Fiber::write(const FileDescriptor fd, const BufferView data) {
@@ -115,6 +140,8 @@ void Fiber::write(const FileDescriptor fd, const BufferView data) {
   // complete
   reactor_->schedule();
 
+  ////////////////////
+  // return from scheduler
   const auto event = getEvent("write data");
 
   // NOTE: there is no return value and all checks have been performed by

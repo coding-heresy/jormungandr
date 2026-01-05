@@ -267,7 +267,10 @@ BufferView buffer_from(const T& ref) {
  */
 template<typename T>
 BufferProxy buffer_from(T& ref) {
-  return BufferProxy(reinterpret_cast<uint8_t*>(&ref), sizeof(ref));
+  if constexpr (DecayedSameAsT<std::string, T>) {
+    return BufferProxy(reinterpret_cast<uint8_t*>(ref.data()), ref.size());
+  }
+  else { return BufferProxy(reinterpret_cast<uint8_t*>(&ref), sizeof(ref)); }
 }
 
 } // namespace jmg
