@@ -226,35 +226,13 @@ Scheduler has 2 states: `polling` and `blocking`
 
 # TODO
 
-* Add sanity checking of the state of the `active` and `next active`
-  fibers in the scheduler function
-  * Design idea: the only state change that should be made outside of
-    the scheduler function should be setting the state to
-    `kTerminated`, all other states should be managed by the scheduler
-    function
-  * The only allowable states for a fiber calling the scheduler
-    function should be kActive or kTerminated
-* ~~Complete the first test case: start the reactor and shut it down
-  without having it explode violently.~~
-* ~~Add a list of _runnable_ fibers to the scheduler
-  * When a uring completion queue event that is associated with a
-    fiber arrives, perform any required bookkeeping and add the fiber
-    to the _runnable_ list
-  * How to handle the case where a completion queue event indicates a
-    failure?~~
-* Firm up the scheduling for the case where a fiber completes its
-  execution
-  * What is the precise behavior of the _root_ fiber (i.e. the fiber
-    created when the reactor is started, which has fiber ID 0)?
-  * Seems like the currently active fiber can process events in
-    batches whether or not its execution is complete
-  * Once a batch of events has been processed, execution should jump
-    to the first thread on the _runnable_ queue
-* ~~test case: start the reactor, create a promise/future for
-  signalling, send the reactor a job that simply triggers the promise,
-  wait for the future, shut down the reactor~~
-* ...
-* Profit!
+* Review and rework fiber state handling
+  * There are currently some weird flags floating around that should
+    be folded into the set of states
+* Maybe create an async retread of the various `std::filesystem`
+  functions
+* Investigate buffer registration
+* Figure out how to use c-ares for DNS resolution
 
 ## Longer term
 * Try to come up with a better way to pass a fiber worker function
