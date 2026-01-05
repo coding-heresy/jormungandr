@@ -182,6 +182,39 @@ TEST_F(ReactorTests, TestFileOpenFailure) {
   EXPECT_TRUE(clean_reactor_shutdown);
 }
 
+TEST_F(ReactorTests, TestReadDataFromFile) {
+  const auto test_data = "some test data"s;
+  TmpFile tmpFile(test_data);
+  Signaller fbr_executed_signaller;
+  string file_data;
+  file_data.resize(test_data.size() + 1);
+  size_t read_sz = 0;
+  reactor.post([&](Fiber& fbr) mutable {
+    const auto fd = fbr.openFile(tmpFile.name(), FileOpenFlags::kRead);
+    {
+      auto guard = Cleanup([&]() { fbr.close(fd); });
+      read_sz = fbr.read(fd, buffer_from(file_data));
+    }
+    fbr_executed_signaller.set_value();
+  });
+
+  auto fbr_executed_barrier = fbr_executed_signaller.get_future();
+  {
+    auto guard = Cleanup([&]() { shutdown(); });
+    // 2 seconds is infinity
+    fbr_executed_barrier.get(2s, "fiber executed barrier");
+
+    {
+      // validate the data read from the file
+      EXPECT_EQ(read_sz, test_data.size());
+      file_data.resize(read_sz);
+      EXPECT_EQ(file_data, test_data);
+    }
+  }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
+}
+
 TEST_F(ReactorTests, TestWriteDataToFile) {
   const auto test_data = "some test data"s;
   TmpFile tmpFile;
