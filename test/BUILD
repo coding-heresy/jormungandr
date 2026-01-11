@@ -76,6 +76,16 @@ cc_test(
 )
 
 cc_test(
+    name = "test_ip_endpoint",
+    srcs = ["test_ip_endpoint.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+    ],
+    size = "small",
+)
+
+cc_test(
     name = "test_meta",
     srcs = ["test_meta.cpp"],
     deps = [

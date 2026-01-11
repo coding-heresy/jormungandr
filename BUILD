@@ -9,6 +9,7 @@ cc_library(
         "include/jmg/field.h",
         "include/jmg/file_util.h",
         "include/jmg/future.h",
+        "include/jmg/ip_endpoint.h",
         "include/jmg/meta.h",
         "include/jmg/object.h",
         "include/jmg/preprocessor.h",
@@ -28,6 +29,7 @@ cc_library(
     ],
     srcs = [
         "src/cbe.cpp",
+        "src/ip_endpoint.cpp",
         "src/server.cpp",
         "src/system.cpp",
     ],
@@ -41,6 +43,7 @@ cc_library(
         "@com_google_abseil//absl/container:flat_hash_set",
         "@com_google_abseil//absl/random",
         "@com_google_abseil//absl/time",
+        "@ctre",
         "@ericniebler_meta//:meta",
         "@doom_strong_type//:strong_type",
         "@liburing",

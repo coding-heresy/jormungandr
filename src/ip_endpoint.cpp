@@ -30,7 +30,7 @@
  *
  */
 
-#include "ip_endpoint.h"
+#include "jmg/ip_endpoint.h"
 
 #include <arpa/inet.h>
 
