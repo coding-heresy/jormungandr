@@ -396,6 +396,14 @@ public:
                         DelaySubmission is_delayed = DelaySubmission::kNoDelay);
 
   /**
+   * submit a request to close an open descriptor
+   */
+  template<DescriptorT T>
+  void submitFdCloseReq(const T fd, const UserData user_data) {
+    submitFdCloseReq(unsafe(fd), user_data);
+  }
+
+  /**
    * submit a request to open a file
    */
   void submitFileOpenReq(c_string_view file_path,
@@ -409,9 +417,11 @@ public:
   void submitSocketOpenReq(SocketTypes socket_type, UserData user_data);
 
   /**
-   * submit a request to close an open file descriptor
+   * submit a request to form a network connection to an endpoint
    */
-  void submitFdCloseReq(int fd, UserData user_data);
+  void submitNetConnectReq(SocketDescriptor sd,
+                           const IpEndpoint& tgt_endpoint,
+                           UserData user_data);
 
   /**
    * submit a request for data, referenced via a view into an iovec object, to
@@ -453,6 +463,11 @@ public:
 
 private:
   io_uring_sqe& getNextSqe();
+
+  /**
+   * actual implementation of close request submission
+   */
+  void submitFdCloseReq(int fd, UserData user_data);
 
   /**
    * actual implementation of write request submission

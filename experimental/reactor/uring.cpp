@@ -144,9 +144,9 @@ void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
   clear_notifier.cancel();
 }
 
-void Uring::submitTimeoutReq(UserData data,
-                             Duration timeout,
-                             DelaySubmission isDelayed) {
+void Uring::submitTimeoutReq(const UserData data,
+                             const Duration timeout,
+                             const DelaySubmission isDelayed) {
   auto& sqe = getNextSqe();
   io_uring_sqe_set_data64(&sqe, unwrap(data));
   UringDuration timeout_duration = from(timeout);
@@ -155,9 +155,18 @@ void Uring::submitTimeoutReq(UserData data,
   if (!unwrap(isDelayed)) { submitReq("timeout"sv); }
 }
 
+void Uring::submitFdCloseReq(const int fd, const UserData user_data) {
+  JMG_ENFORCE_USING(logic_error, fd > -1, "invalid file descriptor value [", fd,
+                    "]");
+  auto& sqe = getNextSqe();
+  io_uring_prep_close(&sqe, fd);
+  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  submitReq("close file descriptor"sv);
+}
+
 void Uring::submitFileOpenReq(const c_string_view file_path,
                               const FileOpenFlags flags,
-                              mode_t permissions,
+                              const mode_t permissions,
                               const UserData user_data) {
   JMG_ENFORCE_USING(logic_error, !file_path.empty(), "empty file path");
   auto& sqe = getNextSqe();
@@ -168,7 +177,7 @@ void Uring::submitFileOpenReq(const c_string_view file_path,
 }
 
 void Uring::submitSocketOpenReq(const SocketTypes socket_type,
-                                UserData user_data) {
+                                const UserData user_data) {
   auto& sqe = getNextSqe();
   switch (socket_type) {
     case SocketTypes::kTcp:
@@ -184,19 +193,21 @@ void Uring::submitSocketOpenReq(const SocketTypes socket_type,
   submitReq("open socket"sv);
 }
 
-void Uring::submitFdCloseReq(const int fd, const UserData user_data) {
-  JMG_ENFORCE_USING(logic_error, fd > -1, "invalid file descriptor value [", fd,
-                    "]");
+void Uring::submitNetConnectReq(const SocketDescriptor sd,
+                                const IpEndpoint& tgt_endpoint,
+                                const UserData user_data) {
   auto& sqe = getNextSqe();
-  io_uring_prep_close(&sqe, fd);
+  io_uring_prep_connect(&sqe, unsafe(sd),
+                        (struct sockaddr*)&(tgt_endpoint.addr()),
+                        sizeof(struct sockaddr_in));
   io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
-  submitReq("close file descriptor"sv);
+  submitReq("connect to network service");
 }
 
 void Uring::submitWriteReq(const int fd,
                            const IoVecView io_vec,
-                           DelaySubmission is_delayed,
-                           optional<UserData> user_data) {
+                           const DelaySubmission is_delayed,
+                           const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
@@ -209,8 +220,8 @@ void Uring::submitWriteReq(const int fd,
 
 void Uring::submitReadReq(const int fd,
                           const IoVecView io_vec,
-                          DelaySubmission is_delayed,
-                          optional<UserData> user_data) {
+                          const DelaySubmission is_delayed,
+                          const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
