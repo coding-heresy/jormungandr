@@ -73,7 +73,28 @@ FileDescriptor Fiber::openFile(const std::filesystem::path& file_path,
   return FileDescriptor(cqe.res);
 }
 
-void Fiber::close(FileDescriptor fd) {
+SocketDescriptor Fiber::openSocket(const SocketTypes socket_type) {
+  auto& uring = *(reactor_->uring_);
+
+  // set the user data to the fiber ID so the completion event gets routed back
+  // to this thread
+  uring.submitSocketOpenReq(socket_type, uring::UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reactor_->schedule();
+
+  ////////////////////
+  // return from scheduler
+  const auto event = getEvent("open file"sv);
+
+  const auto& cqe = *(event);
+
+  return SocketDescriptor(cqe.res);
+}
+
+void Fiber::close(const int fd) {
   auto& uring = *(reactor_->uring_);
 
   // set the user data to the fiber ID so the completion event gets routed back
@@ -94,7 +115,7 @@ void Fiber::close(FileDescriptor fd) {
   // care of cleanup
 }
 
-size_t Fiber::read(const FileDescriptor fd, const BufferProxy buf) {
+size_t Fiber::read(const int fd, const BufferProxy buf) {
   using namespace uring;
   if (buf.empty()) { return 0; }
   auto& uring = *(reactor_->uring_);

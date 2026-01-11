@@ -95,14 +95,25 @@ public:
                           std::optional<mode_t> permissions = std::nullopt);
 
   /**
+   * open a socket
+   */
+  SocketDescriptor openSocket(SocketTypes socket_type);
+
+  /**
    * close an open file descriptor
    */
-  void close(FileDescriptor fd);
+  template<DescriptorT T>
+  void close(T fd) {
+    close(unsafe(fd));
+  }
 
   /**
    * read data from an open file descriptor
    */
-  size_t read(FileDescriptor fd, BufferProxy buf);
+  template<ReadableDescriptorT T>
+  size_t read(T fd, BufferProxy buf) {
+    return read(unsafe(fd), buf);
+  }
 
   /**
    * write data to an open file descriptor
@@ -113,6 +124,10 @@ private:
   friend class Reactor;
 
   Fiber(FiberId id, Reactor& reactor);
+
+  void close(int fd);
+
+  size_t read(int fd, BufferProxy buf);
 
   /**
    * get the outstanding Event object associated with the fiber

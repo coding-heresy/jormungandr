@@ -198,6 +198,7 @@ using Port = SafeType<uint16_t, SafeIdType>;
 using Octet = SafeType<uint8_t, st::arithmetic>;
 // safe types wrapping various file descriptors
 using FileDescriptor = SafeType<int, SafeIdType>;
+using SocketDescriptor = SafeType<int, SafeIdType>;
 using EventFd = SafeType<int, SafeIdType>;
 using PipeReadFd = SafeType<int, SafeIdType>;
 using PipeWriteFd = SafeType<int, SafeIdType>;
@@ -205,6 +206,7 @@ using PipeWriteFd = SafeType<int, SafeIdType>;
 JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
 JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(SocketDescriptor, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(EventFd, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(PipeReadFd, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(PipeWriteFd, int, SafeIdType);
@@ -237,17 +239,18 @@ enum class SocketTypes : uint8_t {
  */
 template<typename T>
 concept DescriptorT =
-  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>;
+  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
+  || SameAsDecayedT<SocketDescriptor, T>;
 
 template<typename T>
 concept ReadableDescriptorT =
   SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
-  || SameAsDecayedT<PipeReadFd, T>;
+  || SameAsDecayedT<PipeReadFd, T> || SameAsDecayedT<SocketDescriptor, T>;
 
 template<typename T>
 concept WritableDescriptorT =
   SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
-  || SameAsDecayedT<PipeWriteFd, T>;
+  || SameAsDecayedT<PipeWriteFd, T> || SameAsDecayedT<SocketDescriptor, T>;
 
 using BufferView = std::span<const uint8_t, std::dynamic_extent>;
 using BufferProxy = std::span<uint8_t, std::dynamic_extent>;

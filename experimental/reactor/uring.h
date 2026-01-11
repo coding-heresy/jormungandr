@@ -403,9 +403,14 @@ public:
                          UserData user_data);
 
   /**
+   * submit a request to open a socket
+   */
+  void submitSocketOpenReq(SocketTypes socket_type, UserData user_data);
+
+  /**
    * submit a request to close an open file descriptor
    */
-  void submitFdCloseReq(FileDescriptor fd, UserData user_data);
+  void submitFdCloseReq(int fd, UserData user_data);
 
   /**
    * submit a request for data, referenced via a view into an iovec object, to

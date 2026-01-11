@@ -232,6 +232,7 @@ Scheduler has 2 states: `polling` and `blocking`
 * Maybe create an async retread of the various `std::filesystem`
   functions
 * Investigate buffer registration
+* Investigate direct descriptors
 * Figure out how to use c-ares for DNS resolution
 
 ## Longer term
