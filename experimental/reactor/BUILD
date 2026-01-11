@@ -24,30 +24,15 @@ cc_test(
 cc_library(
     name = "uring",
     hdrs = [
-        "ip_endpoint.h",
         "uring.h",
         "util.h",
     ],
-    srcs = [
-        "ip_endpoint.cpp",
-        "uring.cpp"
-    ],
+    srcs = ["uring.cpp"],
     defines = ["_GNU_SOURCE"],
     deps = [
-        "@ctre",
         "//:jmg",
         "@liburing",
     ],
-)
-
-cc_test(
-    name = "test_ip_endpoint",
-    srcs = ["test_ip_endpoint.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        ":uring",
-    ],
-    size = "small",
 )
 
 cc_test(
