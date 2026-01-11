@@ -407,9 +407,9 @@ class Serializer {
   void encodeValue(const T& val) {
     // encode the field ID
     constexpr auto id = Fld::kFldId;
-    idx_ += impl::encode(buffer_.subspan(idx_), id);
+    idx_ += impl::encode(buf_.subspan(idx_), id);
     // encode the value
-    idx_ += impl::encode(buffer_.subspan(idx_), val);
+    idx_ += impl::encode(buf_.subspan(idx_), val);
   }
 
   // TODO(bd) ensure that all fields have a cbe field ID and that all
@@ -427,7 +427,7 @@ class Serializer {
   }
 
 public:
-  explicit Serializer(BufferProxy buffer) : buffer_(buffer) {}
+  explicit Serializer(BufferProxy buf) : buf_(buf) {}
 
   template<FieldDefT... Flds>
   void serialize(const cbe::Object<Flds...>& object) {
@@ -438,7 +438,7 @@ public:
 
 private:
   size_t idx_ = 0;
-  BufferProxy buffer_;
+  BufferProxy buf_;
 };
 
 /**
@@ -474,7 +474,7 @@ class Deserializer {
     decoders[id] = [this](Obj& obj) {
       using Tgt = RemoveOptionalT<Decay<decltype(std::get<kFldIdx>(
         std::declval<typename Obj::adapted_type>()))>>;
-      const auto [decoded, consumed] = impl::decode<Tgt>(buffer_.subspan(idx_));
+      const auto [decoded, consumed] = impl::decode<Tgt>(buf_.subspan(idx_));
       idx_ += consumed;
       jmg::set<Fld>(obj, decoded);
     };
@@ -531,18 +531,18 @@ class Deserializer {
     //////////
     // decoding logic
     size_t required_fields_deserialized = 0;
-    while (!isBufferEmpty()) {
+    while (!isBufEmpty()) {
       const auto field_id = [&]() -> size_t {
         const auto [decoded, consumed] =
-          impl::decode<uint32_t>(buffer_.subspan(idx_));
+          impl::decode<uint32_t>(buf_.subspan(idx_));
         idx_ += consumed;
         return static_cast<size_t>(decoded);
       }();
       JMG_ENFORCE(
         field_id <= kMaxFieldId, "decoded field ID [", field_id,
         "] is not in the set of valid IDs for the type being decoded");
-      JMG_ENFORCE(!isBufferEmpty(), "ran out of data after deserializing field "
-                                    "ID and before deserializing type");
+      JMG_ENFORCE(!isBufEmpty(), "ran out of data after deserializing field "
+                                 "ID and before deserializing type");
       auto& decoder = kFieldDecoders[field_id];
       JMG_ENFORCE(
         pred(decoder), "decoded field ID [", field_id,
@@ -557,7 +557,7 @@ class Deserializer {
   }
 
 public:
-  explicit Deserializer(BufferView buffer) : buffer_(buffer) {}
+  explicit Deserializer(BufferView buf) : buf_(buf) {}
 
   /**
    * deserialize a single object from the buffer
@@ -571,10 +571,10 @@ public:
   size_t consumed() const { return idx_; }
 
 private:
-  bool isBufferEmpty() const { return idx_ >= buffer_.size(); }
+  bool isBufEmpty() const { return idx_ >= buf_.size(); }
 
   size_t idx_ = 0;
-  BufferView buffer_;
+  BufferView buf_;
 };
 
 } // namespace jmg::cbe
