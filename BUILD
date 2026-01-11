@@ -54,11 +54,8 @@ cc_library(
 cc_library(
     name = "jmg_server_main",
     visibility = ["//visibility:public"],
-    srcs = [
-        "src/server_main.cpp",
-    ],
+    srcs = ["src/server_main.cpp"],
     linkstatic = True,
-    deps = [
-        ":jmg",
-    ],
+    deps = [":jmg"],
+)
 )
