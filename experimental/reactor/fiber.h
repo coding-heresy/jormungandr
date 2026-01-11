@@ -92,11 +92,36 @@ public:
   }
 
   /**
+   * close an open descriptor of any kind
+   */
+  template<DescriptorT T>
+  void close(T fd) {
+    // set the user data to the fiber ID so the completion event gets routed
+    // back to this thread
+    uring_->submitFdCloseReq(fd, UserData(unsafe(id_)));
+
+    ////////////////////
+    // enter the scheduler to defer further processing until the operation is
+    // complete
+    reschedule();
+
+    ////////////////////
+    // return from scheduler
+    validateEvent("close descriptor");
+  }
+
+  ////////////////////
+  // file support
+
+  /**
    * open a file
    */
   FileDescriptor openFile(const std::filesystem::path& filePath,
                           FileOpenFlags flags,
                           std::optional<mode_t> permissions = std::nullopt);
+
+  ////////////////////
+  // networking support
 
   /**
    * open a socket
@@ -104,12 +129,12 @@ public:
   SocketDescriptor openSocket(SocketTypes socket_type);
 
   /**
-   * close an open file descriptor
+   * connect to a (possibly remote) network endpoint
    */
-  template<DescriptorT T>
-  void close(T fd) {
-    close(unsafe(fd));
-  }
+  void connectTo(SocketDescriptor sd, const IpEndpoint& tgt_endpoint);
+
+  ////////////////////
+  // reading and writing data
 
   /**
    * read data from an open file descriptor

@@ -43,6 +43,11 @@
 #include "jmg/meta.h"
 #include "jmg/preprocessor.h"
 
+////////////////////////////////////////////////////////////////////////////////
+// NOTE: these file utilities employ standard library functions that will block
+// the current thread and are thus inappropriate for use in a reactor fiber
+////////////////////////////////////////////////////////////////////////////////
+
 namespace jmg
 {
 

@@ -253,11 +253,13 @@ enum class SocketTypes : uint8_t {
 
 /**
  * concept for any safe type which wraps an int that should be interpreted as a
- * file descriptor
+ * (file) descriptor
  */
 template<typename T>
 concept DescriptorT =
-  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
+  SameAsDecayedT<FileDescriptor, T> || SameAsDecayedT<FileReadFd, T>
+  || SameAsDecayedT<FileWriteFd, T> || SameAsDecayedT<EventFd, T>
+  || SameAsDecayedT<PipeReadFd, T> || SameAsDecayedT<PipeWriteFd, T>
   || SameAsDecayedT<SocketDescriptor, T>;
 
 /**
