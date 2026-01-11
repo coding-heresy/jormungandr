@@ -939,9 +939,7 @@ catalogued here. If you see an abbreviation whose meaning is not
 obvious, look in this section for a defintion. When contributing code,
 please use these abbreviations where appropriate.
 
-* rslt  - result, typically used to name an automatic variable that
-  will return a value from a function so as to take advantage of named
-  return value optimization
+* buf   - buffer
 * chkpt - checkpoint
 * cncy  - currency
 * ctrl  - control/controller
@@ -954,6 +952,9 @@ please use these abbreviations where appropriate.
 * rc    - return code, typically used for POSIX functions and other 3rd
           party library functions that insist on returning an integer code
 * req   - request
+* rslt  - result, typically used to name an automatic variable that
+          will return a value from a function so as to take advantage
+          of named return value optimization
 * rsp   - response
 * srvr  - server
 * str   - string
