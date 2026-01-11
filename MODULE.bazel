@@ -30,6 +30,27 @@ bazel_dep(
 )
 
 ########################################
+# compile time regular expressions
+########################################
+
+bazel_dep(
+    name = "ctre",
+    version = "3.10.0",
+)
+
+# TODO issue pull request to
+# https://github.com/hanickadot/compile-time-regular-expressions and
+# update here if it is accepted
+archive_override(
+    module_name = "ctre",
+    integrity = "sha256-sX5smmzAzqZRMvYqbGmc7+2VJyEGNWnWM56zykcQReY=",
+    strip_prefix = "compile-time-regular-expressions-3.10.0",
+    urls = ["https://github.com/hanickadot/compile-time-regular-expressions/archive/refs/tags/v3.10.0.tar.gz"],
+    patches = ["//patches:ctre_bazel.patch"],
+    patch_strip = 1,
+)
+
+########################################
 # google test
 ########################################
 

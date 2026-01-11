@@ -1,4 +1,7 @@
 
+####################
+# control blocks
+
 cc_library(
     name = "control_blocks",
     hdrs = ["control_blocks.h"],
@@ -15,18 +18,36 @@ cc_test(
     size = "small",
 )
 
+####################
+# io_uring
+
 cc_library(
     name = "uring",
     hdrs = [
+        "ip_endpoint.h",
         "uring.h",
         "util.h",
     ],
-    srcs = ["uring.cpp"],
+    srcs = [
+        "ip_endpoint.cpp",
+        "uring.cpp"
+    ],
     defines = ["_GNU_SOURCE"],
     deps = [
+        "@ctre",
         "//:jmg",
         "@liburing",
     ],
+)
+
+cc_test(
+    name = "test_ip_endpoint",
+    srcs = ["test_ip_endpoint.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        ":uring",
+    ],
+    size = "small",
 )
 
 cc_test(
@@ -48,6 +69,9 @@ cc_test(
     ],
     size = "small",
 )
+
+####################
+# reactor
 
 cc_library(
     name = "reactor",

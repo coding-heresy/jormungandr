@@ -45,6 +45,7 @@
 #include <absl/container/flat_hash_set.h>
 #include <absl/time/time.h>
 
+#include "jmg/meta.h"
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
 
@@ -189,12 +190,16 @@ public:
   const char* c_str() const { return data(); }
 };
 
+template<typename T>
+concept NullTerminatedStringT =
+  CStyleStringT<T> || DecayedSameAsT<std::string, T>
+  || DecayedSameAsT<c_string_view, T>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // miscellaneous
 ////////////////////////////////////////////////////////////////////////////////
 
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
-using Port = SafeType<uint16_t, SafeIdType>;
 using Octet = SafeType<uint8_t, st::arithmetic>;
 // safe types wrapping various (file) descriptors
 using FileDescriptor = SafeType<int, SafeIdType>;
@@ -205,7 +210,6 @@ using PipeReadFd = SafeType<int, SafeIdType>;
 using PipeWriteFd = SafeType<int, SafeIdType>;
 using SocketDescriptor = SafeType<int, SafeIdType>;
 #else
-JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
 // safe types wrapping various (file) descriptors
 JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
