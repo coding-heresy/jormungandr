@@ -33,7 +33,7 @@
 #include <arpa/inet.h>
 #include <gtest/gtest.h>
 
-#include "ip_endpoint.h"
+#include "jmg/ip_endpoint.h"
 
 using namespace jmg;
 

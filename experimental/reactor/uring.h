@@ -35,6 +35,7 @@
 
 #include <liburing.h>
 
+#include "jmg/ip_endpoint.h"
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
 #include "jmg/types.h"
