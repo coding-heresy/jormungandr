@@ -208,7 +208,6 @@ void Reactor::start() {
 }
 
 void Reactor::shutdown() {
-  static constexpr auto kShutdownCmd = unwrap(Cmd::kShutdown);
   write_all(post_src_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
 }
 
@@ -349,7 +348,7 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
         // external thread has sent a message on the notifier pipe fd
         ////////////////////
         const auto data = notifier_data_;
-        if (unwrap(Cmd::kShutdown) == data) {
+        if (kShutdownCmd == data) {
           ////////////////////
           // shutdown was requested
           ////////////////////
