@@ -44,16 +44,6 @@
 namespace jmg
 {
 
-/**
- * commands that can be sent to the reactor thread from external threads
- */
-enum class Cmd : uint64_t {
-  // NOTE: initial value is 1 because writing a 0 to an eventfd will cause a
-  // read against it to produce an EAGAIN/EWOULDBLOCK error
-  kShutdown = 1,
-  kPost = 2
-};
-
 namespace detail
 {
 void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val);
@@ -83,6 +73,8 @@ public:
   void post(FiberFcn&& fcn);
 
 private:
+  static constexpr uint64_t kShutdownCmd = std::numeric_limits<uint64_t>::max();
+
   using OptMillisec = std::optional<std::chrono::milliseconds>;
   using OptStrView = std::optional<std::string_view>;
   using WorkerFcn = std::function<void(void)>;
