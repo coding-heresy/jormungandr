@@ -92,23 +92,19 @@ SocketDescriptor Fiber::openSocket(const SocketTypes socket_type) {
   return SocketDescriptor(cqe.res);
 }
 
-void Fiber::close(const int fd) {
+void Fiber::connectTo(SocketDescriptor sd, const IpEndpoint& tgt_endpoint) {
   // set the user data to the fiber ID so the completion event gets routed back
   // to this thread
-  uring_->submitFdCloseReq(fd, UserData(unsafe(id_)));
+  uring_->submitNetConnectReq(sd, tgt_endpoint, UserData(unsafe(id_)));
 
   ////////////////////
   // enter the scheduler to defer further processing until the operation is
   // complete
-  reactor_->schedule();
+  reschedule();
 
   ////////////////////
   // return from scheduler
-  const auto event = getEvent("close file descriptor");
-
-  // NOTE: there is no return value and all checks have been performed by
-  // getEvent, no need for further action and destructor for Event will take
-  // care of cleanup
+  validateEvent("close descriptor");
 }
 
 void Fiber::reschedule() { reactor_->schedule(); }
