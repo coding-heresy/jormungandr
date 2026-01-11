@@ -13,7 +13,7 @@ cc_test(
     srcs = ["test_control_blocks.cpp"],
     deps = [
         "@com_google_googletest//:gtest_main",
-        ":control_blocks"
+        ":control_blocks",
     ],
     size = "small",
 )
@@ -40,7 +40,7 @@ cc_test(
     srcs = ["test_uring.cpp"],
     deps = [
         "@com_google_googletest//:gtest_main",
-        ":uring"
+        ":uring",
     ],
     size = "small",
 )
@@ -50,7 +50,7 @@ cc_test(
     srcs = ["test_ucontext.cpp"],
     deps = [
         "@com_google_googletest//:gtest_main",
-        "//:jmg"
+        "//:jmg",
     ],
     size = "small",
 )
@@ -77,10 +77,11 @@ cc_library(
 
 cc_test(
     name = "test_reactor",
+    visibility = ["//visibility:public"],
     srcs = ["test_reactor.cpp"],
     deps = [
         "@com_google_googletest//:gtest_main",
-        ":reactor"
+        ":reactor",
     ],
     size = "small",
 )
