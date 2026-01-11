@@ -61,6 +61,11 @@ struct FiberCtrlBlockBody;
  * publicly accessible interface to a reactor fiber object
  */
 class Fiber {
+  using DelaySubmission = uring::DelaySubmission;
+  using Event = uring::Event;
+  using Uring = uring::Uring;
+  using UserData = uring::UserData;
+
 public:
   Fiber() = default;
   JMG_NON_COPYABLE(Fiber);
@@ -83,8 +88,7 @@ public:
   template<typename... Args>
   void log(Args&&... args) {
     const auto output = str_cat(std::forward<Args&&>(args)...);
-    // NOTE: this assumes that file descriptor 1 is always used for stdout
-    write(FileDescriptor(1), buffer_from(output));
+    write(kStdoutFd, buffer_from(output));
   }
 
   /**
@@ -95,19 +99,62 @@ public:
                           std::optional<mode_t> permissions = std::nullopt);
 
   /**
+   * open a socket
+   */
+  SocketDescriptor openSocket(SocketTypes socket_type);
+
+  /**
    * close an open file descriptor
    */
-  void close(FileDescriptor fd);
+  template<DescriptorT T>
+  void close(T fd) {
+    close(unsafe(fd));
+  }
 
   /**
    * read data from an open file descriptor
    */
-  size_t read(FileDescriptor fd, BufferProxy buf);
+  template<ReadableDescriptorT T>
+  size_t read(T fd, BufferProxy buf) {
+    auto iov = iov_from(buf);
+    // set the user data to the fiber ID so the completion event gets routed
+    // back to this thread
+    uring_->submitReadReq(fd, iov, DelaySubmission::kNoDelay,
+                          UserData(unsafe(id_)));
+
+    ////////////////////
+    // enter the scheduler to defer further processing until the operation is
+    // complete
+    reschedule();
+
+    ////////////////////
+    // return from scheduler
+    const auto event = getEvent("read data");
+    const auto& cqe = *(event);
+    return static_cast<size_t>(cqe.res);
+  }
 
   /**
    * write data to an open file descriptor
    */
-  void write(FileDescriptor fd, BufferView data);
+  template<WritableDescriptorT T>
+  void write(T fd, BufferView data) {
+    if (data.empty()) { return; }
+    auto iov = iov_from(data);
+    // set the user data to the fiber ID so the completion event gets routed
+    // back to this thread
+    uring_->submitWriteReq(fd, iov, DelaySubmission::kNoDelay,
+                           UserData(unsafe(id_)));
+
+    ////////////////////
+    // enter the scheduler to defer further processing until the operation is
+    // complete
+    reschedule();
+
+    ////////////////////
+    // return from scheduler
+    validateEvent("write data");
+  }
 
 private:
   friend class Reactor;
@@ -115,14 +162,32 @@ private:
   Fiber(FiberId id, Reactor& reactor);
 
   /**
+   * non-blocking close of generic (file) descriptor
+   */
+  void close(int fd);
+
+  /**
+   * execute the reactor scheduler to block the current fiber until a requested
+   * action (or actions) is complete
+   */
+  void reschedule();
+
+  /**
    * get the outstanding Event object associated with the fiber
    *
    * also performs several sanity checks
    */
-  uring::Event getEvent(const std::string_view op);
+  Event getEvent(const std::string_view op);
+
+  /**
+   * perform sanity checks on the outstanding Event object associated with the
+   * fiber, but do not return it for processing by the caller
+   */
+  void validateEvent(const std::string_view op);
 
   FiberId id_;
   Reactor* reactor_ = nullptr;
+  Uring* uring_ = nullptr;
   FiberCtrlBlockBody* fcb_body_ = nullptr;
 };
 

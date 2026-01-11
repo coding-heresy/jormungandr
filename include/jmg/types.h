@@ -196,26 +196,42 @@ public:
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using Port = SafeType<uint16_t, SafeIdType>;
 using Octet = SafeType<uint8_t, st::arithmetic>;
-// safe types wrapping various file descriptors
+// safe types wrapping various (file) descriptors
 using FileDescriptor = SafeType<int, SafeIdType>;
+using FileReadFd = SafeType<int, SafeIdType>;
+using FileWriteFd = SafeType<int, SafeIdType>;
 using EventFd = SafeType<int, SafeIdType>;
 using PipeReadFd = SafeType<int, SafeIdType>;
 using PipeWriteFd = SafeType<int, SafeIdType>;
+using SocketDescriptor = SafeType<int, SafeIdType>;
 #else
 JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
 JMG_NEW_SAFE_TYPE(Octet, uint8_t, st::arithmetic);
+// safe types wrapping various (file) descriptors
 JMG_NEW_SAFE_TYPE(FileDescriptor, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(FileReadFd, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(FileWriteFd, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(EventFd, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(PipeReadFd, int, SafeIdType);
 JMG_NEW_SAFE_TYPE(PipeWriteFd, int, SafeIdType);
+JMG_NEW_SAFE_TYPE(SocketDescriptor, int, SafeIdType);
 #endif
 inline constexpr auto kInvalidFileDescriptor = FileDescriptor(-1);
+inline constexpr auto kInvalidFileWriteFd = FileWriteFd(-1);
+inline constexpr auto kInvalidFileReadFd = FileReadFd(-1);
+inline constexpr auto kInvalidEventFd = EventFd(-1);
+inline constexpr auto kInvalidPipeReadFd = PipeReadFd(-1);
+inline constexpr auto kInvalidPipeWriteFd = PipeWriteFd(-1);
 inline constexpr auto kStdoutFd = FileDescriptor(STDOUT_FILENO);
+inline constexpr auto kStderrFd = FileDescriptor(STDERR_FILENO);
+
+////////////////////
+// files, sockets and descriptors
 
 /**
  * file open modes
  *
- * TODO(bd) rework this to allow combinations where permissable
+ * TODO(bd) rework this to allow combinations where permissible
  */
 enum class FileOpenFlags : uint16_t {
   kRead = O_RDONLY,
@@ -237,20 +253,46 @@ enum class SocketTypes : uint8_t {
  */
 template<typename T>
 concept DescriptorT =
-  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>;
+  SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
+  || SameAsDecayedT<SocketDescriptor, T>;
 
+/**
+ * concept for any safe type that represents a readable (file) descriptor
+ */
 template<typename T>
 concept ReadableDescriptorT =
   SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
-  || SameAsDecayedT<PipeReadFd, T>;
+  || SameAsDecayedT<FileReadFd, T> || SameAsDecayedT<PipeReadFd, T>
+  || SameAsDecayedT<SocketDescriptor, T>;
 
+/**
+ * concept for any safe type that represents a writable (file) descriptor
+ */
 template<typename T>
 concept WritableDescriptorT =
   SameAsDecayedT<EventFd, T> || SameAsDecayedT<FileDescriptor, T>
-  || SameAsDecayedT<PipeWriteFd, T>;
+  || SameAsDecayedT<FileWriteFd, T> || SameAsDecayedT<PipeWriteFd, T>
+  || SameAsDecayedT<SocketDescriptor, T>;
 
+////////////////////
+// buffers
+
+/**
+ * read-only buffer
+ */
 using BufferView = std::span<const uint8_t, std::dynamic_extent>;
+
+/**
+ * buffer that can be read from or written to
+ */
 using BufferProxy = std::span<uint8_t, std::dynamic_extent>;
+
+/**
+ * concept for any buffer type
+ */
+template<typename T>
+concept BufferT =
+  SameAsDecayedT<BufferView, T> || SameAsDecayedT<BufferProxy, T>;
 
 /**
  * create a BufferView from a type, typically used when reading a
@@ -276,6 +318,20 @@ BufferProxy buffer_from(T& ref) {
     return BufferProxy(reinterpret_cast<uint8_t*>(ref.data()), ref.size());
   }
   else { return BufferProxy(reinterpret_cast<uint8_t*>(&ref), sizeof(ref)); }
+}
+
+using SingleIoBuf = std::array<struct iovec, 1>;
+
+template<BufferT T>
+SingleIoBuf iov_from(T& buf) {
+  SingleIoBuf iov;
+  // NOTE: being slightly lazy here using C-style to void* instead of being
+  // explicit about the const-ness of the input and output, but this is due to
+  // the fact that struct iovec is used in system functions that do not attempt
+  // to handle const
+  iov[0].iov_base = (void*)buf.data();
+  iov[0].iov_len = buf.size();
+  return iov;
 }
 
 } // namespace jmg

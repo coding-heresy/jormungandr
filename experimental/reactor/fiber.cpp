@@ -44,6 +44,7 @@ namespace jmg
 Fiber::Fiber(FiberId id, Reactor& reactor)
   : id_(id)
   , reactor_(&reactor)
+  , uring_(reactor.uring_.get())
   , fcb_body_(&(reactor.fiber_ctrl_.getBlock(id).body)) {}
 
 void Fiber::yield() { reactor_->yieldFbr(); }
@@ -52,17 +53,16 @@ FileDescriptor Fiber::openFile(const std::filesystem::path& file_path,
                                const FileOpenFlags flags,
                                const std::optional<mode_t> permissions) {
   mode_t mode = permissions ? *permissions : static_cast<mode_t>(0);
-  auto& uring = *(reactor_->uring_);
 
   // set the user data to the fiber ID so the completion event gets routed back
   // to this thread
-  uring.submitFileOpenReq(c_string_view(file_path.native()), flags, mode,
-                          uring::UserData(unsafe(id_)));
+  uring_->submitFileOpenReq(c_string_view(file_path.native()), flags, mode,
+                            UserData(unsafe(id_)));
 
   ////////////////////
   // enter the scheduler to defer further processing until the operation is
   // complete
-  reactor_->schedule();
+  reschedule();
 
   ////////////////////
   // return from scheduler
@@ -73,12 +73,29 @@ FileDescriptor Fiber::openFile(const std::filesystem::path& file_path,
   return FileDescriptor(cqe.res);
 }
 
-void Fiber::close(FileDescriptor fd) {
-  auto& uring = *(reactor_->uring_);
-
+SocketDescriptor Fiber::openSocket(const SocketTypes socket_type) {
   // set the user data to the fiber ID so the completion event gets routed back
   // to this thread
-  uring.submitFdCloseReq(fd, uring::UserData(unsafe(id_)));
+  uring_->submitSocketOpenReq(socket_type, UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reschedule();
+
+  ////////////////////
+  // return from scheduler
+  const auto event = getEvent("open file"sv);
+
+  const auto& cqe = *(event);
+
+  return SocketDescriptor(cqe.res);
+}
+
+void Fiber::close(const int fd) {
+  // set the user data to the fiber ID so the completion event gets routed back
+  // to this thread
+  uring_->submitFdCloseReq(fd, UserData(unsafe(id_)));
 
   ////////////////////
   // enter the scheduler to defer further processing until the operation is
@@ -94,60 +111,7 @@ void Fiber::close(FileDescriptor fd) {
   // care of cleanup
 }
 
-size_t Fiber::read(const FileDescriptor fd, const BufferProxy buf) {
-  using namespace uring;
-  if (buf.empty()) { return 0; }
-  auto& uring = *(reactor_->uring_);
-
-  struct iovec iov[1];
-  iov[0].iov_base = (void*)buf.data();
-  iov[0].iov_len = buf.size();
-
-  // set the user data to the fiber ID so the completion event gets routed back
-  // to this thread
-  uring.submitReadReq(fd, iov, DelaySubmission::kNoDelay, UserData(unsafe(id_)));
-
-  ////////////////////
-  // enter the scheduler to defer further processing until the operation is
-  // complete
-  reactor_->schedule();
-
-  ////////////////////
-  // return from scheduler
-  const auto event = getEvent("read data");
-
-  const auto& cqe = *(event);
-
-  return static_cast<size_t>(cqe.res);
-}
-
-void Fiber::write(const FileDescriptor fd, const BufferView data) {
-  using namespace uring;
-  if (data.empty()) { return; }
-  auto& uring = *(reactor_->uring_);
-
-  struct iovec iov[1];
-  iov[0].iov_base = (void*)data.data();
-  iov[0].iov_len = data.size();
-
-  // set the user data to the fiber ID so the completion event gets routed back
-  // to this thread
-  uring.submitWriteReq(fd, iov, DelaySubmission::kNoDelay,
-                       UserData(unsafe(id_)));
-
-  ////////////////////
-  // enter the scheduler to defer further processing until the operation is
-  // complete
-  reactor_->schedule();
-
-  ////////////////////
-  // return from scheduler
-  const auto event = getEvent("write data");
-
-  // NOTE: there is no return value and all checks have been performed by
-  // getEvent, no need for further action and destructor for Event will take
-  // care of cleanup
-}
+void Fiber::reschedule() { reactor_->schedule(); }
 
 uring::Event Fiber::getEvent(const std::string_view op) {
   // check for missing event
@@ -158,8 +122,8 @@ uring::Event Fiber::getEvent(const std::string_view op) {
 
   auto event = std::move(fcb_body_->event);
   // TODO(bd) fix this, FiberCtrlBlockBody should probably hold the
-  // uring::Event instance using unique_ptr
-  fcb_body_->event = uring::Event();
+  // Event instance using unique_ptr
+  fcb_body_->event = Event();
 
   {
     // verify that event user data matches the current fiber ID
@@ -181,6 +145,10 @@ uring::Event Fiber::getEvent(const std::string_view op) {
   // cancel the cleanup operation, the destructor for the returned Event object
   // will handle the cleanup
   return event;
+}
+
+void Fiber::validateEvent(const std::string_view op) {
+  const auto _ = getEvent(op);
 }
 
 } // namespace jmg

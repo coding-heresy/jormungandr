@@ -88,3 +88,18 @@ TEST(TypesTest, TestBufferView) {
   const auto str_view_buf = buffer_from(str_view);
   EXPECT_EQ(str_view.size(), str_view_buf.size());
 }
+
+// TODO(bd) rework these checks as code that will fail to compile once
+// cc_build_error is working correctly
+TEST(TypesTest, TestDescriptorTypes) {
+  // readable descriptor types
+  EXPECT_TRUE(ReadableDescriptorT<FileDescriptor>);
+  EXPECT_TRUE(ReadableDescriptorT<FileReadFd>);
+  EXPECT_TRUE(ReadableDescriptorT<EventFd>);
+  EXPECT_TRUE(ReadableDescriptorT<PipeReadFd>);
+  // writable descriptor types
+  EXPECT_TRUE(WritableDescriptorT<FileDescriptor>);
+  EXPECT_TRUE(WritableDescriptorT<FileWriteFd>);
+  EXPECT_TRUE(WritableDescriptorT<EventFd>);
+  EXPECT_TRUE(WritableDescriptorT<PipeWriteFd>);
+}
