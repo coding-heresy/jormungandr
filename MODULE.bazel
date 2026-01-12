@@ -19,6 +19,13 @@ bazel_dep(
 # boost library
 ########################################
 
+# TODO(bd) figure out how to make boost.asio work with shadow stacks
+# or try a different thread pool implementation
+# bazel_dep(
+#     name = "boost.asio",
+#     version = "1.87.0",
+# )
+
 bazel_dep(
     name = "boost.date_time",
     version = "1.87.0",
