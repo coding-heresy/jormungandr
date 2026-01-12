@@ -110,6 +110,17 @@ public:
     validateEvent("close descriptor");
   }
 
+#if defined(TMP_THREAD_POOL_WORKS)
+  ////////////////////
+  // thread pool execution support
+
+  template<typename Fcn>
+    requires std::invocable<Fcn>
+  void execute(Fcn&& fcn) {
+    reactor_->execute(std::forward<Fcn>(fcn));
+  }
+#endif
+
   ////////////////////
   // file support
 

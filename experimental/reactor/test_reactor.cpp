@@ -251,3 +251,30 @@ TEST_F(ReactorTests, TestWriteDataToFile) {
 
   EXPECT_TRUE(clean_reactor_shutdown);
 }
+
+#if defined(TMP_THREAD_POOL_WORKS)
+TEST_F(ReactorTests, TestThreadPoolExecution) {
+  Promise<thread::id> reactor_thread_id_prm;
+  Promise<thread::id> pool_thread_id_prm;
+  auto reactor_thread_id = reactor_thread_id_prm.get_future();
+  auto pool_thread_id = pool_thread_id_prm.get_future();
+  // post work to a fiber in the reactor
+  reactor.post([reactor_thread_id_prm = std::move(reactor_thread_id_prm),
+                pool_thread_id_prm = std::move(pool_thread_id_prm)](Fiber& fbr) {
+    // report the thread ID of the thread running the reactor
+    reactor_thread_id_prm.set_value(this_thread::get_id());
+    // forward the work to the thread pool
+    fbr.execute([pool_thread_id_prm = std::move(pool_thread_id_prm)]() {
+      // report the thread ID of the thread in the thread pool executing this work
+      pool_thread_id_prm.set_value(this_thread::get_id());
+    });
+  });
+
+  // 2 seconds is infinity
+  const auto reactor_id = reactor_thread_id.get(2s, "reactor thread ID");
+  const auto pool_id = pool_thread_id.get(2s, "pool thread ID");
+  EXPECT_NE(reactor_id, pool_id);
+  EXPECT_NE(this_thread::get_id(), reactor_id);
+  EXPECT_NE(this_thread::get_id(), pool_id);
+}
+#endif
