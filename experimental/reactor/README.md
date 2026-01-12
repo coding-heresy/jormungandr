@@ -229,11 +229,18 @@ Scheduler has 2 states: `polling` and `blocking`
 * Review and rework fiber state handling
   * There are currently some weird flags floating around that should
     be folded into the set of states
-* Maybe create an async retread of the various `std::filesystem`
-  functions
 * Investigate buffer registration
 * Investigate direct descriptors
 * Figure out how to use c-ares for DNS resolution
+* support setting uring size at either runtime or compile time
+* support use of variable size segmented stacks for fibers
+  * maybe use std::memory_resource to hold the stack?
+* Maybe create an asynchronous retreads of the various
+  `std::filesystem` functions
+* Investigate performance implications of switching thread pool
+  implementations
+  * https://github.com/bshoshany/thread-pool
+  * https://github.com/DeveloperPaul123/thread-pool
 
 ## Longer term
 * Try to come up with a better way to pass a fiber worker function
