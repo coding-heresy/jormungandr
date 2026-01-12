@@ -52,7 +52,8 @@ void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val);
 class Reactor {
 public:
   // TODO(bd) uring size should be at settable at compile or run time
-  Reactor();
+  Reactor(size_t pool_worker_threads = 1);
+  ~Reactor();
   JMG_NON_COPYABLE(Reactor);
   JMG_NON_MOVEABLE(Reactor);
 
@@ -73,11 +74,15 @@ public:
   void post(FiberFcn&& fcn);
 
 private:
+  static constexpr size_t kMaxFibers = FiberCtrl::kMaxFibers;
   static constexpr uint64_t kShutdownCmd = std::numeric_limits<uint64_t>::max();
 
   using OptMillisec = std::optional<std::chrono::milliseconds>;
   using OptStrView = std::optional<std::string_view>;
   using WorkerFcn = std::function<void(void)>;
+#if defined(TMP_THREAD_POOL_WORKS)
+  using ThreadPool = boost::asio::thread_pool;
+#endif
 
   friend class Fiber;
   friend void detail::fiberTrampoline(const intptr_t reactor_ptr_val,
@@ -136,12 +141,28 @@ private:
    */
   void resetNotifier();
 
+#if defined(TMP_THREAD_POOL_WORKS)
+  /**
+   * send work to be executed on the thread pool without waiting for
+   * results
+   */
+  template<typename Fcn>
+    requires std::invocable<Fcn>
+  void execute(Fcn&& fcn) {
+    boost::asio::post(thread_pool_, std::forward<Fcn>(fcn));
+  }
+#endif
+
   std::atomic<bool> is_shutdown_ = false;
   FiberCtrl fiber_ctrl_;
   std::unique_ptr<uring::Uring> uring_;
   ucontext_t shutdown_chkpt_;
 
   FiberCtrlBlockQueue runnable_;
+#if defined(TMP_THREAD_POOL_WORKS)
+  ThreadPool thread_pool_;
+#endif
+
   // NOTE: active_fiber_id_ is marked as volatile because it can change when
   // jumping away from a context and then resuming it
   volatile FiberId active_fiber_id_;

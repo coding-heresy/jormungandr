@@ -68,8 +68,13 @@ JMG_NEW_SAFE_TYPE(CtrlBlockId, uint16_t, SafeIdType, st::incrementable);
  */
 template<typename T>
 struct ControlBlocks {
+  static constexpr size_t kMaxBlocks = 255;
+  static constexpr size_t kMaxBuckets = 255;
+
 public:
   using Id = CtrlBlockId;
+
+  static constexpr size_t kMaxFibers = kMaxBlocks * kMaxBuckets;
 
   struct ControlBlock {
     T body;
@@ -160,8 +165,8 @@ public:
   uint16_t count() const { return counter_; }
 
 private:
-  using Bucket = std::array<ControlBlock, 255>;
-  using Buckets = std::array<std::unique_ptr<Bucket>, 255>;
+  using Bucket = std::array<ControlBlock, kMaxBlocks>;
+  using Buckets = std::array<std::unique_ptr<Bucket>, kMaxBuckets>;
 
   static constexpr auto kMax = Id(std::numeric_limits<uint16_t>::max());
 
