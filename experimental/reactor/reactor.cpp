@@ -149,16 +149,9 @@ void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val) 
 
 } // namespace detail
 
-Reactor::Reactor(const size_t pool_worker_threads)
+Reactor::Reactor(const size_t thread_pool_worker_count)
   // TODO(bd) uring size should be at settable at compile or run time
-  : runnable_(fiber_ctrl_)
-#if defined(TMP_THREAD_POOL_WORKS)
-  , thread_pool_(pool_worker_threads)
-#endif
-{
-#if !defined(TMP_THREAD_POOL_WORKS)
-  std::ignore = pool_worker_threads;
-#endif
+  : runnable_(fiber_ctrl_), thread_pool_(thread_pool_worker_count) {
   const auto [read_fd, write_fd] = make_pipe();
   post_tgt_ = read_fd;
   post_src_ = write_fd;
@@ -167,10 +160,8 @@ Reactor::Reactor(const size_t pool_worker_threads)
 }
 
 Reactor::~Reactor() {
-#if defined(TMP_THREAD_POOL_WORKS)
-  // TODO(bd) find some way to time out the thread pool join?
+  // TODO(bd) maybe support a timeout for the thread pool join?
   thread_pool_.join();
-#endif
 }
 
 void Reactor::start() {

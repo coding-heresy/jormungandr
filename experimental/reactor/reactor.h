@@ -39,6 +39,7 @@
 
 #include "control_blocks.h"
 #include "fiber.h"
+#include "thread_pool.h"
 #include "uring.h"
 
 namespace jmg
@@ -52,7 +53,7 @@ void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val);
 class Reactor {
 public:
   // TODO(bd) uring size should be at settable at compile or run time
-  Reactor(size_t pool_worker_threads = 1);
+  Reactor(size_t thread_pool_worker_count = 1);
   ~Reactor();
   JMG_NON_COPYABLE(Reactor);
   JMG_NON_MOVEABLE(Reactor);
@@ -80,9 +81,10 @@ private:
   using OptMillisec = std::optional<std::chrono::milliseconds>;
   using OptStrView = std::optional<std::string_view>;
   using WorkerFcn = std::function<void(void)>;
-#if defined(TMP_THREAD_POOL_WORKS)
-  using ThreadPool = boost::asio::thread_pool;
-#endif
+  // TODO(bd) maybe experiment with boost thread pool once it is
+  // building correctly
+  // using ThreadPool = BoostThreadPool;
+  using ThreadPool = BshoshanyThreadPool;
 
   friend class Fiber;
   friend void detail::fiberTrampoline(const intptr_t reactor_ptr_val,
@@ -141,7 +143,6 @@ private:
    */
   void resetNotifier();
 
-#if defined(TMP_THREAD_POOL_WORKS)
   /**
    * send work to be executed on the thread pool without waiting for
    * results
@@ -149,9 +150,8 @@ private:
   template<typename Fcn>
     requires std::invocable<Fcn>
   void execute(Fcn&& fcn) {
-    boost::asio::post(thread_pool_, std::forward<Fcn>(fcn));
+    thread_pool_.execute(std::move(fcn));
   }
-#endif
 
   std::atomic<bool> is_shutdown_ = false;
   FiberCtrl fiber_ctrl_;
@@ -159,9 +159,7 @@ private:
   ucontext_t shutdown_chkpt_;
 
   FiberCtrlBlockQueue runnable_;
-#if defined(TMP_THREAD_POOL_WORKS)
   ThreadPool thread_pool_;
-#endif
 
   // NOTE: active_fiber_id_ is marked as volatile because it can change when
   // jumping away from a context and then resuming it
