@@ -37,6 +37,27 @@ bazel_dep(
 )
 
 ########################################
+# thread pool libraries
+########################################
+
+bazel_dep(
+    name = "bshoshany_thread-pool",
+    version = "5.1.0",
+)
+
+# TODO(bd) issue pull request to
+# https://github.com/bshoshany/thread-pool and update here if it is
+# accepted
+archive_override(
+    module_name = "bshoshany_thread-pool",
+    integrity = "sha256-VDePucvq7nKZbT+HYUacQ7t90tSwf67G0ppoJ3vZGlE=",
+    strip_prefix = "thread-pool-5.1.0",
+    urls = ["https://github.com/bshoshany/thread-pool/archive/refs/tags/v5.1.0.tar.gz"],
+    patches = ["//patches:bshoshany_thread_pool_bazel.patch"],
+    patch_strip = 1,
+)
+
+########################################
 # compile time regular expressions
 ########################################
 
