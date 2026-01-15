@@ -34,9 +34,11 @@
 #include <charconv>
 #include <concepts>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <thread>
 
 #include <liburing.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -157,6 +159,18 @@ struct ConvertImpl {
       // convert string-like type to time point
       else if constexpr (std::same_as<Tgt, TimePoint>) {
         return str2TimePoint(src, std::forward<Extras>(extras)...);
+      }
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+    }
+    ////////////////////////////////////////////////////////////
+    // this section converts from std::thread::id to string
+    ////////////////////////////////////////////////////////////
+    else if constexpr (SameAsDecayedT<std::thread::id, Src>) {
+      if constexpr (std::same_as<std::string, Tgt>) {
+        // TODO(bd) use std::to_string when it's supported
+        std::ostringstream strm;
+        strm << src;
+        return strm.str();
       }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
