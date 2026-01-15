@@ -1,0 +1,25 @@
+diff --git a/BUILD b/BUILD
+new file mode 100644
+index 0000000..d91e38e
+--- /dev/null
++++ b/BUILD
+@@ -0,0 +1,8 @@
++
++cc_library(
++    name = "ctre",
++    hdrs = ["single-header/ctre.hpp"],
++    strip_include_prefix = "single-header",
++    includes = ["single-header"],
++    visibility = ["//visibility:public"],
++)
+diff --git a/MODULE.bazel b/MODULE.bazel
+new file mode 100644
+index 0000000..06ed59b
+--- /dev/null
++++ b/MODULE.bazel
+@@ -0,0 +1,5 @@
++
++module(
++    name = "ctre",
++    version = "3.10.0",
++)
