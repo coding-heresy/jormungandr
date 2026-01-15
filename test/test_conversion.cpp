@@ -32,6 +32,10 @@
 
 #include <gtest/gtest.h>
 
+#include <thread>
+
+#include <ctre.hpp>
+
 #include "jmg/conversion.h"
 
 using namespace boost::posix_time;
@@ -113,6 +117,15 @@ TEST(ConversionTests, TestNumericFromStringView) {
 TEST(ConversionTests, TestFailedIntFromStringViewThrowsRuntimeError) {
   const auto src = "a"sv;
   EXPECT_THROW([[maybe_unused]] int bad = from(src), std::runtime_error);
+}
+
+////////////////////
+// one-way conversions to string
+
+TEST(ConversionTests, TestStringFromThreadId) {
+  string thread_id = from(this_thread::get_id());
+  // NOTE: this assumes that the thread ID is an integer
+  EXPECT_TRUE(ctre::match<"^[0-9]+$">(thread_id));
 }
 
 ////////////////////
