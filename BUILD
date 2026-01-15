@@ -58,4 +58,3 @@ cc_library(
     linkstatic = True,
     deps = [":jmg"],
 )
-)

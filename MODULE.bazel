@@ -45,7 +45,7 @@ bazel_dep(
     version = "3.10.0",
 )
 
-# TODO issue pull request to
+# TODO(bd) issue pull request to
 # https://github.com/hanickadot/compile-time-regular-expressions and
 # update here if it is accepted
 archive_override(
