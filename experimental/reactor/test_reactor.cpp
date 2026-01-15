@@ -252,22 +252,30 @@ TEST_F(ReactorTests, TestWriteDataToFile) {
   EXPECT_TRUE(clean_reactor_shutdown);
 }
 
-#if defined(TMP_THREAD_POOL_WORKS)
+#if defined(JMG_REACTOR_THREAD_POOL_WORKS)
 TEST_F(ReactorTests, TestThreadPoolExecution) {
-  Promise<thread::id> reactor_thread_id_prm;
-  Promise<thread::id> pool_thread_id_prm;
-  auto reactor_thread_id = reactor_thread_id_prm.get_future();
-  auto pool_thread_id = pool_thread_id_prm.get_future();
+  auto reactor_thread_id_prm = make_shared<Promise<thread::id>>();
+  auto pool_thread_id_prm = make_shared<Promise<thread::id>>();
+  auto reactor_thread_id = reactor_thread_id_prm->get_future();
+  auto pool_thread_id = pool_thread_id_prm->get_future();
   // post work to a fiber in the reactor
   reactor.post([reactor_thread_id_prm = std::move(reactor_thread_id_prm),
-                pool_thread_id_prm = std::move(pool_thread_id_prm)](Fiber& fbr) {
+                pool_thread_id_prm =
+                  std::move(pool_thread_id_prm)](Fiber& fbr) mutable {
+    string reactor_thread_id = from(this_thread::get_id());
+    fbr.log("executing in fiber [", unsafe(fbr.getId()), "] on thread [",
+            reactor_thread_id, "]");
     // report the thread ID of the thread running the reactor
-    reactor_thread_id_prm.set_value(this_thread::get_id());
+    reactor_thread_id_prm->set_value(this_thread::get_id());
     // forward the work to the thread pool
-    fbr.execute([pool_thread_id_prm = std::move(pool_thread_id_prm)]() {
+    fbr.execute([pool_thread_id_prm = std::move(pool_thread_id_prm)]() mutable {
+      string pool_thread_id = from(this_thread::get_id());
+      cout << "executing in thread pool on thread [" << pool_thread_id << "]\n";
       // report the thread ID of the thread in the thread pool executing this work
-      pool_thread_id_prm.set_value(this_thread::get_id());
+      pool_thread_id_prm->set_value(this_thread::get_id());
     });
+    fbr.log("delegated to thread pool, napping");
+    this_thread::sleep_for(10ms);
   });
 
   // 2 seconds is infinity

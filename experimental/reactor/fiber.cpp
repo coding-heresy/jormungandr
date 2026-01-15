@@ -49,6 +49,10 @@ Fiber::Fiber(FiberId id, Reactor& reactor)
 
 void Fiber::yield() { reactor_->yieldFbr(); }
 
+void Fiber::execute(std::function<void(void)> fcn) {
+  reactor_->execute(std::move(fcn));
+}
+
 FileDescriptor Fiber::openFile(const std::filesystem::path& file_path,
                                const FileOpenFlags flags,
                                const std::optional<mode_t> permissions) {

@@ -110,16 +110,15 @@ public:
     validateEvent("close descriptor");
   }
 
-#if defined(TMP_THREAD_POOL_WORKS)
   ////////////////////
   // thread pool execution support
 
-  template<typename Fcn>
-    requires std::invocable<Fcn>
-  void execute(Fcn&& fcn) {
-    reactor_->execute(std::forward<Fcn>(fcn));
-  }
-#endif
+  // TODO(bd) add support for std::move_only_function?
+  /**
+   * send a task to a thread pool associated with the reactor without
+   * expecting a result
+   */
+  void execute(std::function<void(void)> fcn);
 
   ////////////////////
   // file support
@@ -196,8 +195,6 @@ private:
   friend class Reactor;
 
   Fiber(FiberId id, Reactor& reactor);
-
-  void close(int fd);
 
   size_t read(int fd, BufferProxy buf);
 

@@ -64,6 +64,7 @@ cc_library(
     srcs = [
         "fiber.cpp",
         "reactor.cpp",
+        "thread_pool.h",
     ],
     hdrs = [
         "fiber.h",
@@ -73,6 +74,7 @@ cc_library(
         # TODO(bd) figure out how to make boost.asio work with shadow
         # stacks or try a different thread pool implementation
         # "@boost.asio",
+        "@bshoshany_thread-pool//:thread_pool",
         ":control_blocks",
         ":uring",
     ],
