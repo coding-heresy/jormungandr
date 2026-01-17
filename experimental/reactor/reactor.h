@@ -84,7 +84,7 @@ private:
   // TODO(bd) maybe experiment with boost thread pool once it is
   // building correctly
   // using ThreadPool = BoostThreadPool;
-  using ThreadPool = BshoshanyThreadPool;
+  using ThreadPool = BsThreadPool;
 
   friend class Fiber;
   friend void detail::fiberTrampoline(const intptr_t reactor_ptr_val,
