@@ -75,6 +75,7 @@ cc_library(
         # stacks or try a different thread pool implementation
         # "@boost.asio",
         "@bs_thread-pool//:thread_pool",
+        "@dp_thread-pool//:thread_pool",
         ":control_blocks",
         ":uring",
     ],

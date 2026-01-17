@@ -58,6 +58,20 @@ archive_override(
     patch_strip = 1,
 )
 
+bazel_dep(
+    name = "dp_thread-pool",
+    # AKA developerpaul123_thread-pool
+    version = "0.7.0",
+)
+archive_override(
+    module_name = "dp_thread-pool",
+    #integrity = "sha256-VDePucvq7nKZbT+HYUacQ7t90tSwf67G0ppoJ3vZGlE=",
+    strip_prefix = "thread-pool-0.7.0",
+    urls = ["https://github.com/DeveloperPaul123/thread-pool/archive/refs/tags/0.7.0.tar.gz"],
+    patches = ["//patches:developerpaul123_thread_pool_bazel.patch"],
+    patch_strip = 1,
+)
+
 ########################################
 # compile time regular expressions
 ########################################
@@ -161,6 +175,30 @@ bazel_dep(
     name = "yaml-cpp",
     version = "0.8.0",
 )
+
+
+########################################
+# bazel_module_versions below here
+########################################
+
+bazel_dep(
+    name = "bazel_module_versions",
+    version = "0.0.0",
+)
+
+archive_override(
+    module_name = "bazel_module_versions",
+    integrity = "sha256-t0dFYSC417MvkHbDdhk8GePkp9r4nnVP0VnqGXSsHf8=",
+    strip_prefix = "bazel_module_versions-0.0.0",
+    urls = ["https://github.com/coding-heresy/bazel_module_versions/archive/refs/tags/0.0.0.tar.gz"],
+)
+
+module_versions = use_extension(
+    "@bazel_module_versions//:extensions.bzl",
+    "dependent_module_versions",
+)
+
+use_repo(module_versions, "module_versions")
 
 # TODO(bd) restore this when rules_build_error works correctly
 
