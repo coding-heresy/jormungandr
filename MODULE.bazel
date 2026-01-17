@@ -41,7 +41,8 @@ bazel_dep(
 ########################################
 
 bazel_dep(
-    name = "bshoshany_thread-pool",
+    name = "bs_thread-pool",
+    # AKA bshoshany_thread-pool
     version = "5.1.0",
 )
 
@@ -49,7 +50,7 @@ bazel_dep(
 # https://github.com/bshoshany/thread-pool and update here if it is
 # accepted
 archive_override(
-    module_name = "bshoshany_thread-pool",
+    module_name = "bs_thread-pool",
     integrity = "sha256-VDePucvq7nKZbT+HYUacQ7t90tSwf67G0ppoJ3vZGlE=",
     strip_prefix = "thread-pool-5.1.0",
     urls = ["https://github.com/bshoshany/thread-pool/archive/refs/tags/v5.1.0.tar.gz"],

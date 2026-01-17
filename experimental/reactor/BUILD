@@ -74,7 +74,7 @@ cc_library(
         # TODO(bd) figure out how to make boost.asio work with shadow
         # stacks or try a different thread pool implementation
         # "@boost.asio",
-        "@bshoshany_thread-pool//:thread_pool",
+        "@bs_thread-pool//:thread_pool",
         ":control_blocks",
         ":uring",
     ],

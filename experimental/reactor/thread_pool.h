@@ -69,12 +69,12 @@ private:
 };
 #endif
 
-class BshoshanyThreadPool {
+class BsThreadPool {
 public:
-  BshoshanyThreadPool(size_t thread_count = 1) : pool_(thread_count) {}
-  JMG_NON_COPYABLE(BshoshanyThreadPool);
-  JMG_NON_MOVEABLE(BshoshanyThreadPool);
-  ~BshoshanyThreadPool() = default;
+  BsThreadPool(size_t thread_count = 1) : pool_(thread_count) {}
+  JMG_NON_COPYABLE(BsThreadPool);
+  JMG_NON_MOVEABLE(BsThreadPool);
+  ~BsThreadPool() = default;
 
   void join() { pool_.wait(); }
 

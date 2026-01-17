@@ -29,6 +29,6 @@ index 0000000..6f903c3
 @@ -0,0 +1,5 @@
 +
 +module(
-+    name = "bshoshany_thread-pool",
++    name = "bs_thread-pool",
 +    version = "5.1.0",
 +)
