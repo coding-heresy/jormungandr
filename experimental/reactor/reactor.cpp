@@ -147,6 +147,23 @@ void fiberTrampoline(const intptr_t reactor_ptr_val, const intptr_t fbr_id_val) 
   JMG_SINK_ALL_EXCEPTIONS("fiber function jump")
 }
 
+/**
+ * correctly handle notification data of any size
+ */
+template<typename T>
+void sendNotification(PipeWriteFd post_src, const T val) {
+  if constexpr (sizeof(val) < sizeof(uint64_t)) {
+    uint64_t send_val = unwrap(val);
+    write_all(post_src, buffer_from(send_val), "notifier pipe"sv);
+  }
+  else {
+    static_assert(
+      sizeof(val) == sizeof(uint64_t),
+      "notification value size must be less than or equal to 8 octets");
+    write_all(post_src, buffer_from(val), "notifier pipe"sv);
+  }
+}
+
 } // namespace detail
 
 Reactor::Reactor(const size_t thread_pool_worker_count)
@@ -212,9 +229,7 @@ void Reactor::start() {
   // return control to the thread that started the reactor
 }
 
-void Reactor::shutdown() {
-  write_all(post_src_, buffer_from(kShutdownCmd), "notifier eventfd"sv);
-}
+void Reactor::shutdown() { detail::sendNotification(post_src_, kShutdownCmd); }
 
 void Reactor::post(FiberFcn&& fcn) {
   // TODO(bd) try to come up with a better way to do this
@@ -232,7 +247,7 @@ void Reactor::post(FiberFcn&& fcn) {
 
   // write the address of the lambda to the notifier eventfd to inform the
   // reactor of the work request
-  write_all(post_src_, buffer_from(lambda_ptr.get()), "notifier eventfd");
+  detail::sendNotification(post_src_, lambda_ptr.get());
   lambda_ptr.release();
 }
 
@@ -319,7 +334,10 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
       // execution should jump to the next active fiber
       ////////////////////
 
-      jumpTo(next_active_fcb, "resuming fiber"sv);
+      if (next_active_id != active_fbr_id) {
+        jumpTo(next_active_fcb, "resuming fiber"sv);
+      }
+      else { active_fbr_fcb.body.state = FiberState::kActive; }
 
       dbgOut("resuming previously blocked fiber [", active_fbr_id, "]");
 
@@ -364,6 +382,22 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
 
           // NOTE: no need to submit a new read request on the notifier pipe FD
           // since the reactor will now shut down
+        }
+        else if (notifier_data_ < FiberCtrl::kMaxFibers) {
+          dbgOut("incoming data for fiber [", notifier_data_,
+                 "] received via notifier");
+          auto fbr_id = FiberId(notifier_data_);
+          auto& fcb = fiber_ctrl_.getBlock(fbr_id);
+          JMG_ENFORCE_USING(logic_error, FiberState::kBlocked == fcb.body.state,
+                            "received incoming data for fiber [", fbr_id,
+                            "] that was not blocked");
+          fcb.body.state = FiberState::kRunnable;
+          // NOTE: the uring Event object should not be saved here
+
+          dbgOut("adding fiber [", fbr_id, "] to the run queue");
+
+          runnable_.enqueue(fcb);
+          resetNotifier();
         }
         else {
           dbgOut("external work request received via uring");
@@ -564,6 +598,10 @@ void Reactor::resetNotifier() {
   // fiber
   uring_->submitReadReq(post_tgt_, span(notifier_vec_),
                         uring::UserData(-unsafe(post_tgt_)));
+}
+
+void Reactor::notifyFbr(const FiberId id) {
+  detail::sendNotification(post_src_, id);
 }
 
 } // namespace jmg

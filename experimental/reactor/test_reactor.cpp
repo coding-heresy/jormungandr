@@ -253,32 +253,79 @@ TEST_F(ReactorTests, TestWriteDataToFile) {
 }
 
 TEST_F(ReactorTests, TestThreadPoolExecution) {
-  auto guard = Cleanup([&]() { shutdown(); });
-  auto reactor_thread_id_prm = make_shared<Promise<thread::id>>();
-  auto pool_thread_id_prm = make_shared<Promise<thread::id>>();
-  auto reactor_thread_id = reactor_thread_id_prm->get_future();
-  auto pool_thread_id = pool_thread_id_prm->get_future();
-  // post work to a fiber in the reactor
-  reactor.post([reactor_thread_id_prm = std::move(reactor_thread_id_prm),
-                pool_thread_id_prm =
-                  std::move(pool_thread_id_prm)](Fiber& fbr) mutable {
-    string reactor_thread_id = from(this_thread::get_id());
-    // report the thread ID of the thread running the reactor
-    reactor_thread_id_prm->set_value(this_thread::get_id());
-    // forward the work to the thread pool
-    fbr.execute([pool_thread_id_prm = std::move(pool_thread_id_prm)]() mutable {
+  {
+    auto guard = Cleanup([&]() { shutdown(); });
+    auto reactor_thread_id_prm = make_shared<Promise<thread::id>>();
+    auto pool_thread_id_prm = make_shared<Promise<thread::id>>();
+    auto reactor_thread_id = reactor_thread_id_prm->get_future();
+    auto pool_thread_id = pool_thread_id_prm->get_future();
+    // post work to a fiber in the reactor
+    reactor.post([reactor_thread_id_prm = std::move(reactor_thread_id_prm),
+                  pool_thread_id_prm =
+                    std::move(pool_thread_id_prm)](Fiber& fbr) mutable {
+      string reactor_thread_id = from(this_thread::get_id());
+      // report the thread ID of the thread running the reactor
+      reactor_thread_id_prm->set_value(this_thread::get_id());
+      // forward the work to the thread pool
+      fbr.execute([pool_thread_id_prm =
+                     std::move(pool_thread_id_prm)]() mutable {
+        this_thread::sleep_for(10ms);
+        string pool_thread_id = from(this_thread::get_id());
+        // report the thread ID of the thread in the thread pool executing this work
+        pool_thread_id_prm->set_value(this_thread::get_id());
+      });
       this_thread::sleep_for(10ms);
-      string pool_thread_id = from(this_thread::get_id());
-      // report the thread ID of the thread in the thread pool executing this work
-      pool_thread_id_prm->set_value(this_thread::get_id());
     });
-    this_thread::sleep_for(10ms);
-  });
 
-  // 2 seconds is infinity
-  const auto reactor_id = reactor_thread_id.get(2s, "reactor thread ID");
-  const auto pool_id = pool_thread_id.get(2s, "pool thread ID");
-  EXPECT_NE(reactor_id, pool_id);
-  EXPECT_NE(this_thread::get_id(), reactor_id);
-  EXPECT_NE(this_thread::get_id(), pool_id);
+    // 2 seconds is infinity
+    const auto reactor_id = reactor_thread_id.get(2s, "reactor thread ID");
+    const auto pool_id = pool_thread_id.get(2s, "pool thread ID");
+    EXPECT_NE(reactor_id, pool_id);
+    EXPECT_NE(this_thread::get_id(), reactor_id);
+    EXPECT_NE(this_thread::get_id(), pool_id);
+  }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
+}
+
+TEST_F(ReactorTests, TestThreadPoolComputation) {
+  {
+    auto guard = Cleanup([&]() { shutdown(); });
+    auto rslt_val_prm = Promise<double>();
+    auto rslt_val = rslt_val_prm.get_future();
+    reactor.post([&](Fiber& fbr) {
+      auto sqrtr = [](const double val) { return sqrt(val); };
+      auto rslt = fbr.compute(std::move(sqrtr), 4.0);
+      rslt_val_prm.set_value(rslt);
+    });
+    EXPECT_NEAR(2.0, rslt_val.get(), 1e-6);
+  }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
+}
+
+TEST_F(ReactorTests, TestThreadPoolComputationFailurePropagatesToFiber) {
+  {
+    auto guard = Cleanup([&]() { shutdown(); });
+    auto rslt_val_prm = Promise<bool>();
+    auto rslt_val = rslt_val_prm.get_future();
+    reactor.post([&](Fiber& fbr) {
+      auto thrower = []([[maybe_unused]] const double val) -> double {
+        throw runtime_error("not really exceptional");
+      };
+      try {
+        [[maybe_unused]] auto rslt = fbr.compute(std::move(thrower), 4.0);
+      }
+      catch (const exception& exc) {
+        rslt_val_prm.set_value(true);
+        return;
+      }
+      // should only reach this point if the computation didn't throw
+      // exception as expected
+      rslt_val_prm.set_value(false);
+    });
+    EXPECT_TRUE(rslt_val.get());
+  }
+
+  EXPECT_TRUE(clean_reactor_shutdown);
 }

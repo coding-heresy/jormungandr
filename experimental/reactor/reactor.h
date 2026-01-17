@@ -80,7 +80,7 @@ private:
 
   using OptMillisec = std::optional<std::chrono::milliseconds>;
   using OptStrView = std::optional<std::string_view>;
-  using WorkerFcn = std::function<void(void)>;
+  using WorkerFcn = Fiber::WorkerFcn;
 
   // TODO(bd) maybe experiment with boost thread pool once it is
   // building correctly
@@ -158,6 +158,12 @@ private:
   void execute(Fcn&& fcn) {
     thread_pool_.execute(std::move(fcn));
   }
+
+  /**
+   * notify a fiber that thread pool computation data is ready for
+   * consumption
+   */
+  void notifyFbr(FiberId id);
 
   std::atomic<bool> is_shutdown_ = false;
   FiberCtrl fiber_ctrl_;
