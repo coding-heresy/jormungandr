@@ -81,10 +81,16 @@ private:
   using OptMillisec = std::optional<std::chrono::milliseconds>;
   using OptStrView = std::optional<std::string_view>;
   using WorkerFcn = std::function<void(void)>;
+
   // TODO(bd) maybe experiment with boost thread pool once it is
   // building correctly
   // using ThreadPool = BoostThreadPool;
-  using ThreadPool = BsThreadPool;
+
+  // TODO(bd) maybe experiment with BsThreadPool
+  // using ThreadPool = BsThreadPool;
+
+  // NOTE: currently using DpThreadPool
+  using ThreadPool = DpThreadPool;
 
   friend class Fiber;
   friend void detail::fiberTrampoline(const intptr_t reactor_ptr_val,
