@@ -116,7 +116,7 @@ public:
 
   // TODO(bd) add support for std::move_only_function?
   /**
-   * send a task to a thread pool associated with the reactor without
+   * send a task to the thread pool associated with the reactor without
    * expecting a result
    */
   void execute(WorkerFcn fcn);
@@ -230,8 +230,6 @@ private:
   friend class Reactor;
 
   Fiber(FiberId id, Reactor& reactor);
-
-  size_t read(int fd, BufferProxy buf);
 
   /**
    * non-blocking close of generic (file) descriptor

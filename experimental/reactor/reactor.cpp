@@ -72,7 +72,7 @@ concept ReactorFcnT = jmg::SameAsDecayedT<jmg::Reactor::WorkerFcn, T>
 void workerTrampoline(const intptr_t lambda_ptr_val) {
   try {
     // NOTE: Google told me to do this, it's not my fault
-    auto* lambda_ptr = reinterpret_cast<std::function<void()>*>(lambda_ptr_val);
+    auto* lambda_ptr = reinterpret_cast<function<void()>*>(lambda_ptr_val);
     JMG_ENFORCE(jmg::pred(lambda_ptr), "unable to trampoline to simple worker");
     (*lambda_ptr)();
   }
@@ -251,7 +251,7 @@ void Reactor::post(FiberFcn&& fcn) {
   lambda_ptr.release();
 }
 
-void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
+void Reactor::schedule(const optional<chrono::milliseconds> timeout) {
   bool is_shutdown = false;
   // NOTE: the polling behavior is to handle the case where a fiber yields but
   // there are currently no other runnable fibers and no uring events have occurred
@@ -291,7 +291,7 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
              runnable_.size(), "] entries");
       dbgOut("current fiber [", active_fbr_id, "] is yielding [",
              active_fbr_fcb.body.is_fiber_yielding,
-             "] is handling uring envent [",
+             "] is handling uring event [",
              active_fbr_fcb.body.is_fiber_handling_event, "]");
 
       if (active_fbr_fcb.body.is_fiber_yielding) {
@@ -355,7 +355,7 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
       // TODO(bd) support awaiting a batch of events
       // poll or wait for uring events
       auto event = [&] {
-        std::optional<Duration> uring_timeout = nullopt;
+        optional<Duration> uring_timeout = nullopt;
         if (timeout && !is_polling) { *uring_timeout = from(*timeout); }
         return uring_->awaitEvent(uring_timeout);
       }();
@@ -443,7 +443,6 @@ void Reactor::schedule(const std::optional<std::chrono::milliseconds> timeout) {
 
           // enqueue the new fiber control block on the runnable queue
           runnable_.enqueue(fcb);
-
           resetNotifier();
         }
       }
