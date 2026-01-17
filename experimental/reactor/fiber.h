@@ -87,7 +87,7 @@ public:
    */
   template<typename... Args>
   void log(Args&&... args) {
-    const auto output = str_cat(std::forward<Args&&>(args)...);
+    const auto output = str_cat(std::forward<Args&&>(args)..., "\n");
     write(kStdoutFd, buffer_from(output));
   }
 
