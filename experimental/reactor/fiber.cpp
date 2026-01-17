@@ -49,9 +49,7 @@ Fiber::Fiber(FiberId id, Reactor& reactor)
 
 void Fiber::yield() { reactor_->yieldFbr(); }
 
-void Fiber::execute(std::function<void(void)> fcn) {
-  reactor_->execute(std::move(fcn));
-}
+void Fiber::execute(Fiber::WorkerFcn fcn) { reactor_->execute(std::move(fcn)); }
 
 FileDescriptor Fiber::openFile(const std::filesystem::path& file_path,
                                const FileOpenFlags flags,
@@ -149,6 +147,10 @@ uring::Event Fiber::getEvent(const std::string_view op) {
 
 void Fiber::validateEvent(const std::string_view op) {
   const auto _ = getEvent(op);
+}
+
+Fiber::WorkerFcn Fiber::makeFbrNotifier(FiberId id) {
+  return [id = id, reactor_ptr = reactor_]() { reactor_ptr->notifyFbr(id); };
 }
 
 } // namespace jmg

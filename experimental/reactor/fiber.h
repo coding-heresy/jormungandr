@@ -65,6 +65,7 @@ class Fiber {
   using Event = uring::Event;
   using Uring = uring::Uring;
   using UserData = uring::UserData;
+  using WorkerFcn = std::function<void(void)>;
 
 public:
   Fiber() = default;
@@ -118,7 +119,41 @@ public:
    * send a task to a thread pool associated with the reactor without
    * expecting a result
    */
-  void execute(std::function<void(void)> fcn);
+  void execute(WorkerFcn fcn);
+
+  /**
+   * send a computation task to the thread pool associated with the
+   * reactor and return the resulting value back to the fiber
+   */
+  template<typename Fcn, typename... Args>
+    requires std::invocable<Fcn, Args...>
+  auto compute(Fcn&& fcn, Args&&... args) {
+    using Rslt = std::invoke_result_t<Fcn, Args...>;
+    Rslt rslt;
+    std::exception_ptr exc_ptr;
+    execute([&rslt, &exc_ptr, notify_fbr = makeFbrNotifier(getId()),
+             fcn = std::forward<Fcn>(fcn),
+             ... args = std::forward<Args>(args)]() mutable {
+      // using a thread pool worker, execute the function and assign
+      // the return value back to the result object or propagate any
+      // exception that it may throw
+      try {
+        rslt = std::invoke(std::forward<Fcn>(fcn), std::forward<Args>(args)...);
+      }
+      catch (...) {
+        exc_ptr = std::current_exception();
+      }
+      notify_fbr();
+    });
+
+    reschedule();
+
+    // propagate any exception thrown in the function
+    if (exc_ptr) { std::rethrow_exception(exc_ptr); }
+
+    // return the result if there was no exception
+    return rslt;
+  }
 
   ////////////////////
   // file support
@@ -222,6 +257,17 @@ private:
    */
   void validateEvent(const std::string_view op);
 
+  /**
+   * construct a function that external code can use to notify some
+   * fiber of available data
+   *
+   * @warning the notifier object contains a non-owning reference to
+   * the reactor and should thus only be passed to reactor thread pool
+   * workers, whose lifetimes are guaranteed not to exceed that of the
+   * reactor itself by construction
+   */
+  WorkerFcn makeFbrNotifier(FiberId id);
+
   FiberId id_;
   Reactor* reactor_ = nullptr;
   Uring* uring_ = nullptr;
@@ -230,10 +276,12 @@ private:
 
 using FiberFcn = std::function<void(Fiber&)>;
 
-// TODO(bd) support variable size segmented stacks
-static constexpr size_t kStackSz = 16384;
-
 struct FiberCtrlBlockBody {
+private:
+  // TODO(bd) support variable size segmented stacks
+  static constexpr size_t kStackSz = 16384;
+
+public:
   ucontext_t chkpt;
   std::array<uint8_t, kStackSz> stack;
   Fiber fbr;
