@@ -1,0 +1,154 @@
+diff --git a/BUILD b/BUILD
+new file mode 100644
+index 0000000..4f3ec67
+--- /dev/null
++++ b/BUILD
+@@ -0,0 +1,72 @@
++
++load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
++load("@module_versions//:versions.bzl", "DP_THREAD_POOL_VERSION")
++
++####################
++# generate the version.h header
++
++_VERSION_PARTS = DP_THREAD_POOL_VERSION.split(".")
++MAJOR_VERSION = _VERSION_PARTS[0]
++MINOR_VERSION = _VERSION_PARTS[1]
++PATCH_VERSION = _VERSION_PARTS[2]
++TWEAK_VERSION = _VERSION_PARTS[3] if len(_VERSION_PARTS) > 3 else ""
++
++expand_template(
++    name = "version_h",
++    out = "include/thread_pool/version.h",
++    substitutions = {
++        "@PROJECT_VERSION@": DP_THREAD_POOL_VERSION,
++        "@PROJECT_VERSION_MAJOR@": MAJOR_VERSION,
++        "@PROJECT_VERSION_MINER@": MINOR_VERSION,
++        "@PROJECT_VERSION_PATCH@": PATCH_VERSION,
++        "@PROJECT_VERSION_TWEAK@": TWEAK_VERSION,
++    },
++    template = "cmake/version.h.in",
++    visibility = ["//visibility:private"],
++)
++
++####################
++# library
++
++cc_library(
++    name = "thread_pool",
++    hdrs = glob(["include/thread_pool/*.h"]) + [":version_h"],
++    strip_include_prefix = "include",
++    includes = ["include"],
++    visibility = ["//visibility:public"],
++)
++
++####################
++# tests
++
++cc_test(
++    name = "unittests",
++    srcs = glob(["test/source/*.cpp"]),
++    deps = [
++        "@doctest//doctest:doctest",
++        ":thread_pool",
++    ],
++    visibility = ["//visibility:public"],
++)
++
++####################
++# examples
++
++cc_library(
++    name = "fractal_h",
++    hdrs = ["examples/mandelbrot/include/fractal.h"],
++    strip_include_prefix = "examples/mandelbrot/include",
++    visibility = ["//visibility:private"],
++)
++
++cc_binary(
++    name = "mandelbrot",
++    srcs =  glob(["examples/mandelbrot/source/*.cpp"]),
++    deps = [
++        "@cxxopts",
++        ":fractal_h",
++        ":thread_pool",
++    ],
++)
++
++# TODO(bd) ignoring benchmarks for now
+diff --git a/MODULE.bazel b/MODULE.bazel
+new file mode 100644
+index 0000000..72ea786
+--- /dev/null
++++ b/MODULE.bazel
+@@ -0,0 +1,41 @@
++module(
++    name = "dp_thread-pool",
++    version = "0.7.0",
++)
++
++bazel_dep(
++    name = "bazel_skylib",
++    version = "1.9.0",
++)
++
++bazel_dep(
++    name = "cxxopts",
++    version = "3.3.1",
++)
++
++bazel_dep(
++    name = "doctest",
++    version = "2.4.12",
++)
++
++####################
++# bazel_module_versions below here
++
++bazel_dep(
++    name = "bazel_module_versions",
++    version = "0.0.0",
++)
++
++archive_override(
++    module_name = "bazel_module_versions",
++    integrity = "sha256-t0dFYSC417MvkHbDdhk8GePkp9r4nnVP0VnqGXSsHf8=",
++    strip_prefix = "bazel_module_versions-0.0.0",
++    urls = ["https://github.com/coding-heresy/bazel_module_versions/archive/refs/tags/0.0.0.tar.gz"],
++)
++
++module_versions = use_extension(
++    "@bazel_module_versions//:extensions.bzl",
++    "dependent_module_versions",
++)
++
++use_repo(module_versions, "module_versions")
+diff --git a/test/source/main.cpp b/test/source/main.cpp
+index af24eeb..614015c 100644
+--- a/test/source/main.cpp
++++ b/test/source/main.cpp
+@@ -1,3 +1,3 @@
+ #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+ 
+-#include <doctest/doctest.h>
++#include "doctest/doctest.h"
+diff --git a/test/source/thread_pool.cpp b/test/source/thread_pool.cpp
+index 48c1a64..683804e 100644
+--- a/test/source/thread_pool.cpp
++++ b/test/source/thread_pool.cpp
+@@ -1,4 +1,4 @@
+-#include <doctest/doctest.h>
++#include "doctest/doctest.h"
+ #include <thread_pool/thread_pool.h>
+ // ensure version header is included properly with the project
+ #include <thread_pool/version.h>
+diff --git a/test/source/thread_safe_queue.cpp b/test/source/thread_safe_queue.cpp
+index 07270b0..0ba03ab 100644
+--- a/test/source/thread_safe_queue.cpp
++++ b/test/source/thread_safe_queue.cpp
+@@ -1,4 +1,4 @@
+-#include <doctest/doctest.h>
++#include "doctest/doctest.h"
+ #include <thread_pool/thread_safe_queue.h>
+ 
+ #include <barrier>

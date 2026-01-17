@@ -41,6 +41,7 @@
 #include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>
 #endif
+#include <thread_pool/thread_pool.h>
 #include <BS_thread_pool.hpp>
 
 #include "jmg/preprocessor.h"
@@ -87,6 +88,25 @@ public:
 private:
   // TODO(bd) support optional features?
   BS::thread_pool<BS::tp::none> pool_;
+};
+
+class DpThreadPool {
+public:
+  DpThreadPool(size_t thread_count = 1) : pool_(thread_count) {}
+  JMG_NON_COPYABLE(DpThreadPool);
+  JMG_NON_MOVEABLE(DpThreadPool);
+  ~DpThreadPool() = default;
+
+  void join() { pool_.wait_for_tasks(); }
+
+  template<typename Fcn>
+    requires std::invocable<Fcn>
+  void execute(Fcn&& fcn) {
+    pool_.enqueue_detach(std::forward<Fcn>(fcn));
+  }
+
+private:
+  dp::thread_pool<std::function<void()>> pool_;
 };
 
 } // namespace jmg
