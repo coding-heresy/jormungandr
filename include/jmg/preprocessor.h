@@ -158,12 +158,18 @@
     }                                                          \
   } while (0)
 
-#define JMG_SYSFCN_PTR_RETURN(func, ...)      \
-  []() {                                      \
-    auto* ptr = (func);                       \
-    JMG_ENFORCE(static_cast<bool>(ptr), ...); \
-    return ptr;                               \
-  }()
+/**
+ * call a POSIX-style system function that returns a valid pointer on
+ * success and nullptr on failure (with errno set), and throw an
+ * exception of type std::system_error if it fails
+ *
+ * in this case, the returned pointer is ignored because the function
+ * is presumed to have written to a buffer supplied by the caller
+ */
+#define JMG_SYSFCN_PTR_RETURN(func, ...)                  \
+  do {                                                    \
+    if (!(func)) { JMG_THROW_SYSTEM_ERROR(__VA_ARGS__); } \
+  } while (0)
 
 ////////////////////////////////////////////////////////////////////////////////
 // helper macros for testing
