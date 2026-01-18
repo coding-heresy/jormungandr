@@ -31,6 +31,10 @@
  */
 #pragma once
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+
 #include <charconv>
 #include <concepts>
 #include <optional>
@@ -46,6 +50,7 @@
 #include "jmg/meta.h"
 #include "jmg/preprocessor.h"
 #include "jmg/types.h"
+#include "jmg/util.h"
 
 #define DETAIL_ENFORCE_EMPTY_EXTRAS(extras, src_type, tgt_type) \
   static_assert(0 == sizeof...(extras),                         \
@@ -171,6 +176,26 @@ struct ConvertImpl {
         std::ostringstream strm;
         strm << src;
         return strm.str();
+      }
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+    }
+    ////////////////////////////////////////////////////////////
+    // this section converts from struct sockaddr_in to string
+    //
+    // TODO(bd) support struct sockaddr, struct sockaddr_in6 and
+    // IpEndpoint
+    ////////////////////////////////////////////////////////////
+    else if constexpr (SameAsDecayedT<struct sockaddr_in, Src>) {
+      if constexpr (std::same_as<std::string, Tgt>) {
+        char buf[INET_ADDRSTRLEN + 1];
+        memset(buf, 0, sizeof(buf));
+        const auto* tmp_ptr = ::inet_ntop(AF_INET, (const void*)&(src.sin_addr),
+                                          buf, INET_ADDRSTRLEN);
+        JMG_SYSFCN_PTR_RETURN(tmp_ptr,
+                              "failed to convert sockaddr_in to string");
+        const auto port = ::ntohs(src.sin_port);
+        if (port > 0) { return str_cat(buf, ":", port); }
+        return std::string(buf);
       }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
