@@ -57,7 +57,7 @@ TEST(ConversionTests, TestConversionRelatedConcepts) {
   EXPECT_TRUE(DurationT<std::chrono::nanoseconds>);
   EXPECT_TRUE(DurationT<std::chrono::seconds>);
   EXPECT_TRUE(DurationT<Duration>);
-  EXPECT_TRUE(DurationT<UringDuration>);
+  EXPECT_TRUE(DurationT<UringTimeSpec>);
   EXPECT_FALSE(DurationT<int>);
   // StdChronoDurationT
   EXPECT_TRUE(StdChronoDurationT<std::chrono::nanoseconds>);
@@ -277,19 +277,19 @@ TEST(ConversionTests, TestChronoDurationFromChronoDuration) {
   EXPECT_EQ(42000, ms.count());
 }
 
-TEST(ConversionTests, TestUringDurationFromDuration) {
+TEST(ConversionTests, TestUringTimeSpecFromDuration) {
   const auto duration = [] -> Duration {
     const auto chrono_duration = 1s + 42ns;
     // Yep, 'from' correctly figures this out, FTW!
     return from(chrono_duration);
   }();
-  UringDuration uring_duration = from(duration);
+  UringTimeSpec uring_duration = from(duration);
   EXPECT_EQ(1, uring_duration.tv_sec);
   EXPECT_EQ(42, uring_duration.tv_nsec);
 }
 
-TEST(ConversionTests, TestDurationFromUringDuration) {
-  const UringDuration uring_duration = {.tv_sec = 42, .tv_nsec = 5};
+TEST(ConversionTests, TestDurationFromUringTimeSpec) {
+  const UringTimeSpec uring_duration = {.tv_sec = 42, .tv_nsec = 5};
   const Duration actual = from(uring_duration);
   EXPECT_EQ(std::chrono::seconds(42) + std::chrono::nanoseconds(5), actual);
 }

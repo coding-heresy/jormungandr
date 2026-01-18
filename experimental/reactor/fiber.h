@@ -92,35 +92,7 @@ public:
    */
   void yield();
 
-  /**
-   * write output to stdout
-   */
-  template<typename... Args>
-  void log(Args&&... args) {
-    const auto output = str_cat(std::forward<Args&&>(args)..., "\n");
-    write(kStdoutFd, buffer_from(output));
-  }
-
-  /**
-   * close an open descriptor of any kind
-   */
-  template<DescriptorT T>
-  void close(T fd) {
-    // set the user data to the fiber ID so the completion event gets routed
-    // back to this thread
-    uring_->submitFdCloseReq(fd, UserData(unsafe(id_)));
-
-    ////////////////////
-    // enter the scheduler to defer further processing until the operation is
-    // complete
-    reschedule();
-
-    ////////////////////
-    // return from scheduler
-    validateEvent("close descriptor");
-  }
-
-  ////////////////////
+  ////////////////////////////////////////////////////////////
   // thread pool execution support
 
   // TODO(bd) add support for std::move_only_function?
@@ -168,7 +140,67 @@ public:
     return rslt;
   }
 
-  ////////////////////
+  /**
+   * write output to stdout
+   */
+  template<typename... Args>
+  void log(Args&&... args) {
+    const auto output = str_cat(std::forward<Args&&>(args)..., "\n");
+    write(kStdoutFd, buffer_from(output));
+  }
+
+  ////////////////////////////////////////////////////////////
+  // misc utilities
+
+  /**
+   * close an open descriptor of any kind
+   */
+  template<DescriptorT T>
+  void close(T fd) {
+    // set the user data to the fiber ID so the completion event gets routed
+    // back to this thread
+    uring_->submitFdCloseReq(fd, UserData(unsafe(id_)));
+
+    ////////////////////
+    // enter the scheduler to defer further processing until the operation is
+    // complete
+    reschedule();
+
+    ////////////////////
+    // return from scheduler
+    validateEvent("close descriptor");
+  }
+
+  template<typename T>
+    requires TimePointT<T> || DurationT<T>
+  void awaitTimeout(T&& timeout) {
+    if constexpr (TimePointT<T>) {
+      // timeout is at an absolute time point
+      TimePoint timeout_tp = from(timeout);
+      auto ts = getCurrentTime();
+      JMG_ENFORCE(timeout_tp > ts, "provided timeout time [",
+                  jmg::to_string(timeout_tp),
+                  "] was earlier than or the same as current time [",
+                  jmg::to_string(ts), "]");
+      uring_->submitTimerEventReq(timeout_tp, UserData(unsafe(id_)));
+    }
+    else {
+      // timeout occurs after a time duration
+      Duration timeout_duration = from(timeout);
+      uring_->submitTimerEventReq(timeout_duration, UserData(unsafe(id_)));
+    }
+
+    ////////////////////
+    // enter the scheduler to defer further processing until the operation is
+    // complete
+    reschedule();
+
+    ////////////////////
+    // return from scheduler
+    getEvent("await timeout", true /* is_timer */);
+  }
+
+  ////////////////////////////////////////////////////////////
   // file support
 
   /**
@@ -178,7 +210,7 @@ public:
                           FileOpenFlags flags,
                           std::optional<mode_t> permissions = std::nullopt);
 
-  ////////////////////
+  ////////////////////////////////////////////////////////////
   // networking support
 
   /**
@@ -213,56 +245,6 @@ public:
                        int opt_id,
                        const void* opt_val,
                        size_t opt_sz);
-
-  ////////////////////
-  // reading and writing data
-
-  /**
-   * read data from an open file descriptor
-   */
-  template<ReadableDescriptorT T>
-  size_t read(T fd, BufferProxy buf) {
-    auto iov = iov_from(buf);
-    // set the user data to the fiber ID so the completion event gets routed
-    // back to this thread
-    uring_->submitReadReq(fd, iov, DelaySubmission::kNoDelay,
-                          UserData(unsafe(id_)));
-
-    ////////////////////
-    // enter the scheduler to defer further processing until the operation is
-    // complete
-    reschedule();
-
-    ////////////////////
-    // return from scheduler
-    const auto event = getEvent("read data");
-    const auto& cqe = *(event);
-    return static_cast<size_t>(cqe.res);
-  }
-
-  /**
-   * write data to an open file descriptor
-   */
-  template<WritableDescriptorT T>
-  size_t write(T fd, BufferView data) {
-    if (data.empty()) { return 0; }
-    auto iov = iov_from(data);
-    // set the user data to the fiber ID so the completion event gets routed
-    // back to this thread
-    uring_->submitWriteReq(fd, iov, DelaySubmission::kNoDelay,
-                           UserData(unsafe(id_)));
-
-    ////////////////////
-    // enter the scheduler to defer further processing until the operation is
-    // complete
-    reschedule();
-
-    ////////////////////
-    // return from scheduler
-    const auto event = getEvent("write data");
-    const auto& cqe = *(event);
-    return static_cast<size_t>(cqe.res);
-  }
 
   /**
    * lookup the list of IP endpoints associated with a host
@@ -314,6 +296,56 @@ public:
     });
   }
 
+  ////////////////////////////////////////////////////////////
+  // reading and writing data
+
+  /**
+   * read data from an open file descriptor
+   */
+  template<ReadableDescriptorT T>
+  size_t read(T fd, BufferProxy buf) {
+    auto iov = iov_from(buf);
+    // set the user data to the fiber ID so the completion event gets routed
+    // back to this thread
+    uring_->submitReadReq(fd, iov, DelaySubmission::kNoDelay,
+                          UserData(unsafe(id_)));
+
+    ////////////////////
+    // enter the scheduler to defer further processing until the operation is
+    // complete
+    reschedule();
+
+    ////////////////////
+    // return from scheduler
+    const auto event = getEvent("read data");
+    const auto& cqe = *(event);
+    return static_cast<size_t>(cqe.res);
+  }
+
+  /**
+   * write data to an open file descriptor
+   */
+  template<WritableDescriptorT T>
+  size_t write(T fd, BufferView data) {
+    if (data.empty()) { return 0; }
+    auto iov = iov_from(data);
+    // set the user data to the fiber ID so the completion event gets routed
+    // back to this thread
+    uring_->submitWriteReq(fd, iov, DelaySubmission::kNoDelay,
+                           UserData(unsafe(id_)));
+
+    ////////////////////
+    // enter the scheduler to defer further processing until the operation is
+    // complete
+    reschedule();
+
+    ////////////////////
+    // return from scheduler
+    const auto event = getEvent("write data");
+    const auto& cqe = *(event);
+    return static_cast<size_t>(cqe.res);
+  }
+
 private:
   friend class Reactor;
 
@@ -335,7 +367,7 @@ private:
    *
    * also performs several sanity checks
    */
-  Event getEvent(const std::string_view op);
+  Event getEvent(const std::string_view op, bool is_timer = false);
 
   /**
    * perform sanity checks on the outstanding Event object associated with the

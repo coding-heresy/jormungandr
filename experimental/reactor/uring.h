@@ -35,6 +35,7 @@
 
 #include <liburing.h>
 
+#include "jmg/conversion.h"
 #include "jmg/ip_endpoint.h"
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
@@ -379,6 +380,14 @@ public:
     // submissions to be chained
   }
 
+  /**
+   * submit a request to close an open descriptor
+   */
+  template<DescriptorT T>
+  void submitFdCloseReq(const T fd, const UserData user_data) {
+    submitFdCloseReq(unsafe(fd), user_data);
+  }
+
   void registerEventNotifier(
     EventFd notifier,
     DelaySubmission isDelayed = DelaySubmission::kNoDelay);
@@ -391,16 +400,21 @@ public:
    * schedule timeout events directly with the kernel in order to avoid the need
    * to maintain such a schedule internally e.g. with a priority queue
    */
-  void submitTimeoutReq(UserData data,
-                        Duration timeout,
-                        DelaySubmission is_delayed = DelaySubmission::kNoDelay);
-
-  /**
-   * submit a request to close an open descriptor
-   */
-  template<DescriptorT T>
-  void submitFdCloseReq(const T fd, const UserData user_data) {
-    submitFdCloseReq(unsafe(fd), user_data);
+  template<typename T>
+    requires TimePointT<T> || DurationT<T>
+  void submitTimerEventReq(T&& timeout, UserData data) {
+    UringTimeSpec ts;
+    unsigned flags = 0;
+    if constexpr (TimePointT<T>) {
+      flags = IORING_TIMEOUT_ABS;
+      // convert TimePoint but then copy the values over to
+      // UringTimeSpec
+      const ::timespec ts_tp = from(timeout);
+      ts.tv_sec = ts_tp.tv_sec;
+      ts.tv_nsec = ts_tp.tv_nsec;
+    }
+    else { ts = from(timeout); }
+    submitTimeoutReq(ts, flags, data);
   }
 
   /**
@@ -515,6 +529,10 @@ private:
    * actual implementation of close request submission
    */
   void submitFdCloseReq(int fd, UserData user_data);
+
+  void submitTimeoutReq(UringTimeSpec timeout_spec,
+                        unsigned flags,
+                        UserData user_data);
 
   /**
    * actual implementation of write request submission

@@ -149,7 +149,7 @@ void Fiber::setSocketOption(const SocketDescriptor fd,
 
 void Fiber::reschedule() { reactor_->schedule(); }
 
-uring::Event Fiber::getEvent(const std::string_view op) {
+uring::Event Fiber::getEvent(const std::string_view op, const bool is_timer) {
   // check for missing event
   JMG_ENFORCE_USING(
     logic_error, pred(fcb_body_->event),
@@ -173,7 +173,9 @@ uring::Event Fiber::getEvent(const std::string_view op) {
   {
     // check for failure of the operation in the kernel
     const auto& cqe = *event;
-    if (cqe.res < 0) {
+    if ((cqe.res < 0) &&
+        // no timer event is expected or not a timer event
+        (!is_timer || (-ETIME != cqe.res))) {
       JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(-cqe.res, "failed to ", op);
     }
   }

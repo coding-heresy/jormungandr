@@ -60,7 +60,11 @@
 namespace jmg
 {
 
-using UringDuration = struct __kernel_timespec;
+// NOTE: ::timespec and UringTimeSpec have the same physical
+// structure, but to simplify the conversion code, ::timespec is
+// considered to be a time point type and UringTimeSpec is considered
+// to be a duration time,
+using UringTimeSpec = struct __kernel_timespec;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for types convertible to/from TimePoint
@@ -80,7 +84,7 @@ concept TimePointT =
 template<typename T>
 concept DurationT = SameAsDecayedT<Duration, T>
                     || TemplateSpecializationOfT<T, std::chrono::duration>
-                    || SameAsDecayedT<UringDuration, T>;
+                    || SameAsDecayedT<UringTimeSpec, T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for std::chrono::duration
@@ -255,9 +259,9 @@ struct ConvertImpl {
         // convert from jmg::Duration to absl::Duration
         return absl::FromChrono(src);
       }
-      else if constexpr (SameAsDecayedT<UringDuration, Tgt>) {
-        // convert from jmg::Duration to UringDuration
-        UringDuration rslt;
+      else if constexpr (SameAsDecayedT<UringTimeSpec, Tgt>) {
+        // convert from jmg::Duration to UringTimeSpec
+        UringTimeSpec rslt;
         const auto nanos = src.count();
         rslt.tv_sec = static_cast<int64_t>(nanos / kNanosecPerSec);
         rslt.tv_nsec = nanos - (rslt.tv_sec * kNanosecPerSec);
@@ -316,7 +320,7 @@ struct ConvertImpl {
       // that this might break in the future
       return absl::time_internal::ToChronoDuration<Tgt>(src);
     }
-    else if constexpr (SameAsDecayedT<UringDuration, Src>) {
+    else if constexpr (SameAsDecayedT<UringTimeSpec, Src>) {
       static_assert(std::same_as<Duration, Tgt>,
                     "conversion from uring duration (AKA struct "
                     "__kernel_timespec) must target jmg::Duration");
