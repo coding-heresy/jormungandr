@@ -91,3 +91,10 @@ cc_test(
     ],
     size = "small",
 )
+
+cc_binary(
+    name = "lookup_address",
+    visibility = ["//visibility:public"],
+    srcs = ["lookup_address.cpp"],
+    deps = [":reactor"],
+)
