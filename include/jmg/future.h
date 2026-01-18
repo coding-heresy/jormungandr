@@ -214,4 +214,15 @@ private:
   std::promise<void> prm_;
 };
 
+/**
+ * construct a promise/future pair that communicate a value of a
+ * specific type
+ */
+template<typename T>
+auto makeCommunicator() {
+  auto sndr = Promise<T>();
+  auto rcvr = sndr.get_future();
+  return make_tuple(std::move(sndr), std::move(rcvr));
+}
+
 } // namespace jmg
