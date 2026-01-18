@@ -127,8 +127,7 @@ using OrderedSet = absl::btree_set<Ts...>;
 // TODO(bd) use std::chrono::nanoseconds instead of absl::Time
 using TimePoint = absl::Time;
 using TimeZone = absl::TimeZone;
-// TODO(bd) use std::chrono::nanoseconds instead of absl::Duration
-using Duration = absl::Duration;
+using Duration = std::chrono::nanoseconds;
 
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using TimePointFmt = SafeType<std::string_view, SafeType>;

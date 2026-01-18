@@ -98,10 +98,10 @@ constexpr auto kMillisecPerSec = int64_t(1000);
 constexpr auto kMicrosecPerSec = int64_t(1000000);
 constexpr auto kNanosecPerSec = int64_t(1000000000);
 
-constexpr auto kMicroSecPerMillisec = int64_t(1000);
-constexpr auto kNanosecPerMilliSec = int64_t(1000000);
+constexpr auto kMicrosecPerMillisec = int64_t(1000);
+constexpr auto kNanosecPerMillisec = int64_t(1000000);
 
-constexpr auto kNanosecPerMicroSec = int64_t(1000);
+constexpr auto kNanosecPerMicrosec = int64_t(1000);
 
 ////////////////////////////////////////////////////////////////////////////////
 // conversion implementation
@@ -236,16 +236,14 @@ struct ConvertImpl {
     // this section converts from Duration to other types
     ////////////////////////////////////////////////////////////
     else if constexpr (SameAsDecayedT<Duration, Src>) {
-      // conversion of Duration to other types or representations
-      if constexpr (jmg::StdChronoDurationT<Tgt>) {
-        // TODO(bd) very naughty to use an internal Abseil namespace, but the
-        // alternative is very painful so I'll take the risk that this might
-        // break in the future
-        return absl::time_internal::ToChronoDuration<Tgt>(src);
+      if constexpr (SameAsDecayedT<absl::Duration, Tgt>) {
+        // convert from jmg::Duration to absl::Duration
+        return absl::FromChrono(src);
       }
       else if constexpr (SameAsDecayedT<UringDuration, Tgt>) {
+        // convert from jmg::Duration to UringDuration
         UringDuration rslt;
-        const auto nanos = absl::ToInt64Nanoseconds(src);
+        const auto nanos = src.count();
         rslt.tv_sec = static_cast<int64_t>(nanos / kNanosecPerSec);
         rslt.tv_nsec = nanos - (rslt.tv_sec * kNanosecPerSec);
         return rslt;
@@ -296,17 +294,21 @@ struct ConvertImpl {
     ////////////////////////////////////////////////////////////
     // this section converts from external types to Duration
     ////////////////////////////////////////////////////////////
-    else if constexpr (StdChronoDurationT<Src>) {
-      static_assert(
-        std::same_as<Duration, Tgt>,
-        "conversion from std::chrono::duration must target Duration");
-      return absl::FromChrono(src);
+    else if constexpr (SameAsDecayedT<absl::Duration, Src>) {
+      static_assert(std::same_as<Duration, Tgt>,
+                    "conversion from absl::Duration must target jmg::Duration");
+      // TODO(bd) very naughty to use an internal Abseil namespace,
+      // but the alternative is very painful so I'll take the risk
+      // that this might break in the future
+      return absl::time_internal::ToChronoDuration<Tgt>(src);
     }
     else if constexpr (SameAsDecayedT<UringDuration, Src>) {
       static_assert(std::same_as<Duration, Tgt>,
                     "conversion from uring duration (AKA struct "
-                    "__kernel_timespec) must target Duration");
-      return absl::Seconds(src.tv_sec) + absl::Nanoseconds(src.tv_nsec);
+                    "__kernel_timespec) must target jmg::Duration");
+      const auto intermediate =
+        std::chrono::seconds(src.tv_sec) + Duration(src.tv_nsec);
+      return std::chrono::duration_cast<Duration>(intermediate);
     }
     ////////////////////////////////////////////////////////////
     // unable to perform conversion
