@@ -475,6 +475,17 @@ auto from(Src&& src, Extras&&... extras) {
   }
 }
 
+/**
+ * helper function that makes it easy to produce a string from some
+ * other value type
+ */
+template<typename Src, typename... Extras>
+std::string to_string(Src&& src, Extras&&... extras) {
+  std::string rslt =
+    from(std::forward<Src>(src), std::forward<Extras>(extras)...);
+  return rslt;
+}
+
 #undef DETAIL_ENFORCE_EMPTY_EXTRAS
 
 } // namespace jmg
