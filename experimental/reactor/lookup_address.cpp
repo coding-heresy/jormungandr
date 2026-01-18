@@ -64,13 +64,16 @@ auto makeSignaller() {
 
 using Hostname =
   PosnParam<string, "hostname", "host name to look up address for">;
-using CmdLine = CmdLineArgs<Hostname>;
+using SvcName =
+  PosnParam<string, "service", "service name to look up port for", Optional>;
+using CmdLine = CmdLineArgs<Hostname, SvcName>;
 
 int main(const int argc, const char** argv) {
   try {
     // process arguments
     const auto cmdline = CmdLine(argc, argv);
     const auto hostname = get<Hostname>(cmdline);
+    const auto svc_name = try_get<SvcName>(cmdline);
 
     // start reactor
     Reactor reactor;
@@ -91,9 +94,16 @@ int main(const int argc, const char** argv) {
       const auto terminator = Cleanup([&] { reactor.shutdown(); });
       const auto endpoints =
         reactor.compute([&](Fiber& fbr) mutable -> Fiber::IpEndpoints {
-          return fbr.lookupNetworkEndpoints(hostname);
+          if (svc_name) {
+            return fbr.lookupNetworkEndpoints(hostname, *svc_name);
+          }
+          else { return fbr.lookupNetworkEndpoints(hostname); }
         });
-      cout << "IP endpoints for host [" << hostname << "]:\n";
+      const auto svc_msg =
+        svc_name ? str_cat(" and service [", *svc_name, "]") : string();
+      cout << "IP endpoints for host [" << hostname << "]";
+      if (svc_name) { cout << " and service [" << *svc_name << "]"; }
+      cout << ":\n";
       for (const auto& endpoint : endpoints) {
         cout << " - " << static_cast<string>(from(endpoint.addr())) << "\n";
       }
