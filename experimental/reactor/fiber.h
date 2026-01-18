@@ -31,10 +31,17 @@
  */
 #pragma once
 
+#include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <ucontext.h>
+
 #include <array>
 #include <filesystem>
+#include <vector>
 
-#include <ucontext.h>
+#include "jmg/ip_endpoint.h"
+#include "jmg/types.h"
 
 #include "control_blocks.h"
 #include "uring.h"
@@ -68,6 +75,8 @@ class Fiber {
   using WorkerFcn = std::function<void(void)>;
 
 public:
+  using IpEndpoints = std::vector<IpEndpoint>;
+
   Fiber() = default;
   JMG_NON_COPYABLE(Fiber);
   JMG_NON_MOVEABLE(Fiber);
@@ -253,6 +262,56 @@ public:
     const auto event = getEvent("write data");
     const auto& cqe = *(event);
     return static_cast<size_t>(cqe.res);
+  }
+
+  /**
+   * lookup the list of IP endpoints associated with a host
+   */
+  template<NullTerminatedStringT Str, typename... Args>
+  IpEndpoints lookupNetworkEndpoints(const Str& host, Args&&... args) {
+    c_string_view svc;
+    [[maybe_unused]]
+    auto processArg = [&]<typename Arg>(Arg&& arg) {
+      if constexpr (NullTerminatedStringT<Arg>) { svc = c_string_view(arg); }
+      // TODO(bd) handle multiple protocols along with flags and
+      // timeouts
+      else { JMG_NOT_EXHAUSTIVE(Arg); }
+    };
+    (processArg(args), ...);
+    // delegate to the reactor thread pool because there doesn't seem
+    // to be a fully functional solution that is compatible with
+    // io_uring
+    return compute([&] mutable -> IpEndpoints {
+      const auto* host_ptr = c_string_view(host).c_str();
+      const auto* svc_ptr = svc.empty() ? nullptr : svc.c_str();
+      struct addrinfo hints;
+      memset(&hints, 0, sizeof(hints));
+      // TODO(bd) support IPv6 (via AF_INET6)
+      hints.ai_family = AF_INET;
+      // TODO(bd) support UDP
+      hints.ai_socktype = SOCK_STREAM;
+
+      struct addrinfo* info_ptr = nullptr;
+      const auto rc = ::getaddrinfo(host_ptr, svc_ptr, &hints, &info_ptr);
+      if (rc != 0) {
+        JMG_THROW_EXCEPTION(std::runtime_error,
+                            "unable to lookup network endpoints: ",
+                            ::gai_strerror(rc));
+      }
+      struct addrinfo* ptr = nullptr;
+      size_t rslt_sz = 0;
+      for (ptr = info_ptr; ptr; ptr = ptr->ai_next) {
+        if (AF_INET == ptr->ai_family) { ++rslt_sz; }
+        // TODO(bd) support IPv6 (via AF_INET6)
+      }
+      IpEndpoints rslt;
+      if (!rslt_sz) { return rslt; }
+      rslt.reserve(rslt_sz);
+      for (ptr = info_ptr; ptr; ptr = ptr->ai_next) {
+        if (AF_INET == ptr->ai_family) { rslt.emplace_back(*(ptr->ai_addr)); }
+      }
+      return rslt;
+    });
   }
 
 private:
