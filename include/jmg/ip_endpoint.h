@@ -50,6 +50,8 @@ JMG_DEFINE_RUNTIME_EXCEPTION(MalformedIpAddress);
 /**
  * representation of an internet protocol endpoint, used for convenience and
  * improved type safety
+ *
+ * TODO(bd) handle IPv6
  */
 class IpEndpoint {
   static void makeSysAddr(const char* addr,
@@ -57,6 +59,9 @@ class IpEndpoint {
                           sockaddr_in& sys_addr);
 
 public:
+  /**
+   * construct an IpEndpoint from a string address and port
+   */
   template<NullTerminatedStringT T>
   IpEndpoint(const T& addr, Port port) {
     if constexpr (CStyleStringT<T>) {
@@ -67,6 +72,11 @@ public:
       makeSysAddr(addr.data(), unsafe(port), sys_addr_);
     }
   }
+
+  /**
+   * construct an IpEndpoint from a struct sockaddr
+   */
+  IpEndpoint(const sockaddr& addr, std::optional<size_t> sz = std::nullopt);
 
   const sockaddr_in& addr() const { return sys_addr_; }
 

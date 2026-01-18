@@ -38,6 +38,8 @@
 
 #include "jmg/preprocessor.h"
 
+using namespace std;
+
 namespace jmg
 {
 
@@ -53,6 +55,15 @@ void IpEndpoint::makeSysAddr(const char* addr,
   JMG_SYSTEM(inet_pton(AF_INET, addr, &(sys_addr.sin_addr)),
              "converting IP address to binary");
   sys_addr.sin_port = htons(port);
+}
+
+IpEndpoint::IpEndpoint(const sockaddr& addr, const optional<size_t> sz) {
+  JMG_ENFORCE(AF_INET == addr.sa_family, "address family type [",
+              addr.sa_family, "] is not currently supported");
+  JMG_ENFORCE(!sz || (sz >= sizeof(sys_addr_)), "provided size [", *sz,
+              "] is too small, must be at least [", sizeof(sys_addr_), "]");
+  memset(&sys_addr_, 0, sizeof(sys_addr_));
+  memcpy(&sys_addr_, &addr, sizeof(sys_addr_));
 }
 
 } // namespace jmg
