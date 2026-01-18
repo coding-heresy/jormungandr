@@ -35,7 +35,6 @@
  * general purpose utilities
  */
 
-#include <future>
 #include <optional>
 #include <ranges>
 #include <tuple>

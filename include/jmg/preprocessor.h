@@ -91,11 +91,11 @@
  *
  * @todo use basename of filename?
  */
-#define JMG_THROW_EXCEPTION(ExceptionType, ...)                         \
+#define JMG_THROW_EXCEPTION(exception_type, ...)                        \
   do {                                                                  \
     const auto err_msg = absl::StrCat("'", __VA_ARGS__, "' on line ",   \
                                       __LINE__, " of file ", __FILE__); \
-    throw ExceptionType(err_msg);                                       \
+    throw exception_type(err_msg);                                      \
   } while (0)
 
 /**
