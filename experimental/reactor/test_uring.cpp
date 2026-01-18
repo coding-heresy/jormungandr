@@ -57,8 +57,8 @@ TEST(UringTests, SmokeTest) {
   EXPECT_EQ(unsafe(user_data), unsafe(event.getUserData()));
 
   const auto diff = end_ts - begin_ts;
-  chrono::microseconds chrono_diff = from(diff);
-  EXPECT_TRUE(chrono_diff.count() >= 10 * kMicroSecPerMillisec)
+  Duration duration_diff = from(diff);
+  EXPECT_TRUE(duration_diff.count() >= 10 * kNanosecPerMillisec)
     << "event duration was less than expected timeout";
 }
 

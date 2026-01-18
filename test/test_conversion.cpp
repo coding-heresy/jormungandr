@@ -64,7 +64,8 @@ TEST(ConversionTests, TestConversionRelatedConcepts) {
   // StdChronoDurationT
   EXPECT_TRUE(StdChronoDurationT<std::chrono::nanoseconds>);
   EXPECT_TRUE(StdChronoDurationT<std::chrono::seconds>);
-  EXPECT_FALSE(StdChronoDurationT<Duration>);
+  EXPECT_TRUE(StdChronoDurationT<Duration>);
+  EXPECT_FALSE(StdChronoDurationT<absl::Duration>);
   EXPECT_FALSE(StdChronoDurationT<int>);
 }
 
@@ -266,7 +267,7 @@ TEST(ConversionTests, TestTimePointFromChronoTimePoint) {
 ////////////////////
 // conversions between various time durations
 
-const auto kDuration = absl::Seconds(42);
+const Duration kDuration = from(std::chrono::seconds(42));
 
 TEST(ConversionTests, TestDurationFromChronoDuration) {
   Duration actual = from(42s);
@@ -274,10 +275,9 @@ TEST(ConversionTests, TestDurationFromChronoDuration) {
   EXPECT_EQ(expected, actual);
 }
 
-TEST(ConversionTests, TestChronoDurationFromDuration) {
-  std::chrono::seconds actual = from(kDuration);
-  const auto expected = 42s;
-  EXPECT_EQ(expected, actual);
+TEST(ConversionTests, TestAbslDurationFromDuration) {
+  absl::Duration actual = from(kDuration);
+  EXPECT_EQ(kDuration.count(), absl::ToInt64Nanoseconds(actual));
 }
 
 TEST(ConversionTests, TestChronoDurationFromChronoDuration) {
@@ -298,6 +298,6 @@ TEST(ConversionTests, TestUringDurationFromDuration) {
 
 TEST(ConversionTests, TestDurationFromUringDuration) {
   const UringDuration uring_duration = {.tv_sec = 42, .tv_nsec = 5};
-  const Duration duration = from(uring_duration);
-  EXPECT_EQ(absl::Seconds(42) + absl::Nanoseconds(5), duration);
+  const Duration actual = from(uring_duration);
+  EXPECT_EQ(std::chrono::seconds(42) + std::chrono::nanoseconds(5), actual);
 }
