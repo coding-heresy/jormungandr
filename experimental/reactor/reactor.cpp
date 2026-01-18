@@ -231,7 +231,7 @@ void Reactor::start() {
 
 void Reactor::shutdown() { detail::sendNotification(post_src_, kShutdownCmd); }
 
-void Reactor::post(FiberFcn&& fcn) {
+void Reactor::execute(FiberFcn&& fcn) {
   // TODO(bd) try to come up with a better way to do this
   auto lambda_ptr = make_unique<FiberFcn>(std::move(fcn));
 

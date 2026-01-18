@@ -72,7 +72,7 @@ public:
   /**
    * send work to be performed by a new fiber in the reactor
    */
-  void post(FiberFcn&& fcn);
+  void execute(FiberFcn&& fcn);
 
 private:
   static constexpr size_t kMaxFibers = FiberCtrl::kMaxFibers;

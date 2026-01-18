@@ -108,7 +108,7 @@ TEST_F(ReactorTests, SmokeTest) {
 TEST_F(ReactorTests, TestSignalShutdown) {
   // request execution of a fiber function that will signal when it runs
   Signaller fbr_executed_signaller;
-  reactor.post([&](Fiber&) { fbr_executed_signaller.set_value(); });
+  reactor.execute([&](Fiber&) { fbr_executed_signaller.set_value(); });
 
   // wait until the fiber function completes before proceeding
   auto fbr_executed_barrier = fbr_executed_signaller.get_future();
@@ -140,8 +140,8 @@ TEST_F(ReactorTests, TestFiberYielding) {
   auto fbr_executed_barrier2 = fbr_executed_signaller2->get_future();
 
   auto fbr_fcn1 = make_fbr_fcn(std::move(fbr_executed_signaller1));
-  reactor.post(std::move(fbr_fcn1));
-  reactor.post(make_fbr_fcn(std::move(fbr_executed_signaller2)));
+  reactor.execute(std::move(fbr_fcn1));
+  reactor.execute(make_fbr_fcn(std::move(fbr_executed_signaller2)));
 
   {
     auto guard = Cleanup([&]() {
@@ -165,7 +165,7 @@ TEST_F(ReactorTests, TestFiberYielding) {
 
 TEST_F(ReactorTests, TestFileOpenFailure) {
   Signaller fbr_executed_signaller;
-  reactor.post([&](Fiber& fbr) {
+  reactor.execute([&](Fiber& fbr) {
     EXPECT_THROW([[maybe_unused]] auto fd =
                    fbr.openFile("/no/such/file", FileOpenFlags::kRead),
                  system_error);
@@ -189,7 +189,7 @@ TEST_F(ReactorTests, TestReadDataFromFile) {
   string file_data;
   file_data.resize(test_data.size() + 1);
   size_t read_sz = 0;
-  reactor.post([&](Fiber& fbr) mutable {
+  reactor.execute([&](Fiber& fbr) mutable {
     const auto fd = fbr.openFile(tmpFile.name(), FileOpenFlags::kRead);
     {
       auto guard = Cleanup([&]() { fbr.close(fd); });
@@ -219,7 +219,7 @@ TEST_F(ReactorTests, TestWriteDataToFile) {
   const auto test_data = "some test data"s;
   TmpFile tmpFile;
   Signaller fbr_executed_signaller;
-  reactor.post([&](Fiber& fbr) {
+  reactor.execute([&](Fiber& fbr) {
     const auto fd = fbr.openFile(tmpFile.name(), FileOpenFlags::kWrite, 0644);
     {
       auto guard = Cleanup([&]() { fbr.close(fd); });
@@ -260,9 +260,9 @@ TEST_F(ReactorTests, TestThreadPoolExecution) {
     auto reactor_thread_id = reactor_thread_id_prm->get_future();
     auto pool_thread_id = pool_thread_id_prm->get_future();
     // post work to a fiber in the reactor
-    reactor.post([reactor_thread_id_prm = std::move(reactor_thread_id_prm),
-                  pool_thread_id_prm =
-                    std::move(pool_thread_id_prm)](Fiber& fbr) mutable {
+    reactor.execute([reactor_thread_id_prm = std::move(reactor_thread_id_prm),
+                     pool_thread_id_prm =
+                       std::move(pool_thread_id_prm)](Fiber& fbr) mutable {
       string reactor_thread_id = from(this_thread::get_id());
       // report the thread ID of the thread running the reactor
       reactor_thread_id_prm->set_value(this_thread::get_id());
@@ -293,7 +293,7 @@ TEST_F(ReactorTests, TestThreadPoolComputation) {
     auto guard = Cleanup([&]() { shutdown(); });
     auto rslt_val_prm = Promise<double>();
     auto rslt_val = rslt_val_prm.get_future();
-    reactor.post([&](Fiber& fbr) {
+    reactor.execute([&](Fiber& fbr) {
       auto sqrtr = [](const double val) { return sqrt(val); };
       auto rslt = fbr.compute(std::move(sqrtr), 4.0);
       rslt_val_prm.set_value(rslt);
@@ -309,7 +309,7 @@ TEST_F(ReactorTests, TestThreadPoolComputationFailurePropagatesToFiber) {
     auto guard = Cleanup([&]() { shutdown(); });
     auto rslt_val_prm = Promise<bool>();
     auto rslt_val = rslt_val_prm.get_future();
-    reactor.post([&](Fiber& fbr) {
+    reactor.execute([&](Fiber& fbr) {
       auto thrower = []([[maybe_unused]] const double val) -> double {
         throw runtime_error("not really exceptional");
       };

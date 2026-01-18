@@ -82,7 +82,7 @@ int main(const int argc, const char** argv) {
     });
 
     Promise<string> work_product;
-    reactor.post([&](Fiber& fbr) {
+    reactor.execute([&](Fiber& fbr) {
       try {
         // open socket
         const auto sd = fbr.openSocket(SocketTypes::kTcp);
