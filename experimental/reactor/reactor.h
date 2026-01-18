@@ -33,6 +33,7 @@
 
 #include <span>
 
+#include "jmg/future.h"
 #include "jmg/preprocessor.h"
 #include "jmg/types.h"
 #include "jmg/util.h"
@@ -73,6 +74,32 @@ public:
    * send work to be performed by a new fiber in the reactor
    */
   void execute(FiberFcn&& fcn);
+
+  /**
+   * send a computation task to be performed by a new fiber in the
+   * reactor and block the caller until the value is returned to it
+   *
+   * version with timeout
+   */
+  template<StdChronoDurationT Timeout, typename Fcn, typename... Args>
+    requires std::invocable<Fcn, Fiber&, Args...>
+  auto compute(const Timeout timeout, Fcn&& fcn, Args&&... args) {
+    return compute(std::optional(timeout), std::forward<Fcn>(fcn),
+                   std::forward<Args>(args)...);
+  }
+
+  /**
+   * send a computation task to be performed by a new fiber in the
+   * reactor and block the caller until the value is returned to it
+   *
+   * version without timeout
+   */
+  template<typename Fcn, typename... Args>
+    requires std::invocable<Fcn, Fiber&, Args...>
+  auto compute(Fcn&& fcn, Args&&... args) {
+    return compute(static_cast<OptMillisec>(std::nullopt),
+                   std::forward<Fcn>(fcn), std::forward<Args>(args)...);
+  }
 
 private:
   static constexpr size_t kMaxFibers = FiberCtrl::kMaxFibers;
@@ -157,6 +184,27 @@ private:
     requires std::invocable<Fcn>
   void execute(Fcn&& fcn) {
     thread_pool_.execute(std::move(fcn));
+  }
+
+  template<StdChronoDurationT Timeout, typename Fcn, typename... Args>
+    requires std::invocable<Fcn, Fiber&, Args...>
+  auto compute(const std::optional<Timeout> timeout, Fcn&& fcn, Args&&... args) {
+    using Rslt = std::invoke_result_t<Fcn, Fiber&, Args...>;
+    Rslt rslt;
+    auto [sndr, rcvr] = makeCommunicator<Rslt>();
+    execute([&sndr, fcn = std::forward<Fcn>(fcn),
+             ... args = std::forward<Args>(args)](Fiber& fbr) mutable {
+      try {
+        // execute the function and send the results back
+        sndr.set_value(std::invoke(std::forward<Fcn>(fcn), fbr,
+                                   std::forward<Args>(args)...));
+      }
+      catch (...) {
+        sndr.set_exception(std::current_exception());
+      }
+    });
+    if (timeout) { return rcvr.get(*timeout); }
+    return rcvr.get();
   }
 
   /**
