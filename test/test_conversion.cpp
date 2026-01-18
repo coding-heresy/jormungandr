@@ -48,8 +48,8 @@ TEST(ConversionTests, TestConversionRelatedConcepts) {
   // TimePointT
   EXPECT_TRUE(TimePointT<TimePoint>);
   EXPECT_TRUE(TimePointT<EpochSeconds>);
-  EXPECT_TRUE(TimePointT<timeval>);
-  EXPECT_TRUE(TimePointT<timespec>);
+  EXPECT_TRUE(TimePointT<::timeval>);
+  EXPECT_TRUE(TimePointT<::timespec>);
   EXPECT_TRUE(TimePointT<boost::posix_time::ptime>);
   EXPECT_TRUE(TimePointT<std::chrono::time_point<std::chrono::system_clock>>);
   EXPECT_FALSE(TimePointT<int>);

@@ -76,9 +76,6 @@ inline void write_all(const FD fd,
   namespace vws = std::ranges::views;
   using namespace std::string_view_literals;
   int sz;
-  // dbgOut("writing [", buf.size(), "] raw octets [",
-  //        str_join(buf | vws::transform(octetify), " "sv, kOctetFmt),
-  //        "] to file descriptor [", fd, "]");
   JMG_SYSTEM((sz = write(unsafe(fd), buf.data(), buf.size())),
              "unable to write all data to ", description);
   JMG_ENFORCE(buf.size() == static_cast<size_t>(sz),
@@ -95,9 +92,6 @@ template<ReadableDescriptorT FD>
 inline void read_all(const FD fd,
                      const BufferProxy buf,
                      const std::string_view description) {
-  // dbgOut("reading [", buf.size(), "] octets of data from file descriptor [",
-  // fd,
-  //        "]");
   namespace vws = std::ranges::views;
   using namespace std::string_view_literals;
   int sz;
