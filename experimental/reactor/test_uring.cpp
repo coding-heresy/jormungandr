@@ -48,7 +48,8 @@ using namespace std::string_literals;
 TEST(UringTests, SmokeTest) {
   constexpr auto user_data = uring::UserData(42);
   uring::Uring uring(uring::UringSz(256));
-  uring.submitTimeoutReq(user_data, from(10ms));
+  UringTimeSpec ts = from(Duration(10ms));
+  uring.submitTimerEventReq(ts, user_data);
   const auto begin_ts = getCurrentTime();
   const auto event = uring.awaitEvent(from(100ms));
   EXPECT_TRUE(pred(event)) << "timed out waiting for event that should have "
@@ -65,7 +66,8 @@ TEST(UringTests, SmokeTest) {
 TEST(UringTests, TestTimeoutOnAwaitEvent) {
   constexpr auto user_data = uring::UserData(42);
   uring::Uring uring(uring::UringSz(256));
-  uring.submitTimeoutReq(user_data, from(100ms));
+  UringTimeSpec ts = from(Duration(100ms));
+  uring.submitTimerEventReq(ts, user_data);
   const auto event = uring.awaitEvent(from(10ms));
   // NOTE: awaitEvent should time out and an empty event should be returned
   EXPECT_FALSE(pred(event));

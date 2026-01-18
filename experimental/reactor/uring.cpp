@@ -89,11 +89,11 @@ Uring::Uring(const UringSz sz) {
 Uring::~Uring() { io_uring_queue_exit(&ring_); }
 
 Event Uring::awaitEvent(optional<Duration> timeout) {
-  unique_ptr<UringDuration> wait_timeout;
+  unique_ptr<UringTimeSpec> wait_timeout;
   string is_timeout_str;
   io_uring_cqe* cqe = nullptr;
   if (timeout) {
-    UringDuration duration = from(*timeout);
+    UringTimeSpec duration = from(*timeout);
     auto rc = io_uring_wait_cqe_timeout(&ring_, &cqe, &duration);
     if (-ETIME == rc) {
       // timeout is not a failure, return empty event
@@ -144,15 +144,14 @@ void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
   clear_notifier.cancel();
 }
 
-void Uring::submitTimeoutReq(const UserData data,
-                             const Duration timeout,
-                             const DelaySubmission isDelayed) {
+void Uring::submitTimeoutReq(UringTimeSpec timeout_spec,
+                             unsigned flags,
+                             UserData user_data) {
   auto& sqe = getNextSqe();
-  io_uring_sqe_set_data64(&sqe, unwrap(data));
-  UringDuration timeout_duration = from(timeout);
-  io_uring_prep_timeout(&sqe, &timeout_duration, 0 /* count */,
-                        IORING_TIMEOUT_ETIME_SUCCESS);
-  if (!unwrap(isDelayed)) { submitReq("timeout"sv); }
+  io_uring_prep_timeout(&sqe, &timeout_spec, 0 /* count */,
+                        flags | IORING_TIMEOUT_ETIME_SUCCESS);
+  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  submitReq("timeout"sv);
 }
 
 void Uring::submitFdCloseReq(const int fd, const UserData user_data) {

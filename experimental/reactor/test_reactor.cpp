@@ -163,6 +163,20 @@ TEST_F(ReactorTests, TestFiberYielding) {
   EXPECT_TRUE(clean_reactor_shutdown);
 }
 
+TEST_F(ReactorTests, TestAwaitTimeout) {
+  auto [sndr, rcvr] = makeCommunicator<Duration>();
+  reactor.execute([&](Fiber& fbr) {
+    const auto begin_ts = getCurrentTime();
+    fbr.awaitTimeout(5ms);
+    const auto end_ts = getCurrentTime();
+    sndr.set_value(end_ts - begin_ts);
+  });
+  auto guard = Cleanup([&]() { shutdown(); });
+  const auto td = rcvr.get(2s, "duration receiver");
+  EXPECT_GT(td, Duration(4ms));
+  EXPECT_LT(td, Duration(6ms));
+}
+
 TEST_F(ReactorTests, TestFileOpenFailure) {
   Signaller fbr_executed_signaller;
   reactor.execute([&](Fiber& fbr) {
