@@ -123,7 +123,6 @@ template<typename Tgt, typename Src, typename... Extras>
 struct ConvertImpl {
   static Tgt convert(const Src src, Extras&&... extras) {
     using namespace boost::posix_time;
-    using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
     ////////////////////////////////////////////////////////////
     // degenerate case: any type converts to itself
     ////////////////////////////////////////////////////////////
@@ -211,24 +210,40 @@ struct ConvertImpl {
       }
       // convert TimePoint to EpochSeconds
       else if constexpr (std::same_as<EpochSeconds, Tgt>) {
-        return EpochSeconds(absl::ToTimeT(src));
+        const auto tp_secs =
+          std::chrono::time_point_cast<std::chrono::seconds>(src);
+        return EpochSeconds(tp_secs.time_since_epoch().count());
       }
       // convert TimePoint to timeval
       else if constexpr (std::same_as<::timeval, Tgt>) {
-        return absl::ToTimeval(src);
+        const auto tp_secs =
+          std::chrono::time_point_cast<std::chrono::seconds>(src);
+        const auto tp_usecs =
+          std::chrono::time_point_cast<std::chrono::microseconds>(src);
+        const auto downsampled =
+          std::chrono::time_point_cast<std::chrono::microseconds>(tp_secs);
+        const ::timeval tv = {.tv_sec = tp_secs.time_since_epoch().count(),
+                              .tv_usec = (tp_usecs - downsampled).count()};
+        return tv;
       }
       // convert TimePoint to timespec
       else if constexpr (std::same_as<::timespec, Tgt>) {
-        return absl::ToTimespec(src);
+        const auto tp_secs =
+          std::chrono::time_point_cast<std::chrono::seconds>(src);
+        const auto downsampled =
+          std::chrono::time_point_cast<std::chrono::nanoseconds>(tp_secs);
+        const ::timespec ts = {.tv_sec = tp_secs.time_since_epoch().count(),
+                               .tv_nsec = (src - downsampled).count()};
+        return ts;
       }
       // convert TimePoint to boost::posix_time::ptime
       else if constexpr (std::same_as<ptime, Tgt>) {
         static const auto kPtimeEpoch = from_time_t(0);
-        return kPtimeEpoch + nanoseconds(absl::ToUnixNanos(src));
+        return kPtimeEpoch + nanoseconds(src.time_since_epoch().count());
       }
-      // convert TimePoint to std::chrono::time_point<std::chrono::system_clock>
-      else if constexpr (std::same_as<ChronoTimePoint, Tgt>) {
-        return absl::ToChronoTime(src);
+      // convert absl::TimePoint to TimePoint
+      else if constexpr (std::same_as<absl::Time, Tgt>) {
+        return absl::FromChrono(src);
       }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
@@ -257,23 +272,23 @@ struct ConvertImpl {
     else if constexpr (SameAsDecayedT<EpochSeconds, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from EpochSeconds must target TimePoint");
-      return absl::FromTimeT(unsafe(src));
+      return TimePoint(std::chrono::seconds((unsafe(src))));
     }
     // convert from timeval to TimePoint
     else if constexpr (SameAsDecayedT<::timeval, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timeval must target TimePoint");
-      return absl::FromUnixMicros([&]() {
-        return (src.tv_sec * 1000000) + src.tv_usec;
-      }());
+      const auto tp_sec = std::chrono::seconds(src.tv_sec);
+      const auto tp_usec = std::chrono::microseconds(src.tv_usec);
+      return TimePoint(tp_sec + tp_usec);
     }
     // convert from timespec to TimePoint
     else if constexpr (SameAsDecayedT<::timespec, Src>) {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from timespec must target TimePoint");
-      return absl::FromUnixNanos([&]() {
-        return (src.tv_sec * 1000000000) + src.tv_nsec;
-      }());
+      const auto tp_sec = std::chrono::seconds(src.tv_sec);
+      const auto tp_nsec = std::chrono::nanoseconds(src.tv_nsec);
+      return TimePoint(tp_sec + tp_nsec);
     }
     // convert from boost::posix_time::ptime to TimePoint
     else if constexpr (SameAsDecayedT<ptime, Src>) {
@@ -282,14 +297,13 @@ struct ConvertImpl {
         "conversion from boost::posix_time::ptime must target TimePoint");
       static const auto kPtimeEpoch = from_time_t(0);
       const auto since_epoch = src - kPtimeEpoch;
-      return absl::FromUnixNanos(since_epoch.total_nanoseconds());
+      return TimePoint(std::chrono::nanoseconds(since_epoch.total_nanoseconds()));
     }
-    // convert from std::chrono::time_point<std::chrono::system_clock> to TimePoint
-    else if constexpr (SameAsDecayedT<ChronoTimePoint, Src>) {
-      static_assert(
-        std::same_as<TimePoint, Tgt>,
-        "conversion from std::chrono::time_point must target TimePoint");
-      return absl::FromChrono(src);
+    // convert from absl::Time to TimePoint
+    else if constexpr (SameAsDecayedT<absl::Time, Src>) {
+      static_assert(std::same_as<TimePoint, Tgt>,
+                    "conversion from absl::Time must target TimePoint");
+      return absl::ToChronoTime(src);
     }
     ////////////////////////////////////////////////////////////
     // this section converts from external types to Duration
@@ -375,12 +389,18 @@ private:
     // brain-dead signature that returns a bool with an error message
     // in an old-school result parameter for ParseTime and a perfectly
     // reasonable signature for FormatTime
-    std::string errMsg;
-    TimePoint rslt;
-    JMG_ENFORCE(absl::ParseTime(spec.fmt, str, spec.zone, &rslt, &errMsg),
+
+    // also, using absl_err_msg instead of err_msg here because
+    // err_msg would be shadowed by a variable declared internal to
+    // JMG_ENFORCE
+    std::string absl_err_msg;
+    absl::Time absl_tp;
+    JMG_ENFORCE(absl::ParseTime(spec.fmt, str, spec.zone, &absl_tp,
+                                &absl_err_msg),
                 "unable to parse string value [", str,
-                "] as time point using format [", spec.fmt, "]: ", errMsg);
-    return rslt;
+                "] as time point using format [", spec.fmt,
+                "]: ", absl_err_msg);
+    return absl::ToChronoTime(absl_tp);
   }
 
   /**
@@ -388,7 +408,8 @@ private:
    */
   static std::string timePoint2Str(Src tp, Extras&&... extras) {
     const auto spec = TimePointConversionSpec(std::forward<Extras>(extras)...);
-    const auto rslt = absl::FormatTime(spec.fmt, tp, spec.zone);
+    absl::Time absl_tp = absl::FromChrono(tp);
+    const auto rslt = absl::FormatTime(spec.fmt, absl_tp, spec.zone);
     // quick sanity check since Abseil can't be trusted to do the
     // right thing and throw an exception...
     JMG_ENFORCE(!rslt.empty(),

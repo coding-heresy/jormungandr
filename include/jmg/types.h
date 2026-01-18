@@ -124,8 +124,7 @@ using OrderedSet = absl::btree_set<Ts...>;
 // time point/duration/zone
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO(bd) use std::chrono::nanoseconds instead of absl::Time
-using TimePoint = absl::Time;
+using TimePoint = std::chrono::sys_time<std::chrono::nanoseconds>;
 using TimeZone = absl::TimeZone;
 using Duration = std::chrono::nanoseconds;
 
@@ -169,7 +168,9 @@ inline TimeZone getTimeZone(const TimeZoneName tz_name) {
   return rslt;
 }
 
-inline TimePoint getCurrentTime() { return absl::Now(); }
+inline TimePoint getCurrentTime() {
+  return std::chrono::time_point_cast<Duration>(std::chrono::system_clock::now());
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // strings
