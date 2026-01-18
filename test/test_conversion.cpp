@@ -44,8 +44,6 @@ using namespace std;
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
-using ChronoTimePoint = std::chrono::time_point<std::chrono::system_clock>;
-
 TEST(ConversionTests, TestConversionRelatedConcepts) {
   // TimePointT
   EXPECT_TRUE(TimePointT<TimePoint>);
@@ -214,14 +212,9 @@ TEST(ConversionTests, TestPosixTimeFromTimePoint) {
   EXPECT_EQ(expected, actual);
 }
 
-TEST(ConversionTests, TestChronoTimePointFromTimePoint) {
-  ChronoTimePoint chrono_tp = from(kTimePoint);
-  const auto actual =
-    EpochSeconds(std::chrono::duration_cast<std::chrono::seconds>(
-                   chrono_tp.time_since_epoch())
-                   .count());
-  const auto expected = kEpochSeconds;
-  EXPECT_EQ(expected, actual);
+TEST(ConversionTests, TestAbslTimeFromTimePoint) {
+  absl::Time absl_tp = from(kTimePoint);
+  EXPECT_EQ(absl::ToUnixNanos(absl_tp), kTimePoint.time_since_epoch().count());
 }
 
 ////////////////////
@@ -256,10 +249,9 @@ TEST(ConversionTests, TestTimePointFromPosixTime) {
   EXPECT_EQ(expected, actual);
 }
 
-TEST(ConversionTests, TestTimePointFromChronoTimePoint) {
-  const auto chrono_tp =
-    ChronoTimePoint(std::chrono::seconds(kTimePointSeconds));
-  TimePoint actual = from(chrono_tp);
+TEST(ConversionTests, TestTimePointFromAbslTime) {
+  absl::Time absl_tp = absl::FromUnixSeconds(kTimePointSeconds);
+  TimePoint actual = from(absl_tp);
   const auto expected = kTimePoint;
   EXPECT_EQ(expected, actual);
 }
