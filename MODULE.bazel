@@ -110,7 +110,7 @@ bazel_dep(
 
 bazel_dep(
     name = "liburing",
-    version = "2.5",
+    version = "2.10",
 )
 
 ########################################
