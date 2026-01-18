@@ -461,6 +461,53 @@ public:
     submitReadReq(unsafe(fd), io_vec, is_delayed, user_data);
   }
 
+  /**
+   * submit a request to receive data from a socket, which will be
+   * stored in a referenced buffer object
+   */
+  template<typename... Extras>
+  void submitRecvFromReq(SocketDescriptor sd,
+                         BufferProxy buf,
+                         int flags,
+                         Extras&&... extras) {
+    DelaySubmission is_delayed = DelaySubmission::kNoDelay;
+    std::optional<UserData> user_data = std::nullopt;
+    [[maybe_unused]]
+    auto processParam = [&]<typename T>(const T arg) {
+      if constexpr (jmg::DecayedSameAsT<T, DelaySubmission>) {
+        is_delayed = arg;
+      }
+      else if constexpr (jmg::DecayedSameAsT<T, UserData>) { user_data = arg; }
+    };
+    (processParam(std::forward<Extras>(extras)), ...);
+    submitRecvFromReq(unsafe(sd), buf, flags, is_delayed, user_data);
+  }
+
+  /**
+   * submit a request to receive data from a socket, which will be
+   * stored in a referenced buffer object
+   */
+  template<typename... Extras>
+  void submitSetSockOptReq(SocketDescriptor sd,
+                           int level,
+                           int opt_name,
+                           const void* opt_val,
+                           size_t opt_sz,
+                           Extras&&... extras) {
+    DelaySubmission is_delayed = DelaySubmission::kNoDelay;
+    std::optional<UserData> user_data = std::nullopt;
+    [[maybe_unused]]
+    auto processParam = [&]<typename T>(const T arg) {
+      if constexpr (jmg::DecayedSameAsT<T, DelaySubmission>) {
+        is_delayed = arg;
+      }
+      else if constexpr (jmg::DecayedSameAsT<T, UserData>) { user_data = arg; }
+    };
+    (processParam(std::forward<Extras>(extras)), ...);
+    submitSetSockOptReq(unsafe(sd), level, opt_name, opt_val, opt_sz,
+                        is_delayed, user_data);
+  }
+
 private:
   io_uring_sqe& getNextSqe();
 
@@ -484,6 +531,26 @@ private:
                      IoVecView io_vec,
                      DelaySubmission is_delayed,
                      std::optional<UserData> user_data);
+
+  /**
+   * actual implementation of recv request submission
+   */
+  void submitRecvFromReq(int sd,
+                         BufferProxy buf,
+                         int flags,
+                         DelaySubmission is_delayed,
+                         std::optional<UserData> user_data);
+
+  /**
+   * actual implementation of setsockopt request submission
+   */
+  void submitSetSockOptReq(int sd,
+                           int level,
+                           int opt_name,
+                           const void* opt_val,
+                           size_t opt_sz,
+                           DelaySubmission is_delayed,
+                           std::optional<UserData> user_data);
 
   std::optional<EventFd> notifier_;
   io_uring ring_;

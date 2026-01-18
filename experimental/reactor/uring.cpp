@@ -232,6 +232,35 @@ void Uring::submitReadReq(const int fd,
   if (!unwrap(is_delayed)) { submitReq("read"sv); }
 }
 
+void Uring::submitRecvFromReq(const int sd,
+                              BufferProxy buf,
+                              int flags,
+                              const DelaySubmission is_delayed,
+                              const optional<UserData> user_data) {
+  auto& sqe = getNextSqe();
+  io_uring_prep_recv(&sqe, sd, buf.data(), buf.size(), flags);
+  if (user_data) {
+    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
+  }
+  if (!unwrap(is_delayed)) { submitReq("recvfrom"sv); }
+}
+
+void Uring::submitSetSockOptReq(const int sd,
+                                int level,
+                                int opt_name,
+                                const void* opt_val,
+                                size_t opt_sz,
+                                const DelaySubmission is_delayed,
+                                const optional<UserData> user_data) {
+  auto& sqe = getNextSqe();
+  io_uring_prep_cmd_sock(&sqe, SOCKET_URING_OP_SETSOCKOPT, sd, level, opt_name,
+                         const_cast<void*>(opt_val), opt_sz);
+  if (user_data) {
+    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
+  }
+  if (!unwrap(is_delayed)) { submitReq("set socket options"sv); }
+}
+
 io_uring_sqe& Uring::getNextSqe() {
   auto* sqe = io_uring_get_sqe(&ring_);
   // TODO(bd) allow SQEs to be stored on a pending queue to be submitted when
