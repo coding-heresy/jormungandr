@@ -212,8 +212,8 @@ public:
    * write data to an open file descriptor
    */
   template<WritableDescriptorT T>
-  void write(T fd, BufferView data) {
-    if (data.empty()) { return; }
+  size_t write(T fd, BufferView data) {
+    if (data.empty()) { return 0; }
     auto iov = iov_from(data);
     // set the user data to the fiber ID so the completion event gets routed
     // back to this thread
@@ -227,7 +227,10 @@ public:
 
     ////////////////////
     // return from scheduler
-    validateEvent("write data");
+    const auto event = getEvent("write data");
+    const auto& cqe = *(event);
+    return static_cast<size_t>(cqe.res);
+  }
   }
 
 private:
