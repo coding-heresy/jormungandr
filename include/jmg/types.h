@@ -185,12 +185,11 @@ class c_string_view : public std::string_view {
 
 public:
   c_string_view() = default;
-  c_string_view(const char* str) : std::string_view(str) {}
-  c_string_view(const std::string& str) : std::string_view(str) {}
+  c_string_view(const char* str) : Base(str) {}
+  c_string_view(const std::string& str) : Base(str) {}
   // NOTE: allowing construction from another c_string_view simplifies
   // generic cases
-  c_string_view(const c_string_view& str)
-    : std::string_view(str.data(), str.size()) {}
+  c_string_view(const c_string_view& str) : Base(str.data(), str.size()) {}
   const char* c_str() const { return data(); }
 };
 

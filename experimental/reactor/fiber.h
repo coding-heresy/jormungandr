@@ -124,6 +124,10 @@ public:
   /**
    * send a computation task to the thread pool associated with the
    * reactor and return the resulting value back to the fiber
+   *
+   * NOTE: this function will automatically capture any exceptions
+   * thrown within the body of its compute function and propagate them
+   * to the caller
    */
   template<typename Fcn, typename... Args>
     requires std::invocable<Fcn, Args...>

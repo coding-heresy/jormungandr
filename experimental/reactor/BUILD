@@ -71,13 +71,13 @@ cc_library(
         "reactor.h"
     ],
     deps = [
+        ":control_blocks",
+        ":uring",
         # TODO(bd) figure out how to make boost.asio work with shadow
         # stacks or try a different thread pool implementation
         # "@boost.asio",
         "@bs_thread-pool//:thread_pool",
         "@dp_thread-pool//:thread_pool",
-        ":control_blocks",
-        ":uring",
     ],
 )
 
