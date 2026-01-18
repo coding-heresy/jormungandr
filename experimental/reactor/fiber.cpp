@@ -109,6 +109,44 @@ void Fiber::connectTo(SocketDescriptor sd, const IpEndpoint& tgt_endpoint) {
   validateEvent("close descriptor");
 }
 
+size_t Fiber::recvFrom(SocketDescriptor fd, BufferProxy buf, int flags) {
+  // set the user data to the fiber ID so the completion event gets routed
+  // back to this thread
+  uring_->submitRecvFromReq(fd, buf, flags, DelaySubmission::kNoDelay,
+                            UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reschedule();
+
+  ////////////////////
+  // return from scheduler
+  const auto event = getEvent("recvfrom");
+  const auto& cqe = *(event);
+  return static_cast<size_t>(cqe.res);
+}
+
+void Fiber::setSocketOption(const SocketDescriptor fd,
+                            const int level,
+                            const int opt_name,
+                            const void* opt_val,
+                            const size_t opt_sz) {
+  // set the user data to the fiber ID so the completion event gets routed
+  // back to this thread
+  uring_->submitSetSockOptReq(fd, level, opt_name, opt_val, opt_sz,
+                              DelaySubmission::kNoDelay, UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reschedule();
+
+  ////////////////////
+  // return from scheduler
+  validateEvent("set socket option");
+}
+
 void Fiber::reschedule() { reactor_->schedule(); }
 
 uring::Event Fiber::getEvent(const std::string_view op) {

@@ -182,6 +182,29 @@ public:
    */
   void connectTo(SocketDescriptor sd, const IpEndpoint& tgt_endpoint);
 
+  /**
+   * read data from a socket
+   *
+   * TODO(bd) create a safe type for flags
+   */
+  size_t recvFrom(SocketDescriptor fd, BufferProxy buf, int flags);
+
+  /**
+   * set options for a socket
+   *
+   * TODO(bd) support multiple options in a single command
+   *
+   * TODO(bd) create safe types for level and opt_id
+   *
+   * TODO(bd) create an owning type for the combination of level,
+   * opt_id, opt_val and opt_sz
+   */
+  void setSocketOption(SocketDescriptor fd,
+                       int level,
+                       int opt_id,
+                       const void* opt_val,
+                       size_t opt_sz);
+
   ////////////////////
   // reading and writing data
 
@@ -230,7 +253,6 @@ public:
     const auto event = getEvent("write data");
     const auto& cqe = *(event);
     return static_cast<size_t>(cqe.res);
-  }
   }
 
 private:
