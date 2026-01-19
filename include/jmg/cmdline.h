@@ -448,4 +448,23 @@ private:
   Values values_;
 };
 
+/**
+ * concept for command line arguments
+ */
+template<typename T>
+concept CmdLineArgsT = TemplateSpecializationOfT<T, CmdLineArgs>;
+
+/**
+ * retrieve the value of an optional parameter from a set of processed
+ * arguments, returning a default value if no argument was provided
+ */
+template<CmdLineParamT Param>
+  requires OptionalField<Param>
+auto get_with_default(const auto& args, typename Param::type dflt) {
+  static_assert(CmdLineArgsT<decltype(args)>,
+                "first argument was not a specialization of CmdLineArgs");
+  if (const auto& val = try_get<Param>(args); val) { return *val; }
+  return dflt;
+}
+
 } // namespace jmg

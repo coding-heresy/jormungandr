@@ -73,6 +73,10 @@ TEST(CmdLineParamTests, TestConcepts) {
   // command line params can be used to build an object
   using TmpObj = ObjectDef<PosnParam1, PosnParam2, NamedParam1, NamedParam2>;
   EXPECT_TRUE(ObjectDefT<TmpObj>);
+
+  using CmdLine = CmdLineArgs<PosnParam1>;
+  EXPECT_TRUE(CmdLineArgsT<CmdLine>);
+  EXPECT_FALSE(CmdLineArgsT<TmpObj>);
 }
 
 TEST(CmdLineParamTests, TestUsage) {
@@ -290,6 +294,20 @@ TEST(CmdLineParamTests, TestExtraneousArgument) {
   EXPECT_CMDLINE_ERROR((CmdLine(argv.size(), argv.data())),
                        "command line argument [bar] did not match any declared "
                        "parameter");
+}
+
+TEST(CmdLineParamTests, TestOptionalsWithDefault) {
+  using CmdLine = CmdLineArgs<PosnParam2, OptPosnParam>;
+  {
+    std::array argv{"test_program", "foo", "bar"};
+    const auto cmdline = CmdLine(argv.size(), argv.data());
+    EXPECT_EQ("bar"s, get_with_default<OptPosnParam>(cmdline, "blub"s));
+  }
+  {
+    std::array argv{"test_program", "foo"};
+    const auto cmdline = CmdLine(argv.size(), argv.data());
+    EXPECT_EQ("blub"s, get_with_default<OptPosnParam>(cmdline, "blub"s));
+  }
 }
 
 #undef EXPECT_CMDLINE_ERROR
