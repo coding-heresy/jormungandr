@@ -44,6 +44,7 @@
 #include <atomic>
 #include <chrono>
 #include <iostream>
+#include <thread>
 
 #include "jmg/meta.h"
 #include "jmg/preprocessor.h"
