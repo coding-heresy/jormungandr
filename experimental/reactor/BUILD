@@ -97,3 +97,20 @@ cc_binary(
     srcs = ["misc/lookup_address.cpp"],
     deps = [":reactor"],
 )
+
+cc_binary(
+    name = "echo_client",
+    visibility = ["//visibility:public"],
+    srcs = ["misc/echo_client.cpp"],
+    deps = [":reactor"],
+)
+
+cc_binary(
+    name = "echo_server",
+    visibility = ["//visibility:public"],
+    srcs = ["misc/non_reactor_echo_server.cpp"],
+    deps = [
+        ":reactor",
+        "//:jmg_server_main",
+    ],
+)
