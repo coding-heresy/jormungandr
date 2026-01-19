@@ -5,6 +5,7 @@
 cc_library(
     name = "control_blocks",
     hdrs = ["control_blocks.h"],
+    include_prefix = "jmg/reactor",
     deps = ["//:jmg"],
 )
 
@@ -23,10 +24,8 @@ cc_test(
 
 cc_library(
     name = "uring",
-    hdrs = [
-        "uring.h",
-        "util.h",
-    ],
+    hdrs = ["uring.h"],
+    include_prefix = "jmg/reactor",
     srcs = ["uring.cpp"],
     defines = ["_GNU_SOURCE"],
     deps = [
@@ -64,12 +63,12 @@ cc_library(
     srcs = [
         "fiber.cpp",
         "reactor.cpp",
-        "thread_pool.h",
     ],
     hdrs = [
         "fiber.h",
         "reactor.h"
     ],
+    include_prefix = "jmg/reactor",
     deps = [
         ":control_blocks",
         ":uring",
@@ -95,6 +94,6 @@ cc_test(
 cc_binary(
     name = "lookup_address",
     visibility = ["//visibility:public"],
-    srcs = ["lookup_address.cpp"],
+    srcs = ["misc/lookup_address.cpp"],
     deps = [":reactor"],
 )

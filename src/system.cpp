@@ -46,4 +46,10 @@ void blockAllSignals() {
   JMG_SYSTEM_ERRNO_RETURN(pthread_sigmask(SIG_BLOCK, &sig_set, nullptr),
                           "failed to block signals");
 }
+
+tuple<PipeReadFd, PipeWriteFd> make_pipe() {
+  int pipe_fds[2];
+  JMG_SYSTEM(pipe(pipe_fds), "unable to create a pipe");
+  return make_tuple(PipeReadFd(pipe_fds[0]), PipeWriteFd(pipe_fds[1]));
+}
 } // namespace jmg

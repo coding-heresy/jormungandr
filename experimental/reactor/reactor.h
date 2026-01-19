@@ -35,13 +35,13 @@
 
 #include "jmg/future.h"
 #include "jmg/preprocessor.h"
+#include "jmg/thread_pool.h"
 #include "jmg/types.h"
 #include "jmg/util.h"
 
-#include "control_blocks.h"
-#include "fiber.h"
-#include "thread_pool.h"
-#include "uring.h"
+#include "jmg/reactor/control_blocks.h"
+#include "jmg/reactor/fiber.h"
+#include "jmg/reactor/uring.h"
 
 namespace jmg
 {
