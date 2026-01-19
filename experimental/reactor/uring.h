@@ -31,6 +31,7 @@
  */
 #pragma once
 
+#include <forward_list>
 #include <optional>
 
 #include <liburing.h>
@@ -58,6 +59,15 @@
  * perform such filtering. This reserved value is represented by the
  * kDetachedOperationFailure constant
  */
+
+// TODO(bd) remove debugging output once the code is confirmed stable
+// #define JMG_ENABLE_REACTOR_DEBUGGING_OUTPUT
+
+#if defined(JMG_ENABLE_REACTOR_DEBUGGING_OUTPUT)
+#define JMG_URING_LOG_DEBUG(ring, ...) ring->debugLog(__VA_ARGS__)
+#else
+#define JMG_URING_LOG_DEBUG(ring, ...)
+#endif
 
 namespace jmg::uring
 {
@@ -300,11 +310,11 @@ const std::array kOperations{
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using UringSz = SafeType<uint32_t>;
 using UringFlags = SafeType<uint32_t>;
-using UserData = SafeType<uint64_t>;
+using UserData = SafeType<uint64_t, st::equality_comparable>;
 #else
 JMG_NEW_SIMPLE_SAFE_TYPE(UringSz, uint32_t);
 JMG_NEW_SIMPLE_SAFE_TYPE(UringFlags, uint32_t);
-JMG_NEW_SIMPLE_SAFE_TYPE(UserData, uint64_t);
+JMG_NEW_SAFE_TYPE(UserData, uint64_t, st::equality_comparable);
 #endif
 
 using IoVecView = std::span<const struct iovec>;
@@ -312,6 +322,8 @@ using IoVecView = std::span<const struct iovec>;
 ////////////////////////////////////////////////////////////////////////////////
 // constants for uring
 ////////////////////////////////////////////////////////////////////////////////
+
+constexpr auto kDetachedOperationFailure = UserData(-1);
 
 constexpr auto kDefaultUringFlags = UringFlags(0);
 
@@ -388,6 +400,12 @@ public:
   Event awaitEvent(std::optional<Duration> timeout = std::nullopt);
 
   /**
+   * fast poll of the ring in user space to check if some event is
+   * available
+   */
+  bool hasEvent();
+
+  /**
    * call this after adding one or more requests to uring with delayed submission
    */
   void submitReq(const std::string_view req_type) {
@@ -419,7 +437,7 @@ public:
    */
   template<typename T>
     requires TimePointT<T> || DurationT<T>
-  void submitTimerEventReq(T&& timeout, UserData data) {
+  void submitTimerEventReq(T&& timeout, UserData user_data) {
     UringTimeSpec ts;
     unsigned flags = 0;
     if constexpr (TimePointT<T>) {
@@ -431,7 +449,7 @@ public:
       ts.tv_nsec = ts_tp.tv_nsec;
     }
     else { ts = from(timeout); }
-    submitTimeoutReq(ts, flags, data);
+    submitTimeoutReq(ts, flags, user_data);
   }
 
   /**
@@ -539,11 +557,25 @@ public:
                         is_delayed, user_data);
   }
 
+  /**
+   * log debug data to stdout using a detached operation that will no
+   * produce a completion event if it is successful
+   */
+  template<typename... Args>
+  void debugLog(Args&&... args) {
+    // NOTE: locally constructed message must be stored until it has
+    // been consumed by the ring, but there is probably a better way
+    // to do this...
+    debug_msgs_.emplace_front(str_cat(">>>>> DBG ", std::forward<Args>(args)...,
+                                      "\n"));
+    submitDebugLogReq(iov_from(debug_msgs_.front()));
+  }
+
 private:
   io_uring_sqe& getNextSqe();
 
   /**
-   * actual implementation of close request submission
+   * implementation of close request submission
    */
   void submitFdCloseReq(int fd, UserData user_data);
 
@@ -552,7 +584,7 @@ private:
                         UserData user_data);
 
   /**
-   * actual implementation of write request submission
+   * implementation of write request submission
    */
   void submitWriteReq(int fd,
                       IoVecView io_vec,
@@ -560,7 +592,7 @@ private:
                       std::optional<UserData> user_data);
 
   /**
-   * actual implementation of read request submission
+   * implementation of read request submission
    */
   void submitReadReq(int fd,
                      IoVecView io_vec,
@@ -568,7 +600,7 @@ private:
                      std::optional<UserData> user_data);
 
   /**
-   * actual implementation of recv request submission
+   * implementation of recv request submission
    */
   void submitRecvFromReq(int sd,
                          BufferProxy buf,
@@ -577,7 +609,7 @@ private:
                          std::optional<UserData> user_data);
 
   /**
-   * actual implementation of setsockopt request submission
+   * implementation of setsockopt request submission
    */
   void submitSetSockOptReq(int sd,
                            int level,
@@ -587,9 +619,15 @@ private:
                            DelaySubmission is_delayed,
                            std::optional<UserData> user_data);
 
+  /**
+   * implementation of debug log request submission
+   */
+  void submitDebugLogReq(IoVecView io_vec);
+
   std::optional<EventFd> notifier_;
   io_uring ring_;
   std::atomic<FileDescriptor> channel_ = kInvalidFileDescriptor;
+  std::forward_list<std::string> debug_msgs_;
 };
 
 } // namespace jmg::uring

@@ -129,7 +129,10 @@ TEST_F(ReactorTests, TestFiberYielding) {
   auto make_fbr_fcn = [](SignallerPtr&& signaller) mutable {
     return [signaller = std::move(signaller)](Fiber& fbr) mutable {
       for (int step : views::iota(1, 3)) {
-        fbr.log("fiber [", fbr.getId(), "] is yielding at step [", step, "]\n");
+        // NOTE: using cout here instead of fbr.log to ensure the
+        // correct execution order
+        cout << "fiber [" << fbr.getId() << "] is yielding at step [" << step
+             << "]\n";
         fbr.yield();
       }
       signaller->set_value();
