@@ -54,7 +54,9 @@ class Reactor;
 // TODO(bd) add a 'kYielding' state?
 enum class FiberState : uint8_t {
   kUnallocated = 0,
+  kEmbryonic,
   kActive, // NOTE: only one thread at a time should be active
+  kYielding,
   kBlocked,
   kRunnable,
   kTerminated
@@ -407,9 +409,6 @@ public:
   uring::Event event;
   // TODO(bd) is it really necessary for these variables to be volatile?
   volatile FiberState state;
-  // TODO(bd) these flags can probably be converted to specific state values
-  volatile bool is_fiber_yielding = false;
-  volatile bool is_fiber_handling_event = false;
 };
 using FiberCtrl = ControlBlocks<FiberCtrlBlockBody>;
 using FiberCtrlBlock = FiberCtrl::ControlBlock;

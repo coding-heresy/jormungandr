@@ -39,6 +39,9 @@
 
 using namespace std;
 
+#define JMG_URING_STORE_USER_DATA(sq, ud) \
+  io_uring_sqe_set_data64(&(sq), static_cast<__u64>(unsafe(ud)))
+
 namespace jmg::uring
 {
 
@@ -92,6 +95,21 @@ Event Uring::awaitEvent(optional<Duration> timeout) {
   unique_ptr<UringTimeSpec> wait_timeout;
   string is_timeout_str;
   io_uring_cqe* cqe = nullptr;
+
+  // clean up old debug messages when they are no longer needed
+  using Cleaner = function<void()>;
+  auto debug_msgs_maintenance = [&]() -> optional<Cleanup<Cleaner>> {
+    if (debug_msgs_.empty()) { return nullopt; }
+    auto maybe_clean = [&] {
+      if (!io_uring_sq_ready(&ring_)) {
+        // submission queue is empty, any outstanding debug messages can
+        // be cleaned up
+        debug_msgs_.clear();
+      }
+    };
+    return Cleanup<Cleaner>(std::move(maybe_clean));
+  }();
+
   if (timeout) {
     UringTimeSpec duration = from(*timeout);
     auto rc = io_uring_wait_cqe_timeout(&ring_, &cqe, &duration);
@@ -129,6 +147,16 @@ Event Uring::awaitEvent(optional<Duration> timeout) {
   return Event(&ring_, cqe);
 }
 
+bool Uring::hasEvent() {
+  io_uring_cqe* cqe = nullptr;
+  const auto rc = io_uring_peek_cqe(&ring_, &cqe);
+  if (!rc) { return true; }
+  if (-EAGAIN == rc) { return false; }
+  JMG_SYSTEM_ERRNO_RETURN(rc, "unable to poll for completion queue event");
+  // TODO(bd) should be unreachable?
+  return false;
+}
+
 void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
   JMG_ENFORCE_USING(
     logic_error, !notifier_,
@@ -144,23 +172,23 @@ void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
   clear_notifier.cancel();
 }
 
+void Uring::submitFdCloseReq(const int fd, const UserData user_data) {
+  JMG_ENFORCE_USING(logic_error, fd > -1, "invalid file descriptor value [", fd,
+                    "]");
+  auto& sqe = getNextSqe();
+  io_uring_prep_close(&sqe, fd);
+  JMG_URING_STORE_USER_DATA(sqe, user_data);
+  submitReq("close file descriptor"sv);
+}
+
 void Uring::submitTimeoutReq(UringTimeSpec timeout_spec,
                              unsigned flags,
                              UserData user_data) {
   auto& sqe = getNextSqe();
   io_uring_prep_timeout(&sqe, &timeout_spec, 0 /* count */,
                         flags | IORING_TIMEOUT_ETIME_SUCCESS);
-  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  JMG_URING_STORE_USER_DATA(sqe, user_data);
   submitReq("timeout"sv);
-}
-
-void Uring::submitFdCloseReq(const int fd, const UserData user_data) {
-  JMG_ENFORCE_USING(logic_error, fd > -1, "invalid file descriptor value [", fd,
-                    "]");
-  auto& sqe = getNextSqe();
-  io_uring_prep_close(&sqe, fd);
-  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
-  submitReq("close file descriptor"sv);
 }
 
 void Uring::submitFileOpenReq(const c_string_view file_path,
@@ -171,7 +199,7 @@ void Uring::submitFileOpenReq(const c_string_view file_path,
   auto& sqe = getNextSqe();
   io_uring_prep_openat(&sqe, AT_FDCWD, file_path.c_str(),
                        static_cast<uint16_t>(flags), permissions);
-  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  JMG_URING_STORE_USER_DATA(sqe, user_data);
   submitReq("open file"sv);
 }
 
@@ -188,7 +216,7 @@ void Uring::submitSocketOpenReq(const SocketTypes socket_type,
       JMG_THROW_EXCEPTION(logic_error, "unknown socket type [",
                           static_cast<int>(socket_type), "]");
   }
-  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  JMG_URING_STORE_USER_DATA(sqe, user_data);
   submitReq("open socket"sv);
 }
 
@@ -199,7 +227,7 @@ void Uring::submitNetConnectReq(const SocketDescriptor sd,
   io_uring_prep_connect(&sqe, unsafe(sd),
                         (struct sockaddr*)&(tgt_endpoint.addr()),
                         sizeof(struct sockaddr_in));
-  io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(user_data)));
+  JMG_URING_STORE_USER_DATA(sqe, user_data);
   submitReq("connect to network service");
 }
 
@@ -211,9 +239,7 @@ void Uring::submitWriteReq(const int fd,
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
   io_uring_prep_writev(&sqe, fd, io_vec.data(), io_vec.size(), 0 /* offset */);
-  if (user_data) {
-    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
-  }
+  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
   if (!unwrap(is_delayed)) { submitReq("write"sv); }
 }
 
@@ -225,9 +251,7 @@ void Uring::submitReadReq(const int fd,
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
   io_uring_prep_readv(&sqe, fd, io_vec.data(), io_vec.size(), 0 /* offset */);
-  if (user_data) {
-    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
-  }
+  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
   if (!unwrap(is_delayed)) { submitReq("read"sv); }
 }
 
@@ -238,9 +262,7 @@ void Uring::submitRecvFromReq(const int sd,
                               const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   io_uring_prep_recv(&sqe, sd, buf.data(), buf.size(), flags);
-  if (user_data) {
-    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
-  }
+  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
   if (!unwrap(is_delayed)) { submitReq("recvfrom"sv); }
 }
 
@@ -254,9 +276,7 @@ void Uring::submitSetSockOptReq(const int sd,
   auto& sqe = getNextSqe();
   io_uring_prep_cmd_sock(&sqe, SOCKET_URING_OP_SETSOCKOPT, sd, level, opt_name,
                          const_cast<void*>(opt_val), opt_sz);
-  if (user_data) {
-    io_uring_sqe_set_data64(&sqe, static_cast<__u64>(unsafe(*user_data)));
-  }
+  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
   if (!unwrap(is_delayed)) { submitReq("set socket options"sv); }
 }
 
@@ -266,6 +286,22 @@ io_uring_sqe& Uring::getNextSqe() {
   // the next ring slot becomes available
   JMG_ENFORCE(pred(sqe), "no submit queue entries currently available");
   return *sqe;
+}
+
+void Uring::submitDebugLogReq(IoVecView io_vec) {
+  auto& sqe = getNextSqe();
+  // NOTE: offset is always 0 since io_vec is a std::span and can be used to
+  // generate an offset into a larger collection of iovec structures if needed
+  // TODO(bd) support writing debug output to stderr?
+  io_uring_prep_writev(&sqe, unsafe(kStdoutFd), io_vec.data(), io_vec.size(),
+                       0 /* offset */);
+  // allow failure reports to be discarded or logged separate from
+  // other completion events
+  io_uring_sqe_set_data64(&sqe,
+                          static_cast<__u64>(unsafe(kDetachedOperationFailure)));
+  // best efforts delivery
+  io_uring_sqe_set_flags(&sqe, IOSQE_CQE_SKIP_SUCCESS);
+  submitReq("debug log"sv);
 }
 
 } // namespace jmg::uring

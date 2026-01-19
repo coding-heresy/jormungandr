@@ -268,7 +268,7 @@ std::optional<Tgt> tryGetFromArgs(Args&&... args) {
  */
 template<typename Fcn>
 struct Cleanup {
-  Cleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
+  explicit Cleanup(Fcn&& fcn) : fcn_(std::move(fcn)) {}
   ~Cleanup() {
     if (!isCxl_) { fcn_(); }
   }

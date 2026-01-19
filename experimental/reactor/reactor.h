@@ -127,7 +127,7 @@ private:
    * pass control from a fiber to the reactor scheduler when the fiber executes
    * an async operation
    */
-  void schedule(const OptMillisec timeout = std::nullopt);
+  void schedule();
 
   /**
    * jump to the checkpoint stored in a fiber control block
@@ -212,6 +212,36 @@ private:
    * consumption
    */
   void notifyFbr(FiberId id);
+
+  /**
+   * return true if user_data represents a detached event failure
+   * report that can safely be ignored or maybe logged
+   */
+  bool isDetachedEventFailureReport(uring::UserData user_data);
+
+  /**
+   * return true if user_data indicates that data was received on the
+   * read end of the notification pipe
+   */
+  bool isNotification(uring::UserData user_data);
+
+  /**
+   * return true if the current notification is signaling for the
+   * reactor to shut down
+   */
+  bool isShutdownNotified();
+
+  /**
+   * get the ID of the fiber referenced in the current notification,
+   * if any
+   */
+  std::optional<FiberId> tryGetNotifiedFiber();
+
+  /**
+   * convert the data from the current notification into a task
+   * function that can be executed by a fiber
+   */
+  FiberFcn getWrappedFiberFcnFromNotifier();
 
   std::atomic<bool> is_shutdown_ = false;
   FiberCtrl fiber_ctrl_;

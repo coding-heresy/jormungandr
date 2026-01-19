@@ -41,21 +41,6 @@
 namespace jmg::reactor
 {
 
-// TODO(bd) remove debugging output once the code is confirmed stable
-// #define ENABLE_REACTOR_DEBUGGING_OUTPUT
-
-template<typename... Args>
-inline void dbgOut(Args&&... args) {
-  using namespace std;
-#if defined(ENABLE_REACTOR_DEBUGGING_OUTPUT)
-  cout << ">>>>> DBG ";
-  (cout << ... << args);
-  cout << endl;
-#else
-  ignore = make_tuple(std::forward<Args>(args)...);
-#endif
-}
-
 /**
  * create a pipe, return safely typed endpoints
  */
