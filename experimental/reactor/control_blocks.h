@@ -60,6 +60,11 @@ using CtrlBlockId = SafeType<uint16_t, SafeIdType, st::incrementable>;
 JMG_NEW_SAFE_TYPE(CtrlBlockId, uint16_t, SafeIdType, st::incrementable);
 #endif
 
+namespace detail
+{
+constexpr auto kMax = CtrlBlockId(std::numeric_limits<uint16_t>::max());
+} // namespace detail
+
 /**
  * table of control blocks, organized as 255 buckets of 255 blocks
  *
@@ -86,7 +91,7 @@ public:
     buckets_[0] = std::make_unique<Bucket>();
     memset(static_cast<void*>(buckets_[0].get()), 0, sizeof(Bucket));
     auto& block = getBlock(Id(0));
-    block.link = kMax;
+    block.link = detail::kMax;
   }
 
   /**
@@ -106,7 +111,7 @@ public:
    * one, if possible
    */
   std::tuple<Id, ControlBlock&> getOrAllocate() {
-    JMG_ENFORCE(next_never_used_ < kMax, "control block table is full");
+    JMG_ENFORCE(next_never_used_ < detail::kMax, "control block table is full");
     JMG_ENFORCE_USING(std::logic_error, free_ <= next_never_used_,
                       "free stack pointer exceeds counter");
     const auto never_used = (free_ == next_never_used_);
@@ -131,14 +136,14 @@ public:
       ++next_never_used_;
     }
     else {
-      if (kMax == block.link) {
-        // free stack is now empty, now point to never used space
+      if (detail::kMax == block.link) {
+        // free stack is now empty, point to never used space
         free_ = next_never_used_;
       }
       else { free_ = block.link; }
     }
 
-    block.link = kMax;
+    block.link = detail::kMax;
     ++counter_;
     return std::forward_as_tuple(id, block);
   }
@@ -150,7 +155,7 @@ public:
     JMG_ENFORCE_USING(std::logic_error, id < next_never_used_, "ID [", id,
                       "] was never allocated");
     auto& block = getBlock(id);
-    JMG_ENFORCE_USING(std::logic_error, block.link == kMax,
+    JMG_ENFORCE_USING(std::logic_error, block.link == detail::kMax,
                       "double release of ID [", id, "]");
 
     // push the block onto the free stack
@@ -167,8 +172,6 @@ public:
 private:
   using Bucket = std::array<ControlBlock, kMaxBlocks>;
   using Buckets = std::array<std::unique_ptr<Bucket>, kMaxBuckets>;
-
-  static constexpr auto kMax = Id(std::numeric_limits<uint16_t>::max());
 
   /**
    * split control block ID into (bucket, index)
@@ -205,7 +208,7 @@ public:
     const auto id = item.id;
     if (tail_) {
       auto& tail_block = ctrl_blocks_.getBlock(*tail_);
-      tail_block.id = id;
+      tail_block.link = id;
       tail_ = id;
     }
     else {
@@ -228,7 +231,8 @@ public:
       head_ = std::nullopt;
       tail_ = std::nullopt;
     }
-    else { head_ = rslt.id; }
+    else { head_ = rslt.link; }
+    rslt.link = detail::kMax;
     --counter_;
     return rslt;
   }
