@@ -43,8 +43,8 @@
 #include "jmg/ip_endpoint.h"
 #include "jmg/types.h"
 
-#include "control_blocks.h"
-#include "uring.h"
+#include "jmg/reactor/control_blocks.h"
+#include "jmg/reactor/uring.h"
 
 namespace jmg
 {

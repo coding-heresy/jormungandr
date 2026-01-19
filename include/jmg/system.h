@@ -41,9 +41,14 @@
 #include <csignal>
 
 #include "jmg/preprocessor.h"
+#include "jmg/types.h"
 
 namespace jmg
 {
+
+////////////////////////////////////////////////////////////////////////////////
+// signals
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * create a POSIX sigset_t with a specific set of signals added
@@ -73,5 +78,56 @@ void blockAllSignals();
 inline void send_shutdown_signal() {
   JMG_SYSTEM(kill(getpid(), SIGTERM), "failed to send shutdown signal");
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// read/write data to descriptor
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * read all bytes that a buffer can hold from a file descriptor, throwing
+ * exception if they cannot all be read in one call
+ */
+template<ReadableDescriptorT FD>
+void read_all(const FD fd,
+              const BufferProxy buf,
+              const std::string_view description) {
+  namespace vws = std::ranges::views;
+  using namespace std::string_view_literals;
+  int sz;
+  JMG_SYSTEM((sz = ::read(unsafe(fd), buf.data(), buf.size())),
+             "unable to read all data from ", description);
+  JMG_ENFORCE(buf.size() == static_cast<size_t>(sz),
+              "size mismatch reading from ", description,
+              ", should have read [", buf.size(), "] but actually read [", sz,
+              "]");
+}
+
+/**
+ * write all bytes from a buffer to a file descriptor, throwing exception if
+ * they cannot all be written in one call
+ */
+template<WritableDescriptorT FD>
+void write_all(const FD fd,
+               const BufferView buf,
+               const std::string_view description) {
+  namespace vws = std::ranges::views;
+  using namespace std::string_view_literals;
+  int sz;
+  JMG_SYSTEM((sz = ::write(unsafe(fd), buf.data(), buf.size())),
+             "unable to write all data to ", description);
+  JMG_ENFORCE(buf.size() == static_cast<size_t>(sz),
+              "size mismatch writing to ", description,
+              ", should have written [", buf.size(), "] but actually wrote [",
+              sz, "]");
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// miscellaneous
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * create a pipe, return safely typed endpoints
+ */
+std::tuple<PipeReadFd, PipeWriteFd> make_pipe();
 
 } // namespace jmg

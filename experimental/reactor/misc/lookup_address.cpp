@@ -44,7 +44,7 @@
 #include "jmg/future.h"
 #include "jmg/system.h"
 
-#include "reactor.h"
+#include "jmg/reactor/reactor.h"
 
 using namespace jmg;
 using namespace std;

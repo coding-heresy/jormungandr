@@ -36,9 +36,11 @@
 
 #include "jmg/conversion.h"
 #include "jmg/future.h"
+#include "jmg/system.h"
 #include "jmg/types.h"
+#include "jmg/util.h"
+
 #include "uring.h"
-#include "util.h"
 
 using namespace jmg;
 using namespace std;
@@ -102,7 +104,7 @@ TEST(UringTests, TestCrossUringMsg) {
                   "incoming event did reference notifier as expected");
 
       uint64_t data;
-      reactor::read_all(notifier, buffer_from(data), "eventfd"sv);
+      read_all(notifier, buffer_from(data), "eventfd"sv);
 
       // send the user data back to the main thread
       user_data_prm->set_value(data);

@@ -38,9 +38,10 @@
 
 #include "jmg/conversion.h"
 #include "jmg/meta.h"
+#include "jmg/system.h"
+#include "jmg/util.h"
 
 #include "reactor.h"
-#include "util.h"
 
 using namespace std;
 using namespace std::string_literals;
@@ -108,8 +109,6 @@ void chkptStoreAndJump(ucontext_t& src,
 
 namespace jmg
 {
-
-using namespace reactor;
 
 namespace detail
 {

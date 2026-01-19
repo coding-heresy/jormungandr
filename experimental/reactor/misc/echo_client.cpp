@@ -33,11 +33,12 @@
 #include <iostream>
 #include <string>
 
+#include "jmg/cmdline.h"
 #include "jmg/future.h"
 #include "jmg/system.h"
 #include "jmg/util.h"
 
-#include "reactor.h"
+#include "jmg/reactor/reactor.h"
 
 /**
  * quick and dirty reactor-based echo client
