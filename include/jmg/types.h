@@ -331,7 +331,8 @@ BufferProxy buffer_from(T& ref) {
 
 using SingleIoBuf = std::array<struct iovec, 1>;
 
-template<BufferT T>
+template<typename T>
+  requires BufferT<T> || StdStringLikeT<T>
 SingleIoBuf iov_from(T& buf) {
   SingleIoBuf iov;
   // NOTE: being slightly lazy here using C-style to void* instead of being
