@@ -42,6 +42,23 @@
 #include "jmg/types.h"
 #include "jmg/util.h"
 
+/**
+ * wrapper class for io_uring
+ *
+ * User Data Protocol:
+ *
+ * User data passed with a uring request is returned as part of the
+ * completion event. This header declares a safe type UserData for
+ * such data and its use is generally unrestricted except that the
+ * value -1 is reserved for use in cases where the request has
+ * indicated that successfully completing the operation should not
+ * generate a completion queue event (AKA 'detached operations'). In
+ * these cases, a failure of the operation can be ignored (or perhaps
+ * logged) when handling the event, and the this value can be used to
+ * perform such filtering. This reserved value is represented by the
+ * kDetachedOperationFailure constant
+ */
+
 namespace jmg::uring
 {
 namespace io_sqe
