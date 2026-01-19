@@ -49,38 +49,32 @@ using namespace std;
 using namespace std::chrono_literals;
 using namespace std::string_view_literals;
 
+using HostName =
+  NamedParam<string, "host", "host to connect to (defaults to local host)", Optional>;
+using PortNum =
+  NamedParam<uint16_t, "port", "port to connect to (defaults to 8888)", Optional>;
+using CmdLine = CmdLineArgs<HostName, PortNum>;
+
 int main(const int argc, const char** argv) {
-  ignore = argc;
-  ignore = argv;
   try {
-    // start reactor in a separate thread
+    // process arguments
+    const auto cmdline = CmdLine(argc, argv);
+    const auto hostname = get_with_default<HostName>(cmdline, "127.0.0.1"s);
+    const auto port = Port(get_with_default<PortNum>(cmdline, 8888));
+
+    // start reactor
     Reactor reactor;
-    auto reactor_worker = make_unique<thread>([&] {
+    auto [reactor_start_signal, reactor_start_rcvr] = makeSignaller();
+    auto reactor_worker = thread([&] {
       blockAllSignals();
       try {
+        reactor_start_signal.set_value();
         reactor.start();
       }
       JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
     });
-
-    // set up RAII cleanup for reactor
-    const auto joiner = Cleanup([&]() {
-      try {
-        cout << "joining reactor worker thread...\n";
-        auto awaiter = Future(async(launch::async, [&]() -> bool {
-          if (reactor_worker->joinable()) {
-            reactor_worker->join();
-            return true;
-          }
-          return false;
-        }));
-        const auto rslt =
-          awaiter.get(2s, "waiting for reactor worker thread join"sv);
-        if (!rslt) { cout << "reactor worker thread was not joinable\n"; }
-        cout << "done joining reactor worker thread...\n";
-      }
-      JMG_SINK_ALL_EXCEPTIONS("reactor worker joiner")
-    });
+    const auto awaitShutdown = Cleanup([&] { reactor_worker.join(); });
+    reactor_start_rcvr.get(2s, "reactor start signal");
 
     Promise<string> work_product;
     reactor.execute([&](Fiber& fbr) {
@@ -98,7 +92,8 @@ int main(const int argc, const char** argv) {
         {
           // NOTE: address lookup isn't supported yet so can only
           // connect to an IPv4 address
-          const auto tgt = IpEndpoint("127.0.0.1", Port(8888));
+          // const auto tgt = IpEndpoint("127.0.0.1", Port(8888));
+          const auto tgt = IpEndpoint(hostname, port);
           fbr.connectTo(sd, tgt);
         }
 
