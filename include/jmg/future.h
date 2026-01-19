@@ -214,6 +214,23 @@ private:
   std::promise<void> prm_;
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// helpers
+////////////////////////////////////////////////////////////////////////////////
+
+using Signaller = Promise<void>;
+
+/**
+ * construct a promise/future pair specialized on void that are
+ * intended to function as a simple signaling mechanism between
+ * threads
+ */
+inline auto makeSignaller() {
+  auto signaller = Signaller();
+  auto rcvr = signaller.get_future();
+  return std::make_tuple(std::move(signaller), std::move(rcvr));
+}
+
 /**
  * construct a promise/future pair that communicate a value of a
  * specific type
@@ -222,7 +239,7 @@ template<typename T>
 auto makeCommunicator() {
   auto sndr = Promise<T>();
   auto rcvr = sndr.get_future();
-  return make_tuple(std::move(sndr), std::move(rcvr));
+  return std::make_tuple(std::move(sndr), std::move(rcvr));
 }
 
 } // namespace jmg

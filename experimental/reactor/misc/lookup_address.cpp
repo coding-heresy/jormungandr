@@ -50,18 +50,6 @@ using namespace jmg;
 using namespace std;
 using namespace std::chrono_literals;
 
-using Signaller = Promise<void>;
-using SignallerPtr = shared_ptr<Signaller>;
-
-namespace
-{
-auto makeSignaller() {
-  auto signaller = Signaller();
-  auto rcvr = signaller.get_future();
-  return make_tuple(std::move(signaller), std::move(rcvr));
-}
-} // namespace
-
 using Hostname =
   PosnParam<string, "hostname", "host name to look up address for">;
 using SvcName =
