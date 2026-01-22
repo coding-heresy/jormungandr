@@ -169,7 +169,7 @@ void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
   // use event_fd as user_data for identification
   io_uring_sqe_set_data(sqe, (void*)static_cast<intptr_t>(unsafe(notifier)));
   if (!unwrap(isDelayed)) { submitReq("event notifier registration"sv); }
-  clear_notifier.cancel();
+  std::move(clear_notifier).cancel();
 }
 
 void Uring::submitFdCloseReq(const int fd, const UserData user_data) {

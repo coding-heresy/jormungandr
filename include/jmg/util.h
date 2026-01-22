@@ -272,7 +272,7 @@ struct Cleanup {
   ~Cleanup() {
     if (!isCxl_) { fcn_(); }
   }
-  void cancel() { isCxl_ = true; }
+  void cancel() && { isCxl_ = true; }
 
 private:
   bool isCxl_ = false;
