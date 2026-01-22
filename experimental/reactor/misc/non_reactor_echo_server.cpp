@@ -132,20 +132,24 @@ public:
           return buf;
         }();
 
-        // read data
-        string data;
-        data.resize(sz);
+        // read message
+        string msg;
+        msg.resize(sz);
         sz = [&]() -> size_t {
-          const auto rslt = ::read(cnxn_sd, data.data(), data.size());
-          JMG_SYSTEM(rslt, "reading data");
+          const auto rslt = ::read(cnxn_sd, msg.data(), msg.size());
+          JMG_SYSTEM(rslt, "reading message");
           return static_cast<size_t>(rslt);
         }();
-        JMG_ENFORCE(sz == data.size(),
-                    "incorrect number of octets read for data, expected [",
-                    data.size(), "] but got [", sz, "]");
-        cout << "received data to echo: [" << data << "]\n";
+        JMG_ENFORCE(sz == msg.size(),
+                    "incorrect number of octets read for message, expected [",
+                    msg.size(), "] but got [", sz, "]");
+        cout << "received message to echo: [" << msg << "]\n";
 
-        JMG_SYSTEM(write(cnxn_sd, data.data(), data.size()), "echoing data");
+        // send message length
+        JMG_SYSTEM(write(cnxn_sd, &sz, sizeof(sz)), "echoing message length");
+
+        // send message
+        JMG_SYSTEM(write(cnxn_sd, msg.data(), msg.size()), "echoing message");
       }
       JMG_SINK_ALL_EXCEPTIONS("handling connection");
     }

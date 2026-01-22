@@ -91,6 +91,21 @@ cc_test(
     size = "small",
 )
 
+####################
+# support libraries
+
+cc_library(
+    name = "reactor_based_client",
+    visibility = ["//visibility:public"],
+    hdrs = ["reactor_based_client.h"],
+    include_prefix = "jmg/reactor",
+    srcs = ["reactor_based_client.cpp"],
+    deps = [":reactor"],
+)
+
+####################
+# misc demo programs
+
 cc_binary(
     name = "lookup_address",
     visibility = ["//visibility:public"],
@@ -101,8 +116,12 @@ cc_binary(
 cc_binary(
     name = "echo_client",
     visibility = ["//visibility:public"],
-    srcs = ["misc/echo_client.cpp"],
-    deps = [":reactor"],
+    srcs = [
+        "misc/echo_client.cpp",
+        "misc/simple_tcp_service.h",
+        "misc/simple_tcp_service.cpp",
+    ],
+    deps = [":reactor_based_client"],
 )
 
 cc_binary(
