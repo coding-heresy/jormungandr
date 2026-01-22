@@ -31,6 +31,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include "jmg/cmdline.h"
@@ -38,84 +39,55 @@
 #include "jmg/system.h"
 #include "jmg/util.h"
 
-#include "jmg/reactor/reactor.h"
+#include "jmg/reactor/reactor_based_client.h"
+
+#include "simple_tcp_service.h"
 
 /**
  * quick and dirty reactor-based echo client
  */
 
-using namespace jmg;
 using namespace std;
 using namespace std::chrono_literals;
 using namespace std::string_view_literals;
 
-using HostName =
-  NamedParam<string, "host", "host to connect to (defaults to local host)", Optional>;
-using PortNum =
-  NamedParam<uint16_t, "port", "port to connect to (defaults to 8888)", Optional>;
-using CmdLine = CmdLineArgs<HostName, PortNum>;
+namespace jmg
+{
 
-int main(const int argc, const char** argv) {
-  try {
-    // process arguments
+class ReactorBasedEchoClient : public ReactorBasedClient {
+  // command line argument
+  using HostName = NamedParam<string,
+                              "host",
+                              "host to connect to (defaults to local host)",
+                              Optional>;
+  using PortNum =
+    NamedParam<uint16_t, "port", "port to connect to (defaults to 8888)", Optional>;
+  using CmdLine = CmdLineArgs<HostName, PortNum>;
+
+public:
+  ReactorBasedEchoClient() = default;
+  virtual ~ReactorBasedEchoClient() = default;
+
+  void processArguments(const int argc, const char** argv) override {
     const auto cmdline = CmdLine(argc, argv);
-    const auto hostname = get_with_default<HostName>(cmdline, "127.0.0.1"s);
-    const auto port = Port(get_with_default<PortNum>(cmdline, 8888));
+    hostname_ = get_with_default<HostName>(cmdline, "127.0.0.1"s);
+    port_ = Port(get_with_default<PortNum>(cmdline, 8888));
+  }
 
-    // start reactor
-    Reactor reactor;
-    auto [reactor_start_signal, reactor_start_rcvr] = makeSignaller();
-    auto reactor_worker = thread([&] {
-      blockAllSignals();
-      try {
-        reactor_start_signal.set_value();
-        reactor.start();
-      }
-      JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
-    });
-    const auto awaitShutdown = Cleanup([&] { reactor_worker.join(); });
-    reactor_start_rcvr.get(2s, "reactor start signal");
-
+  void execute(Reactor& reactor) override {
     Promise<string> work_product;
     reactor.execute([&](Fiber& fbr) {
       try {
-        // open socket
-        const auto sd = fbr.openSocket(SocketTypes::kTcp);
-        const auto closer = Cleanup([&]() {
-          try {
-            fbr.close(sd);
-          }
-          JMG_SINK_ALL_EXCEPTIONS("connection socket closer")
-        });
-
-        // connect to service
-        {
-          // NOTE: address lookup isn't supported yet so can only
-          // connect to an IPv4 address
-          // const auto tgt = IpEndpoint("127.0.0.1", Port(8888));
-          const auto tgt = IpEndpoint(hostname, port);
-          fbr.connectTo(sd, tgt);
-        }
-
+        // connect to the server
+        auto cnxn = SimpleTcpSvc::connectTo(fbr, IpEndpoint(hostname_, port_));
         const auto msg = string("Hello echo server!");
 
-        // send the message size
-        {
-          const auto sz = msg.size();
-          fbr.write(sd, buffer_from(sz));
-        }
-
         // send the message
-        fbr.write(sd, buffer_from(msg));
+        cnxn.send(buffer_from(msg));
 
-        // read the response
-        string rsp;
-        rsp.resize(msg.size());
-        const auto sz = fbr.read(sd, buffer_from(rsp));
+        // receive the response
+        const auto rsp = cnxn.receive();
 
-        // process the response
-        JMG_ENFORCE(sz == rsp.size(), "expected [", sz,
-                    "] octets in the response but received [", rsp.size(), "]");
         work_product.set_value(std::move(rsp));
       }
       catch (...) {
@@ -133,7 +105,13 @@ int main(const int argc, const char** argv) {
     const auto msg =
       work_product.get_future().get(2s, "work completed awaiter");
     cout << "++++++++++ received echoed data [" << msg << "]\n";
-    reactor.shutdown();
   }
-  JMG_SINK_ALL_EXCEPTIONS("top level")
-}
+
+private:
+  string hostname_;
+  Port port_;
+};
+
+JMG_REGISTER_CLIENT(ReactorBasedEchoClient);
+
+} // namespace jmg
