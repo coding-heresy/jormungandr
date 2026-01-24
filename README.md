@@ -948,17 +948,22 @@ please use these abbreviations where appropriate.
 * ctxt  - context
 * def   - definition
 * fbr   - fiber
+* fd    - file descriptor
 * fld   - field
+* ifce  - interface
 * msg   - message
 * px    - price
 * rc    - return code, typically used for POSIX functions and other 3rd
           party library functions that insist on returning an integer code
 * rcv   - receive
+* rcvr  - receiver
 * req   - request
 * rslt  - result, typically used to name an automatic variable that
           will return a value from a function so as to take advantage
           of named return value optimization
 * rsp   - response
+* sd    - socket descriptor (AKA file descriptor used for a socket)
+* sndr  - sender
 * srvr  - server
 * str   - string
 * strm  - stream
