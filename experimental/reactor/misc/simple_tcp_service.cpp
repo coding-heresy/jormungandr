@@ -42,13 +42,13 @@ SimpleTcpSvc::Cnxn::Cnxn(Fiber& fbr, SocketDescriptor sd)
 
 SimpleTcpSvc::Cnxn::~Cnxn() { fbr_.close(sd_); }
 
-void SimpleTcpSvc::Cnxn::send(BufferView msg) {
+void SimpleTcpSvc::Cnxn::sendTo(BufferView msg) {
   const auto sz = msg.size();
   fbr_.write(sd_, buffer_from(sz));
   fbr_.write(sd_, msg);
 }
 
-std::string SimpleTcpSvc::Cnxn::receive() {
+std::string SimpleTcpSvc::Cnxn::rcvFrom() {
   size_t msg_sz;
   auto sz = fbr_.read(sd_, buffer_from(msg_sz));
   // TODO(bd) return empty message on 0 bytes to indicate
