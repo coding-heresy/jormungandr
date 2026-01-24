@@ -323,7 +323,7 @@ public:
    * submit a request to form a network connection to an endpoint
    */
   template<detail::CommonExtraT... Extras>
-  void submitNetConnectReq(SocketDescriptor sd,
+  void submitNetConnectReq(const SocketDescriptor sd,
                            const IpEndpoint& tgt_endpoint,
                            Extras&&... extras) {
     const auto [is_delayed, user_data] =
@@ -336,9 +336,9 @@ public:
    * stored in a referenced buffer object
    */
   template<detail::CommonExtraT... Extras>
-  void submitRecvFromReq(SocketDescriptor sd,
-                         BufferProxy buf,
-                         int flags,
+  void submitRecvFromReq(const SocketDescriptor sd,
+                         const BufferProxy buf,
+                         const int flags,
                          Extras&&... extras) {
     const auto [is_delayed, user_data] =
       getCommonExtras(std::forward<Extras>(extras)...);
@@ -350,11 +350,11 @@ public:
    * stored in a referenced buffer object
    */
   template<detail::CommonExtraT... Extras>
-  void submitSetSockOptReq(SocketDescriptor sd,
-                           int level,
-                           int opt_name,
+  void submitSetSockOptReq(const SocketDescriptor sd,
+                           const int level,
+                           const int opt_name,
                            const void* opt_val,
-                           size_t opt_sz,
+                           const size_t opt_sz,
                            Extras&&... extras) {
     const auto [is_delayed, user_data] =
       getCommonExtras(std::forward<Extras>(extras)...);
@@ -369,7 +369,7 @@ public:
    */
   template<typename... Extras>
   // TODO(bd) add 'requires' statement here
-  void submitSocketBindReq(SocketDescriptor sd, Extras&&... extras) {
+  void submitSocketBindReq(const SocketDescriptor sd, Extras&&... extras) {
     // TODO(bd) figure out how to support some version of
     // getCommonExtras here
     auto port = Port(0);
@@ -393,7 +393,7 @@ public:
    */
   template<typename... Extras>
   // TODO(bd) add 'requires' statement here
-  void submitSocketListenReq(SocketDescriptor sd, Extras&&... extras) {
+  void submitSocketListenReq(const SocketDescriptor sd, Extras&&... extras) {
     // TODO(bd) figure out how to support some version of
     // getCommonExtras here
     auto backlog = kDefaultListenQueueBacklog;
@@ -415,7 +415,7 @@ public:
 
 #if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
   template<detail::CommonExtraT... Extras>
-  void submitSocketInfoReq(SocketDescriptor sd,
+  void submitSocketInfoReq(const SocketDescriptor sd,
                            struct sockaddr& addr,
                            socklen_t& addrSz,
                            SocketSide side,
