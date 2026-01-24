@@ -57,12 +57,12 @@ public:
     /**
      * send a message to the peer
      */
-    void send(BufferView msg);
+    void sendTo(BufferView msg);
 
     /**
      * receive a message from the peer
      */
-    std::string receive();
+    std::string rcvFrom();
 
   private:
     friend class SimpleTcpSvc;

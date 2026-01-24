@@ -83,10 +83,10 @@ public:
         const auto msg = string("Hello echo server!");
 
         // send the message
-        cnxn.send(buffer_from(msg));
+        cnxn.sendTo(buffer_from(msg));
 
         // receive the response
-        const auto rsp = cnxn.receive();
+        const auto rsp = cnxn.rcvFrom();
 
         work_product.set_value(std::move(rsp));
       }

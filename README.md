@@ -157,6 +157,8 @@ from `absl::Time` (which provides the underlying implementation).
 
 ## Named Value Parameters
 
+**TODO come up with a better name for this technique**
+
 OK, the name here is a bait-and-switch because it doesn't provide
 named value parameters for functions in the way that python does (go
 define a `struct` and use designated initializers if that's what
@@ -951,6 +953,7 @@ please use these abbreviations where appropriate.
 * px    - price
 * rc    - return code, typically used for POSIX functions and other 3rd
           party library functions that insist on returning an integer code
+* rcv   - receive
 * req   - request
 * rslt  - result, typically used to name an automatic variable that
           will return a value from a function so as to take advantage
