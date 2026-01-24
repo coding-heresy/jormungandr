@@ -302,12 +302,12 @@ void Uring::submitSocketListenReq(const int sd,
 #if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
 void Uring::submitSocketInfoReq(const int sd,
                                 struct sockaddr& addr,
-                                socklen_t& addrSz,
+                                socklen_t& addr_sz,
                                 const SocketSide side,
                                 const DelaySubmission is_delayed,
                                 const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
-  io_uring_prep_getsockname(&sqe, sd, &addr, &addrSz, unwrap(side));
+  io_uring_prep_getsockname(&sqe, sd, &addr, &addr_sz, unwrap(side));
   reqFinalize(sqe, is_delayed, user_data, "get socket info"sv);
 }
 #endif
