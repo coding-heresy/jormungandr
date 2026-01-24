@@ -71,9 +71,7 @@ FileDescriptor Fiber::openFile(const std::filesystem::path& file_path,
   ////////////////////
   // return from scheduler
   const auto event = getEvent("open file"sv);
-
   const auto& cqe = *(event);
-
   return FileDescriptor(cqe.res);
 }
 
@@ -90,9 +88,7 @@ SocketDescriptor Fiber::openSocket(const SocketTypes socket_type) {
   ////////////////////
   // return from scheduler
   const auto event = getEvent("open file"sv);
-
   const auto& cqe = *(event);
-
   return SocketDescriptor(cqe.res);
 }
 

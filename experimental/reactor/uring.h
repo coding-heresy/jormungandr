@@ -414,15 +414,18 @@ public:
   }
 
 #if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
+  /**
+   * submit a request to retrieve information about a socket
+   */
   template<detail::CommonExtraT... Extras>
   void submitSocketInfoReq(const SocketDescriptor sd,
                            struct sockaddr& addr,
-                           socklen_t& addrSz,
+                           socklen_t& addr_sz,
                            SocketSide side,
                            Extras&&... extras) {
     const auto [is_delayed, user_data] =
       getCommonExtras(std::forward<Extras>(extras)...);
-    submitSocketInfoReq(unsafe(sd), addr, addrSz, side, is_delayed, user_data);
+    submitSocketInfoReq(unsafe(sd), addr, addr_sz, side, is_delayed, user_data);
   }
 #endif
 
@@ -577,7 +580,7 @@ private:
    */
   void submitSocketInfoReq(int sd,
                            struct sockaddr& addr,
-                           socklen_t& addrSz,
+                           socklen_t& addr_sz,
                            SocketSide side,
                            DelaySubmission is_delayed,
                            std::optional<UserData> user_data);
