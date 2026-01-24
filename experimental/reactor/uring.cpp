@@ -38,6 +38,7 @@
 #include "uring.h"
 
 using namespace std;
+using namespace std::string_view_literals;
 
 #define JMG_URING_STORE_USER_DATA(sq, ud) \
   io_uring_sqe_set_data64(&(sq), static_cast<__u64>(unsafe(ud)))
@@ -73,6 +74,8 @@ Event::~Event() {
   if (ring_ && cqe_) { io_uring_cqe_seen(ring_, cqe_); }
 }
 
+Uring::~Uring() { io_uring_queue_exit(&ring_); }
+
 Uring::Uring(const UringSz sz) {
   memset(&ring_, 0, sizeof(ring_));
   io_uring_params params = {};
@@ -89,7 +92,15 @@ Uring::Uring(const UringSz sz) {
   channel_ = FileDescriptor(ring_.ring_fd);
 }
 
-Uring::~Uring() { io_uring_queue_exit(&ring_); }
+bool Uring::hasEvent() {
+  io_uring_cqe* cqe = nullptr;
+  const auto rc = io_uring_peek_cqe(&ring_, &cqe);
+  if (!rc) { return true; }
+  if (-EAGAIN == rc) { return false; }
+  JMG_SYSTEM_ERRNO_RETURN(rc, "unable to poll for completion queue event");
+  // TODO(bd) should be unreachable?
+  return false;
+}
 
 Event Uring::awaitEvent(optional<Duration> timeout) {
   unique_ptr<UringTimeSpec> wait_timeout;
@@ -147,16 +158,6 @@ Event Uring::awaitEvent(optional<Duration> timeout) {
   return Event(&ring_, cqe);
 }
 
-bool Uring::hasEvent() {
-  io_uring_cqe* cqe = nullptr;
-  const auto rc = io_uring_peek_cqe(&ring_, &cqe);
-  if (!rc) { return true; }
-  if (-EAGAIN == rc) { return false; }
-  JMG_SYSTEM_ERRNO_RETURN(rc, "unable to poll for completion queue event");
-  // TODO(bd) should be unreachable?
-  return false;
-}
-
 void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
   JMG_ENFORCE_USING(
     logic_error, !notifier_,
@@ -172,13 +173,30 @@ void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
   std::move(clear_notifier).cancel();
 }
 
-void Uring::submitFdCloseReq(const int fd, const UserData user_data) {
+io_uring_sqe& Uring::getNextSqe() {
+  auto* sqe = io_uring_get_sqe(&ring_);
+  // TODO(bd) allow SQEs to be stored on a pending queue to be submitted when
+  // the next ring slot becomes available
+  JMG_ENFORCE(pred(sqe), "no submit queue entries currently available");
+  return *sqe;
+}
+
+void Uring::reqFinalize(io_uring_sqe& sqe,
+                        const DelaySubmission is_delayed,
+                        const std::optional<UserData> user_data,
+                        const std::string_view req_type) {
+  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
+  if (!unwrap(is_delayed)) { submitReq(req_type); }
+}
+
+void Uring::submitFdCloseReq(const int fd,
+                             const DelaySubmission is_delayed,
+                             const std::optional<UserData> user_data) {
   JMG_ENFORCE_USING(logic_error, fd > -1, "invalid file descriptor value [", fd,
                     "]");
   auto& sqe = getNextSqe();
   io_uring_prep_close(&sqe, fd);
-  JMG_URING_STORE_USER_DATA(sqe, user_data);
-  submitReq("close file descriptor"sv);
+  reqFinalize(sqe, is_delayed, user_data, "close file descriptor"sv);
 }
 
 void Uring::submitTimeoutReq(UringTimeSpec timeout_spec,
@@ -194,41 +212,23 @@ void Uring::submitTimeoutReq(UringTimeSpec timeout_spec,
 void Uring::submitFileOpenReq(const c_string_view file_path,
                               const FileOpenFlags flags,
                               const mode_t permissions,
-                              const UserData user_data) {
+                              const DelaySubmission is_delayed,
+                              const std::optional<UserData> user_data) {
   JMG_ENFORCE_USING(logic_error, !file_path.empty(), "empty file path");
   auto& sqe = getNextSqe();
   io_uring_prep_openat(&sqe, AT_FDCWD, file_path.c_str(),
                        static_cast<uint16_t>(flags), permissions);
-  JMG_URING_STORE_USER_DATA(sqe, user_data);
-  submitReq("open file"sv);
+  reqFinalize(sqe, is_delayed, user_data, "open file"sv);
 }
 
-void Uring::submitSocketOpenReq(const SocketTypes socket_type,
-                                const UserData user_data) {
-  auto& sqe = getNextSqe();
-  switch (socket_type) {
-    case SocketTypes::kTcp:
-      io_uring_prep_socket(&sqe, AF_INET, SOCK_STREAM, 0, 0);
-      break;
-    case SocketTypes::kUdp:
-      break;
-    default:
-      JMG_THROW_EXCEPTION(logic_error, "unknown socket type [",
-                          static_cast<int>(socket_type), "]");
-  }
-  JMG_URING_STORE_USER_DATA(sqe, user_data);
-  submitReq("open socket"sv);
-}
-
-void Uring::submitNetConnectReq(const SocketDescriptor sd,
+void Uring::submitNetConnectReq(const int sd,
                                 const IpEndpoint& tgt_endpoint,
-                                const UserData user_data) {
+                                DelaySubmission is_delayed,
+                                std::optional<UserData> user_data) {
   auto& sqe = getNextSqe();
-  io_uring_prep_connect(&sqe, unsafe(sd),
-                        (struct sockaddr*)&(tgt_endpoint.addr()),
+  io_uring_prep_connect(&sqe, sd, (struct sockaddr*)&(tgt_endpoint.addr()),
                         sizeof(struct sockaddr_in));
-  JMG_URING_STORE_USER_DATA(sqe, user_data);
-  submitReq("connect to network service");
+  reqFinalize(sqe, is_delayed, user_data, "connect to network endpoint"sv);
 }
 
 void Uring::submitWriteReq(const int fd,
@@ -239,8 +239,7 @@ void Uring::submitWriteReq(const int fd,
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
   io_uring_prep_writev(&sqe, fd, io_vec.data(), io_vec.size(), 0 /* offset */);
-  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
-  if (!unwrap(is_delayed)) { submitReq("write"sv); }
+  reqFinalize(sqe, is_delayed, user_data, "write"sv);
 }
 
 void Uring::submitReadReq(const int fd,
@@ -251,8 +250,7 @@ void Uring::submitReadReq(const int fd,
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
   io_uring_prep_readv(&sqe, fd, io_vec.data(), io_vec.size(), 0 /* offset */);
-  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
-  if (!unwrap(is_delayed)) { submitReq("read"sv); }
+  reqFinalize(sqe, is_delayed, user_data, "read"sv);
 }
 
 void Uring::submitRecvFromReq(const int sd,
@@ -262,8 +260,7 @@ void Uring::submitRecvFromReq(const int sd,
                               const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   io_uring_prep_recv(&sqe, sd, buf.data(), buf.size(), flags);
-  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
-  if (!unwrap(is_delayed)) { submitReq("recvfrom"sv); }
+  reqFinalize(sqe, is_delayed, user_data, "recvfrom"sv);
 }
 
 void Uring::submitSetSockOptReq(const int sd,
@@ -276,17 +273,43 @@ void Uring::submitSetSockOptReq(const int sd,
   auto& sqe = getNextSqe();
   io_uring_prep_cmd_sock(&sqe, SOCKET_URING_OP_SETSOCKOPT, sd, level, opt_name,
                          const_cast<void*>(opt_val), opt_sz);
-  if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
-  if (!unwrap(is_delayed)) { submitReq("set socket options"sv); }
+  reqFinalize(sqe, is_delayed, user_data, "set socket options"sv);
 }
 
-io_uring_sqe& Uring::getNextSqe() {
-  auto* sqe = io_uring_get_sqe(&ring_);
-  // TODO(bd) allow SQEs to be stored on a pending queue to be submitted when
-  // the next ring slot becomes available
-  JMG_ENFORCE(pred(sqe), "no submit queue entries currently available");
-  return *sqe;
+void Uring::submitSocketBindReq(int sd,
+                                const Port port,
+                                DelaySubmission is_delayed,
+                                std::optional<UserData> user_data) {
+  auto& sqe = getNextSqe();
+  struct sockaddr_in addr;
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(unsafe(port));
+  io_uring_prep_bind(&sqe, sd, (sockaddr*)&addr, sizeof(addr));
+  reqFinalize(sqe, is_delayed, user_data, "set socket options"sv);
 }
+
+void Uring::submitSocketListenReq(int sd,
+                                  int backlog,
+                                  DelaySubmission is_delayed,
+                                  std::optional<UserData> user_data) {
+  auto& sqe = getNextSqe();
+  io_uring_prep_listen(&sqe, sd, backlog);
+  reqFinalize(sqe, is_delayed, user_data, "socket listen"sv);
+}
+
+#if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
+void Uring::submitSocketInfoReq(int sd,
+                                struct sockaddr& addr,
+                                socklen_t& addrSz,
+                                SocketSide side,
+                                DelaySubmission is_delayed,
+                                std::optional<UserData> user_data) {
+  auto& sqe = getNextSqe();
+  io_uring_prep_getsockname(&sqe, sd, &addr, &addrSz, unwrap(side));
+  reqFinalize(sqe, is_delayed, user_data, "get socket info"sv);
+}
+#endif
 
 void Uring::submitDebugLogReq(IoVecView io_vec) {
   auto& sqe = getNextSqe();
