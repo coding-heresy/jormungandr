@@ -70,8 +70,10 @@ struct FiberCtrlBlockBody;
  * publicly accessible interface to a reactor fiber object
  */
 class Fiber {
+  using AcceptHandler = std::function<void(Fiber&, SocketDescriptor sd)>;
   using DelaySubmission = uring::DelaySubmission;
   using Event = uring::Event;
+  using FiberFcn = std::function<void(Fiber&)>;
   using Uring = uring::Uring;
   using UserData = uring::UserData;
   using WorkerFcn = std::function<void(void)>;
@@ -255,6 +257,20 @@ public:
                        int opt_id,
                        const void* opt_val,
                        size_t opt_sz);
+
+  /**
+   * bind a socket to a network interface and (optionally) protocol
+   * port on the local host for later use in listening for connections
+   */
+  void bindSocketToIfce(SocketDescriptor sd, Port port);
+
+  /**
+   * enable connection listening on a socket that was previously bound
+   * to a local interface and port
+   */
+  void enableListenSocket(SocketDescriptor sd,
+                          std::optional<uring::ListenBacklog> backlog =
+                            uring::kDefaultListenQueueBacklog);
 
   /**
    * lookup the list of IP endpoints associated with a host

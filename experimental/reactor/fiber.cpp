@@ -149,6 +149,39 @@ void Fiber::setSocketOption(const SocketDescriptor sd,
   validateEvent("set socket option");
 }
 
+void Fiber::bindSocketToIfce(const SocketDescriptor sd, const Port port) {
+  // set the user data to the fiber ID so the completion event gets routed
+  // back to this thread
+  uring_->submitSocketBindReq(sd, port, DelaySubmission::kNoDelay,
+                              UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reschedule();
+
+  ////////////////////
+  // return from scheduler
+  validateEvent("set socket option");
+}
+
+void Fiber::enableListenSocket(const SocketDescriptor sd,
+                               const optional<uring::ListenBacklog> backlog) {
+  // set the user data to the fiber ID so the completion event gets routed
+  // back to this thread
+  uring_->submitSocketListenReq(sd, backlog, DelaySubmission::kNoDelay,
+                                UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reschedule();
+
+  ////////////////////
+  // return from scheduler
+  validateEvent("set socket option");
+}
+
 void Fiber::reschedule() { reactor_->schedule(); }
 
 uring::Event Fiber::getEvent(const std::string_view op, const bool is_timer) {
