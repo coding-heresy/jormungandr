@@ -186,6 +186,10 @@ private:
     thread_pool_.execute(std::move(fcn));
   }
 
+  /**
+   * send work to be executed on the thread pool, blocking the current
+   * fiber until the result computed is received
+   */
   template<StdChronoDurationT Timeout, typename Fcn, typename... Args>
     requires std::invocable<Fcn, Fiber&, Args...>
   auto compute(const std::optional<Timeout> timeout, Fcn&& fcn, Args&&... args) {
