@@ -392,26 +392,34 @@ void Reactor::schedule() {
       }
       JMG_ENFORCE_USING(logic_error, !runnable_.empty(),
                         "run queue was empty after io_uring event processing");
-      auto& fcb = runnable_.dequeue();
-      const auto fbr_id = fcb.id;
-      JMG_URING_LOG_DEBUG(uring_, "dequeued runnable fiber [", fbr_id, "]");
-      const auto is_embryonic = (FiberState::kEmbryonic == fcb.body.state);
-      fcb.body.state = FiberState::kActive;
-      if (fbr_id != active_fbr_id) {
-        if (is_embryonic) {
-          JMG_URING_LOG_DEBUG(uring_, "starting new fiber [", fbr_id, "]");
+      while (!runnable_.empty()) {
+        auto& fcb = runnable_.dequeue();
+        if (FiberState::kTerminated == fcb.body.state) {
+          // ignore any terminated fibers encountered on the run queue
+          continue;
         }
-        else {
-          //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-          // jump from current fiber to newly reactivated fiber
-          JMG_URING_LOG_DEBUG(uring_, "resuming blocked fiber [", fbr_id, "]");
+        const auto fbr_id = fcb.id;
+        JMG_URING_LOG_DEBUG(uring_, "dequeued runnable fiber [", fbr_id, "]");
+        const auto is_embryonic = (FiberState::kEmbryonic == fcb.body.state);
+        fcb.body.state = FiberState::kActive;
+        if (fbr_id != active_fbr_id) {
+          if (is_embryonic) {
+            // jump from current fiber to new fiber
+            JMG_URING_LOG_DEBUG(uring_, "starting new fiber [", fbr_id, "]");
+          }
+          else {
+            // jump from current fiber to resuming fiber
+            JMG_URING_LOG_DEBUG(uring_, "resuming blocked fiber [", fbr_id, "]");
+          }
+          jumpTo(fcb, "resuming fiber"sv);
         }
-        jumpTo(fcb, "resuming fiber"sv);
+        ////////////////////
+        // resume state of active_fbr_id
+        JMG_URING_LOG_DEBUG(uring_, "resuming active fiber [", active_fbr_id,
+                            "]");
+        return;
       }
-      ////////////////////
-      // resume state of active_fbr_id
-      JMG_URING_LOG_DEBUG(uring_, "resuming active fiber [", active_fbr_id, "]");
-      return;
+      // no runnable fibers available, restart the scheduler loop
     }
   }
 }
@@ -562,13 +570,23 @@ FiberFcn Reactor::getWrappedFiberFcnFromNotifier() {
   FiberFcn wrapper = [this, fcn = std::move(fcn)](Fiber& fbr) mutable {
     const auto fbr_id = fbr.getId();
 
+    JMG_URING_LOG_DEBUG(uring_, "fiber [", getActiveFbrId(),
+                        "] is executing its fiber function");
+
     // execute the wrapped handler
     (*fcn)(fbr);
+
+    JMG_URING_LOG_DEBUG(uring_, "fiber [", getActiveFbrId(),
+                        "] is finished executing its fiber function");
 
     // terminate the current fiber
     auto& fcb = fiber_ctrl_.getBlock(fbr_id);
     fcb.body.state = FiberState::kTerminated;
     fiber_ctrl_.release(fbr_id);
+
+    JMG_URING_LOG_DEBUG(uring_, "terminated fiber [", getActiveFbrId(),
+                        "] is calling the scheduler");
+
     schedule();
   };
   return wrapper;
