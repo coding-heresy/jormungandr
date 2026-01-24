@@ -542,6 +542,14 @@ void Reactor::resetNotifier() {
                         uring::UserData(-unsafe(post_tgt_)));
 }
 
+void Reactor::spawn(FiberFcn&& fcn) {
+  auto& fcb = initFbr(std::move(fcn), "executing internally requested work",
+                      &shutdown_chkpt_);
+  fcb.body.state = FiberState::kEmbryonic;
+  runnable_.enqueue(fcb);
+  // TODO(bd) optionally yield to the new fiber?
+}
+
 void Reactor::notifyFbr(const FiberId id) {
   detail::sendNotification(post_src_, id);
 }

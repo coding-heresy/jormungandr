@@ -166,6 +166,34 @@ TEST_F(ReactorTests, TestFiberYielding) {
   EXPECT_TRUE(clean_reactor_shutdown);
 }
 
+TEST_F(ReactorTests, TestFiberSpawning) {
+  auto [sndr, rcvr] = makeCommunicator<FiberId>();
+  optional<FiberId> spawned_fiber_id;
+  reactor.execute([&](Fiber& fbr) {
+    try {
+      fbr.spawn([&](Fiber& fbr) {
+        try {
+          spawned_fiber_id = fbr.getId();
+          sndr.set_value(fbr.getId());
+        }
+        catch (...) {
+          sndr.set_exception(std::current_exception());
+        }
+      });
+    }
+    catch (...) {
+      sndr.set_exception(std::current_exception());
+    }
+  });
+  {
+    auto guard = Cleanup([&]() { shutdown(); });
+    const auto id = rcvr.get(2s, "value receiver");
+    EXPECT_TRUE(pred(spawned_fiber_id));
+    EXPECT_EQ(*spawned_fiber_id, id);
+  }
+  EXPECT_TRUE(clean_reactor_shutdown);
+}
+
 TEST_F(ReactorTests, TestAwaitTimeout) {
   auto [sndr, rcvr] = makeCommunicator<Duration>();
   reactor.execute([&](Fiber& fbr) {

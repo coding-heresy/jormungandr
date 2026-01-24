@@ -205,6 +205,11 @@ public:
     getEvent("await timeout", true /* is_timer */);
   }
 
+  /**
+   * create a new fiber that will execute the argument function
+   */
+  void spawn(FiberFcn&& fcn);
+
   ////////////////////////////////////////////////////////////
   // file support
 

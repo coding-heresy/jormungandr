@@ -212,6 +212,12 @@ private:
   }
 
   /**
+   * called by a fiber to create a new thread that will execute the
+   * argument function to completion
+   */
+  void spawn(FiberFcn&& fcn);
+
+  /**
    * notify a fiber that thread pool computation data is ready for
    * consumption
    */
