@@ -273,6 +273,13 @@ public:
                             uring::kDefaultListenQueueBacklog);
 
   /**
+   * accept a connection on a socket that was previously enabled to
+   * listen returning the new socket descriptor associated with the
+   * connection
+   */
+  std::tuple<SocketDescriptor, IpEndpoint> acceptCnxn(SocketDescriptor sd);
+
+  /**
    * lookup the list of IP endpoints associated with a host
    */
   template<NullTerminatedStringT Str, typename... Args>

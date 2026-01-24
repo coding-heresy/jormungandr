@@ -178,6 +178,36 @@ void Fiber::enableListenSocket(const SocketDescriptor sd,
   validateEvent("set socket option");
 }
 
+tuple<SocketDescriptor, IpEndpoint> Fiber::acceptCnxn(const SocketDescriptor sd) {
+  // automatic variables that will receive the peer information for
+  // the new connection
+  struct sockaddr_in addr;
+  auto* addr_ptr = (sockaddr*)&addr;
+  socklen_t addr_sz = sizeof(addr);
+
+  // automatically configure the accepted socket to be non-blocking
+  // and to close automatically if the 'exec' syscall is invoked
+  constexpr int kFlags = (SOCK_NONBLOCK | SOCK_CLOEXEC);
+
+  // set the user data to the fiber ID so the completion event gets routed
+  // back to this thread
+  uring_->submitAcceptCnxnReq(sd, *addr_ptr, addr_sz, kFlags,
+                              UserData(unsafe(id_)));
+
+  ////////////////////
+  // enter the scheduler to defer further processing until the operation is
+  // complete
+  reschedule();
+
+  ////////////////////
+  // return from scheduler
+  const auto event = getEvent("accept connection"sv);
+  const auto& cqe = *(event);
+  const auto cnxn_sd = SocketDescriptor(cqe.res);
+  const auto peer_endpoint = IpEndpoint(*addr_ptr, addr_sz);
+  return make_tuple(cnxn_sd, peer_endpoint);
+}
+
 void Fiber::reschedule() { reactor_->schedule(); }
 
 uring::Event Fiber::getEvent(const std::string_view op, const bool is_timer) {
