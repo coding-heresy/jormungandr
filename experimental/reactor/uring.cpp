@@ -49,7 +49,7 @@ namespace jmg::uring
 Event::Event(io_uring* ring, io_uring_cqe* cqe) : ring_(ring), cqe_(cqe) {
   if (cqe) {
     JMG_ENFORCE_USING(
-      std::logic_error, pred(ring),
+      logic_error, pred(ring),
       "received a non-null CQE pointer with a null ring pointer");
   }
 }
@@ -158,7 +158,8 @@ Event Uring::awaitEvent(optional<Duration> timeout) {
   return Event(&ring_, cqe);
 }
 
-void Uring::registerEventNotifier(EventFd notifier, DelaySubmission isDelayed) {
+void Uring::registerEventNotifier(const EventFd notifier,
+                                  const DelaySubmission isDelayed) {
   JMG_ENFORCE_USING(
     logic_error, !notifier_,
     "attempted to register more than one event notifier with uring instance");
@@ -183,15 +184,15 @@ io_uring_sqe& Uring::getNextSqe() {
 
 void Uring::reqFinalize(io_uring_sqe& sqe,
                         const DelaySubmission is_delayed,
-                        const std::optional<UserData> user_data,
-                        const std::string_view req_type) {
+                        const optional<UserData> user_data,
+                        const string_view req_type) {
   if (user_data) { JMG_URING_STORE_USER_DATA(sqe, *user_data); }
   if (!unwrap(is_delayed)) { submitReq(req_type); }
 }
 
 void Uring::submitFdCloseReq(const int fd,
                              const DelaySubmission is_delayed,
-                             const std::optional<UserData> user_data) {
+                             const optional<UserData> user_data) {
   JMG_ENFORCE_USING(logic_error, fd > -1, "invalid file descriptor value [", fd,
                     "]");
   auto& sqe = getNextSqe();
@@ -213,7 +214,7 @@ void Uring::submitFileOpenReq(const c_string_view file_path,
                               const FileOpenFlags flags,
                               const mode_t permissions,
                               const DelaySubmission is_delayed,
-                              const std::optional<UserData> user_data) {
+                              const optional<UserData> user_data) {
   JMG_ENFORCE_USING(logic_error, !file_path.empty(), "empty file path");
   auto& sqe = getNextSqe();
   io_uring_prep_openat(&sqe, AT_FDCWD, file_path.c_str(),
@@ -223,8 +224,8 @@ void Uring::submitFileOpenReq(const c_string_view file_path,
 
 void Uring::submitNetConnectReq(const int sd,
                                 const IpEndpoint& tgt_endpoint,
-                                DelaySubmission is_delayed,
-                                std::optional<UserData> user_data) {
+                                const DelaySubmission is_delayed,
+                                const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   io_uring_prep_connect(&sqe, sd, (struct sockaddr*)&(tgt_endpoint.addr()),
                         sizeof(struct sockaddr_in));
@@ -254,8 +255,8 @@ void Uring::submitReadReq(const int fd,
 }
 
 void Uring::submitRecvFromReq(const int sd,
-                              BufferProxy buf,
-                              int flags,
+                              const BufferProxy buf,
+                              const int flags,
                               const DelaySubmission is_delayed,
                               const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
@@ -264,10 +265,10 @@ void Uring::submitRecvFromReq(const int sd,
 }
 
 void Uring::submitSetSockOptReq(const int sd,
-                                int level,
-                                int opt_name,
+                                const int level,
+                                const int opt_name,
                                 const void* opt_val,
-                                size_t opt_sz,
+                                const size_t opt_sz,
                                 const DelaySubmission is_delayed,
                                 const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
@@ -276,10 +277,10 @@ void Uring::submitSetSockOptReq(const int sd,
   reqFinalize(sqe, is_delayed, user_data, "set socket options"sv);
 }
 
-void Uring::submitSocketBindReq(int sd,
+void Uring::submitSocketBindReq(const int sd,
                                 const Port port,
-                                DelaySubmission is_delayed,
-                                std::optional<UserData> user_data) {
+                                const DelaySubmission is_delayed,
+                                const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   struct sockaddr_in addr;
   addr.sin_family = AF_INET;
@@ -289,29 +290,29 @@ void Uring::submitSocketBindReq(int sd,
   reqFinalize(sqe, is_delayed, user_data, "set socket options"sv);
 }
 
-void Uring::submitSocketListenReq(int sd,
-                                  int backlog,
-                                  DelaySubmission is_delayed,
-                                  std::optional<UserData> user_data) {
+void Uring::submitSocketListenReq(const int sd,
+                                  const int backlog,
+                                  const DelaySubmission is_delayed,
+                                  const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   io_uring_prep_listen(&sqe, sd, backlog);
   reqFinalize(sqe, is_delayed, user_data, "socket listen"sv);
 }
 
 #if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
-void Uring::submitSocketInfoReq(int sd,
+void Uring::submitSocketInfoReq(const int sd,
                                 struct sockaddr& addr,
                                 socklen_t& addrSz,
-                                SocketSide side,
-                                DelaySubmission is_delayed,
-                                std::optional<UserData> user_data) {
+                                const SocketSide side,
+                                const DelaySubmission is_delayed,
+                                const optional<UserData> user_data) {
   auto& sqe = getNextSqe();
   io_uring_prep_getsockname(&sqe, sd, &addr, &addrSz, unwrap(side));
   reqFinalize(sqe, is_delayed, user_data, "get socket info"sv);
 }
 #endif
 
-void Uring::submitDebugLogReq(IoVecView io_vec) {
+void Uring::submitDebugLogReq(const IoVecView io_vec) {
   auto& sqe = getNextSqe();
   // NOTE: offset is always 0 since io_vec is a std::span and can be used to
   // generate an offset into a larger collection of iovec structures if needed
