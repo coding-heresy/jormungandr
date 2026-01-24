@@ -413,6 +413,23 @@ public:
     submitSocketListenReq(unsafe(sd), unsafe(backlog), is_delayed, user_data);
   }
 
+  /**
+   * submit a request to accept a connection on a socket that has been
+   * enabled for listening
+   *
+   * TODO(bd) create a safe type for flags and fold it into extras
+   */
+  template<detail::CommonExtraT... Extras>
+  void submitAcceptCnxnReq(const SocketDescriptor sd,
+                           struct sockaddr& addr,
+                           socklen_t& addr_sz,
+                           const int flags,
+                           Extras&&... extras) {
+    const auto [is_delayed, user_data] =
+      getCommonExtras(std::forward<Extras>(extras)...);
+    submitAcceptCnxnReq(unsafe(sd), addr, addr_sz, flags, is_delayed, user_data);
+  }
+
 #if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
   /**
    * submit a request to retrieve information about a socket
@@ -573,6 +590,16 @@ private:
                              int backlog,
                              DelaySubmission is_delayed,
                              std::optional<UserData> user_data);
+
+  /**
+   * implementation of accept connection request submission
+   */
+  void submitAcceptCnxnReq(int sd,
+                           struct sockaddr& addr,
+                           socklen_t& addr_sz,
+                           int flags,
+                           DelaySubmission is_delayed,
+                           std::optional<UserData> user_data);
 
 #if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
   /**

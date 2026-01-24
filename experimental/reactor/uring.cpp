@@ -299,6 +299,17 @@ void Uring::submitSocketListenReq(const int sd,
   reqFinalize(sqe, is_delayed, user_data, "socket listen"sv);
 }
 
+void Uring::submitAcceptCnxnReq(const int sd,
+                                struct sockaddr& addr,
+                                socklen_t& addr_sz,
+                                const int flags,
+                                const DelaySubmission is_delayed,
+                                const optional<UserData> user_data) {
+  auto& sqe = getNextSqe();
+  io_uring_prep_accept(&sqe, sd, &addr, &addr_sz, flags);
+  reqFinalize(sqe, is_delayed, user_data, "socket listen"sv);
+}
+
 #if defined(JMG_LIBURING_VERSION_SUPPORTS_GETSOCKNAME)
 void Uring::submitSocketInfoReq(const int sd,
                                 struct sockaddr& addr,
