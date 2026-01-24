@@ -142,6 +142,9 @@ public:
     return rslt;
   }
 
+  ////////////////////////////////////////////////////////////
+  // logging
+
   /**
    * write output to stdout
    */
@@ -152,7 +155,7 @@ public:
   }
 
   ////////////////////////////////////////////////////////////
-  // misc utilities
+  // misc functions
 
   /**
    * close an open descriptor of any kind
@@ -242,7 +245,7 @@ public:
    * TODO(bd) create an owning type for the combination of level,
    * opt_id, opt_val and opt_sz
    */
-  void setSocketOption(SocketDescriptor fd,
+  void setSocketOption(SocketDescriptor sd,
                        int level,
                        int opt_id,
                        const void* opt_val,

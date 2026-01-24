@@ -127,14 +127,14 @@ size_t Fiber::recvFrom(SocketDescriptor fd, BufferProxy buf, int flags) {
   return static_cast<size_t>(cqe.res);
 }
 
-void Fiber::setSocketOption(const SocketDescriptor fd,
+void Fiber::setSocketOption(const SocketDescriptor sd,
                             const int level,
                             const int opt_name,
                             const void* opt_val,
                             const size_t opt_sz) {
   // set the user data to the fiber ID so the completion event gets routed
   // back to this thread
-  uring_->submitSetSockOptReq(fd, level, opt_name, opt_val, opt_sz,
+  uring_->submitSetSockOptReq(sd, level, opt_name, opt_val, opt_sz,
                               DelaySubmission::kNoDelay, UserData(unsafe(id_)));
 
   ////////////////////

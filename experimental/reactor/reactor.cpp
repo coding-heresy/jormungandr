@@ -384,6 +384,7 @@ void Reactor::schedule() {
     // finished servicing the ring, now service the run queue
     if (!is_shutdown) {
       if (FiberState::kYielding == active_fbr_state) {
+        // a yielding fiber should now be added to the run queue
         active_fbr_fcb.body.state = FiberState::kRunnable;
         runnable_.enqueue(active_fbr_fcb);
         JMG_URING_LOG_DEBUG(uring_, "enqueued yielding fiber [", active_fbr_id,
