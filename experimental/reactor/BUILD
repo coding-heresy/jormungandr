@@ -98,8 +98,17 @@ cc_library(
     name = "reactor_based_client",
     visibility = ["//visibility:public"],
     hdrs = ["reactor_based_client.h"],
-    include_prefix = "jmg/reactor",
     srcs = ["reactor_based_client.cpp"],
+    include_prefix = "jmg/reactor",
+    deps = [":reactor"],
+)
+
+cc_library(
+    name = "simple_tcp_service",
+    hdrs = ["misc/simple_tcp_service.h"],
+    srcs = ["misc/simple_tcp_service.cpp"],
+    strip_include_prefix = "misc",
+    include_prefix = "jmg/reactor",
     deps = [":reactor"],
 )
 
@@ -116,12 +125,11 @@ cc_binary(
 cc_binary(
     name = "echo_client",
     visibility = ["//visibility:public"],
-    srcs = [
-        "misc/echo_client.cpp",
-        "misc/simple_tcp_service.h",
-        "misc/simple_tcp_service.cpp",
+    srcs = ["misc/echo_client.cpp"],
+    deps = [
+        ":reactor_based_client",
+        ":simple_tcp_service",
     ],
-    deps = [":reactor_based_client"],
 )
 
 cc_binary(
@@ -131,5 +139,6 @@ cc_binary(
     deps = [
         ":reactor",
         "//:jmg_server_main",
+        ":simple_tcp_service",
     ],
 )

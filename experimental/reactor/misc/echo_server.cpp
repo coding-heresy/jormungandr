@@ -38,6 +38,8 @@
 #include "jmg/reactor/fiber.h"
 #include "jmg/reactor/reactor.h"
 
+#include "simple_tcp_service.h"
+
 using namespace std;
 using namespace std::chrono_literals;
 
@@ -71,84 +73,10 @@ public:
     });
     // 2 seconds is infinity
     reactor_start_rcvr.get(2s, "reactor start signal");
-    reactor_.execute([&](Fiber& fbr) {
-      try {
-        acceptor_ = fbr.openSocket();
-        {
-          const int opt = 1;
-          fbr.setSocketOption(acceptor_, SOL_SOCKET,
-                              SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
-        }
-        fbr.bindSocketToIfce(acceptor_, port);
-        fbr.enableListenSocket(acceptor_);
-        while (!is_shutdown_) {
-          // accept new connection and pass it to a new fiber
-          auto accept_rslt = [&] mutable -> optional<AcceptRslt> {
-            try {
-              return fbr.acceptCnxn(acceptor_);
-            }
-            catch (...) {
-              // ignore exceptions that occur after shutdown, most
-              // likely it is due to the socket being forcibly closed
-              // by the shutdown handler
-              if (!is_shutdown_) { rethrow_exception(current_exception()); }
-            }
-            return nullopt;
-          }();
-          if (!accept_rslt) {
-            JMG_ENFORCE_USING(
-              logic_error, is_shutdown_,
-              "got empty socket accept result when not shutting down");
-            continue;
-          }
-          const auto [sd, peer] = *accept_rslt;
-          fbr.spawn([sd = sd](Fiber& fbr) {
-            try {
-              const auto closer = Cleanup([&] { fbr.close(sd); });
-
-              // read message length
-              auto sz = [&] -> size_t {
-                size_t buf;
-                const auto rslt = fbr.read(sd, buffer_from(buf));
-                JMG_ENFORCE(
-                  rslt == sizeof(buf),
-                  "incorrect number of octets read for size, expected [",
-                  sizeof(buf), "] but got [", rslt, "]");
-                return buf;
-              }();
-
-              // read message
-              string msg;
-              msg.resize(sz);
-              sz = fbr.read(sd, buffer_from(msg));
-              JMG_ENFORCE(
-                sz == msg.size(),
-                "incorrect number of octets read for message, expected [",
-                msg.size(), "] but got [", sz, "]");
-              cout << "received message to echo: [" << msg << "]\n";
-
-              // write response message length
-              {
-                const auto rsp_sz = msg.size();
-                sz = fbr.write(sd, buffer_from(rsp_sz));
-                JMG_ENFORCE(
-                  sz == sizeof(rsp_sz),
-                  "incorrect number of octets written for message, expected [",
-                  sizeof(rsp_sz), "] but got [", sz, "]");
-              }
-
-              // write response message
-              sz = fbr.write(sd, buffer_from(msg));
-              JMG_ENFORCE(
-                sz == msg.size(),
-                "incorrect number of octets written for message, expected [",
-                msg.size(), "] but got [", sz, "]");
-            }
-            JMG_SINK_ALL_EXCEPTIONS("handling echo request")
-          });
-        }
-      }
-      JMG_SINK_ALL_EXCEPTIONS("accepting new connections")
+    reactor_.execute([this, port = port](Fiber& fbr) {
+      cout << "fiber [" << fbr.getId()
+           << "] executing listener task using port [" << port << "]\n";
+      executeFbrTask(fbr, port);
     });
     if (reactor_worker.joinable()) { reactor_worker.join(); }
   }
@@ -156,17 +84,52 @@ public:
   void shutdownImpl() override final {
     cout << "shutting down...\n";
     is_shutdown_ = true;
-    if (kInvalidSocketDescriptor != acceptor_) {
-      ::shutdown(unsafe(acceptor_), SHUT_RDWR);
-      ::close(unsafe(acceptor_));
+    if (kInvalidSocketDescriptor != listener_sd_) {
+      ::shutdown(unsafe(listener_sd_), SHUT_RDWR);
+      ::close(unsafe(listener_sd_));
       reactor_.shutdown();
     }
   }
 
 private:
+  using Cnxn = SimpleTcpSvc::Cnxn;
+  using CnxnAccepter = SimpleTcpSvc::CnxnAccepter;
+
+  /**
+   * actual work is done here
+   */
+  void executeFbrTask(Fiber& fbr, const IpPort port) {
+    try {
+      // create the listener
+      cout << "fiber [" << fbr.getId()
+           << "] creating listener endpoint using port [" << port << "]\n";
+      const auto listen_endpoint = IpEndpoint("127.0.0.1", port);
+      auto listener =
+        SimpleTcpSvc::listenAt(fbr, listen_endpoint, is_shutdown_);
+      listener_sd_ = listener.listener();
+      while (!is_shutdown_) {
+        cout << "fiber [" << fbr.getId() << "] awaiting next connection\n";
+        listener.acceptCnxn([&](Fiber& fbr, Cnxn cnxn,
+                                const IpEndpoint peer) mutable {
+          try {
+            cout << "fiber [" << fbr.getId() << "] connected to peer at ["
+                 << peer.str() << "]\n";
+            const auto msg = cnxn.rcvFrom();
+            cout << "fiber [" << fbr.getId() << "] received message to echo: ["
+                 << msg << "]\n";
+            cnxn.sendTo(buffer_from(msg));
+            cout << "fiber [" << fbr.getId() << "] finished echoing message\n";
+          }
+          JMG_SINK_ALL_EXCEPTIONS("handling echo request")
+        });
+      }
+    }
+    JMG_SINK_ALL_EXCEPTIONS("accepting new connections")
+  }
+
   atomic<bool> is_shutdown_;
   Reactor reactor_;
-  SocketDescriptor acceptor_ = kInvalidSocketDescriptor;
+  SocketDescriptor listener_sd_ = kInvalidSocketDescriptor;
 };
 
 JMG_REGISTER_SERVER(EchoServer);
