@@ -152,7 +152,8 @@ public:
    */
   template<typename... Args>
   void log(Args&&... args) {
-    const auto output = str_cat(std::forward<Args&&>(args)..., "\n");
+    const auto output =
+      str_cat("[", id_, "] ", std::forward<Args&&>(args)..., "\n");
     write(kStdoutFd, buffer_from(output));
   }
 
@@ -228,7 +229,7 @@ public:
   /**
    * open a socket
    */
-  SocketDescriptor openSocket(SocketTypes socket_type);
+  SocketDescriptor openSocket(SocketTypes socket_type = SocketTypes::kTcp);
 
   /**
    * connect to a (possibly remote) network endpoint
