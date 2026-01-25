@@ -53,10 +53,10 @@ namespace jmg
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept SafeT = st::is_strong_type_v<T>;
+concept SafeT = st::is_strong_type_v<Decay<T>>;
 
 template<typename T>
-concept UnsafeT = (!st::is_strong_type_v<T>);
+concept UnsafeT = (!st::is_strong_type_v<Decay<T>>);
 
 ////////////////////////////////////////////////////////////////////////////////
 // type aliases
