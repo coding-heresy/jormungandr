@@ -229,6 +229,7 @@ inline constexpr auto kInvalidFileReadFd = FileReadFd(-1);
 inline constexpr auto kInvalidEventFd = EventFd(-1);
 inline constexpr auto kInvalidPipeReadFd = PipeReadFd(-1);
 inline constexpr auto kInvalidPipeWriteFd = PipeWriteFd(-1);
+inline constexpr auto kInvalidSocketDescriptor = SocketDescriptor(-1);
 inline constexpr auto kStdoutFd = FileDescriptor(STDOUT_FILENO);
 inline constexpr auto kStderrFd = FileDescriptor(STDERR_FILENO);
 
