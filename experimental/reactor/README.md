@@ -226,17 +226,24 @@ Scheduler has 2 states: `polling` and `blocking`
 
 # TODO
 
-* Review and rework fiber state handling
-  * There are currently some weird flags floating around that should
-    be folded into the set of states
+* Clean up shutdown of server using a listen socket
+  * Investigate creating an exception type specifically to be thrown
+    in the case where a listen socket throws an exception because of
+    "invalid argument" when the shutdown signal has been received
+    * c.f. existing echo_server code that performs complex gymnastics
+      around the fbr.acceptCnxn call
+    * investigate the precise identification of the expected
+      system_error exception that occurs in this case
+  * Can/should the call to `::shutdown(unsafe(sd), SHUT_RDWR);` be
+    performed inside the reactor?
+* Investigate multishot connection acceptance
 * Investigate buffer registration
 * Investigate direct descriptors
-* Figure out how to use c-ares for DNS resolution
 * support setting uring size at either runtime or compile time
 * support use of variable size segmented stacks for fibers
   * maybe use std::memory_resource to hold the stack?
-* Maybe create an asynchronous retreads of the various
-  `std::filesystem` functions
+* Maybe create asynchronous retreads of the various `std::filesystem`
+  functions
 * Investigate performance implications of switching thread pool
   implementations
   * https://github.com/bshoshany/thread-pool
