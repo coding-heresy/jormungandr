@@ -307,7 +307,7 @@ template<typename T>
 using ArgTypeForT = detail::ArgTypeFor<T>::type;
 
 template<typename T>
-using ReturnTypeForField = detail::ReturnTypeForField<T>::type;
+using ReturnTypeForFieldT = detail::ReturnTypeForField<T>::type;
 
 /**
  * common field name constant for fields that have no string name

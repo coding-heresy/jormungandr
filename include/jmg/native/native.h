@@ -156,7 +156,7 @@ public:
   template<RequiredField Fld>
   decltype(auto) get() const {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
-    using Rslt = ReturnTypeForField<Fld>;
+    using Rslt = ReturnTypeForFieldT<Fld>;
     if constexpr (ViewableFieldT<Fld>) { return Rslt(std::get<kIdx>(obj_)); }
     else if constexpr (std::is_reference_v<Rslt>) {
       return static_cast<const Decay<Rslt>&>(std::get<kIdx>(obj_));
@@ -172,7 +172,7 @@ public:
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     if constexpr (ViewableFieldT<Fld>) {
       using ViewType = Fld::const_view_type;
-      using Rslt = ReturnTypeForField<Fld>;
+      using Rslt = ReturnTypeForFieldT<Fld>;
       const auto& val = std::get<kIdx>(obj_);
       if (val) { return Rslt(ViewType(*val)); }
       // NOTE: default constructed Rslt here returns a correctly typed version
