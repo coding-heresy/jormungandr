@@ -35,6 +35,7 @@
 #include <iostream>
 
 #include "jmg/cmdline.h"
+#include "jmg/safe_types.h"
 
 using namespace jmg;
 using namespace std;
@@ -308,6 +309,23 @@ TEST(CmdLineParamTests, TestOptionalsWithDefault) {
     const auto cmdline = CmdLine(argv.size(), argv.data());
     EXPECT_EQ("blub"s, get_with_default<OptPosnParam>(cmdline, "blub"s));
   }
+}
+
+TEST(CmdLineParamTests, TestSafeTypes) {
+  using TestIdStr = SafeIdStr<>;
+  using TestId32 = SafeId32<>;
+
+  using SafeName =
+    NamedParam<TestIdStr, "str_id", "a safe string ID named param", Required>;
+  using SafePosn =
+    PosnParam<TestId32, "int_id", "a safe 32 bit integer ID positional param">;
+
+  using CmdLine = CmdLineArgs<SafeName, SafePosn>;
+
+  std::array argv{"test_program", "-str_id", "foo", "20010911"};
+  const auto cmdline = CmdLine(argv.size(), argv.data());
+  EXPECT_EQ(TestIdStr("foo"), jmg::get<SafeName>(cmdline));
+  EXPECT_EQ(TestId32(20010911), jmg::get<SafePosn>(cmdline));
 }
 
 #undef EXPECT_CMDLINE_ERROR

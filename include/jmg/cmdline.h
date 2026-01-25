@@ -189,6 +189,9 @@ public:
         constexpr auto param_idx = meta::find_index<ParamList, T>{}();
         const auto is_required = RequiredField<T>;
         if constexpr (NamedParamT<T>) {
+          ////////////////////
+          // handling of named parameters
+
           // function that will return true if its argument matches
           // the named parameter
           auto matchNamedParam = [](const std::string_view str) {
@@ -244,17 +247,12 @@ public:
               "] was previously consumed for some other parameter");
             matches[arg_idx + 1] = true;
 
-            if constexpr (std::same_as<ValueType, std::string>) {
-              std::get<param_idx>(values_) = args[arg_idx + 1];
-            }
-            else {
-              ValueType val = from(std::string_view(args[arg_idx + 1]));
-              std::get<param_idx>(values_) = val;
-            }
+            captureArg<param_idx, ValueType>(args, arg_idx + 1);
           }
         }
         else {
-          // positional parameter
+          ////////////////////
+          // handling of positional parameters
 
           // find first unmatched argument
           const auto entry =
@@ -269,13 +267,7 @@ public:
           const auto arg_idx = std::distance(matches.begin(), entry);
           *entry = true;
 
-          if constexpr (std::same_as<ValueType, std::string>) {
-            std::get<param_idx>(values_) = args[arg_idx];
-          }
-          else {
-            ValueType val = from(std::string_view(args[arg_idx]));
-            std::get<param_idx>(values_) = val;
-          }
+          captureArg<param_idx, ValueType>(args, arg_idx);
         }
       };
       // TODO: find some way to get rid of the annoying .template
@@ -342,6 +334,25 @@ private:
   enum class ScanState { Opts, ReqdPosns, OptPosns };
   using ParamList = meta::list<Params...>;
   using Values = Tuplize<meta::transform<ParamList, Optionalize>>;
+
+  /**
+   * convert an element of the argument array to the appropriate type
+   * and store it in the appropriate position in the set of values
+   */
+  template<size_t kParamIdx, typename T>
+  void captureArg(std::span<const char*>(args), size_t arg_idx) {
+    if constexpr (SameAsDecayedT<std::string, T>) {
+      std::get<kParamIdx>(values_) = args[arg_idx];
+    }
+    else if constexpr (SafeT<T>) {
+      UnsafeTypeFromT<T> val = from(std::string_view(args[arg_idx]));
+      std::get<kParamIdx>(values_) = T(val);
+    }
+    else {
+      T val = from(std::string_view(args[arg_idx]));
+      std::get<kParamIdx>(values_) = val;
+    }
+  }
 
   /**
    * construct the portion of the usage command line for one declared
@@ -453,18 +464,5 @@ private:
  */
 template<typename T>
 concept CmdLineArgsT = TemplateSpecializationOfT<T, CmdLineArgs>;
-
-/**
- * retrieve the value of an optional parameter from a set of processed
- * arguments, returning a default value if no argument was provided
- */
-template<CmdLineParamT Param>
-  requires OptionalField<Param>
-auto get_with_default(const auto& args, typename Param::type dflt) {
-  static_assert(CmdLineArgsT<decltype(args)>,
-                "first argument was not a specialization of CmdLineArgs");
-  if (const auto& val = try_get<Param>(args); val) { return *val; }
-  return dflt;
-}
 
 } // namespace jmg
