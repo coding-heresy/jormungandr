@@ -61,8 +61,10 @@ class ReactorBasedEchoClient : public ReactorBasedClient {
                               "host to connect to (defaults to local host)",
                               Optional>;
   using PortNum =
-    NamedParam<uint16_t, "port", "port to connect to (defaults to 8888)", Optional>;
+    NamedParam<Port, "port", "port to connect to (defaults to 8888)", Optional>;
   using CmdLine = CmdLineArgs<HostName, PortNum>;
+
+  static constexpr auto kDfltPort = Port(8888);
 
 public:
   ReactorBasedEchoClient() = default;
@@ -70,8 +72,8 @@ public:
 
   void processArguments(const int argc, const char** argv) override {
     const auto cmdline = CmdLine(argc, argv);
-    hostname_ = get_with_default<HostName>(cmdline, "127.0.0.1"s);
-    port_ = Port(get_with_default<PortNum>(cmdline, 8888));
+    hostname_ = get<HostName>(cmdline, "127.0.0.1"s);
+    port_ = get<PortNum>(cmdline, kDfltPort);
   }
 
   void execute(Reactor& reactor) override {

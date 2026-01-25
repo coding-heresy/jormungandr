@@ -155,6 +155,9 @@ inline constexpr bool isMemberOfObject() {
 
 // TODO(bd) figure out how to return string_view instead of string
 
+/**
+ * get the value associated with a required field
+ */
 template<RequiredField Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
@@ -162,6 +165,24 @@ decltype(auto) get(const Obj& obj)
   return obj.template get<Fld>();
 }
 
+/**
+ * get the value associated with an optional field, returning a
+ * default value if no value is present in the object
+ */
+template<OptionalField Fld, ObjectDefT Obj>
+decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForT<Fld>> dflt)
+  requires(isMemberOfObject<Fld, Obj>())
+{
+  using ReturnT = RemoveOptionalT<ReturnTypeForFieldT<Fld>>;
+  auto opt_val = obj.template try_get<Fld>();
+  if (opt_val) { return ReturnT(*opt_val); }
+  return ReturnT(dflt);
+}
+
+/**
+ * get the value associated with an optional field, return
+ * std::nullopt if no value is present in the object
+ */
 template<OptionalField Fld, ObjectDefT Obj>
 decltype(auto) try_get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
