@@ -551,8 +551,19 @@ void Reactor::resetNotifier() {
 }
 
 void Reactor::spawn(FiberFcn&& fcn) {
-  auto& fcb = initFbr(std::move(fcn), "executing internally requested work",
-                      &shutdown_chkpt_);
+  FiberFcn wrapper = [this, fcn = std::move(fcn)](Fiber& fbr) {
+    const auto description =
+      str_cat("executing spawned task on fiber [", fbr.getId(), "]");
+    try {
+      JMG_URING_LOG_DEBUG(uring_, description);
+      fcn(fbr);
+      JMG_URING_LOG_DEBUG(uring_, "done ", description);
+      schedule();
+    }
+    JMG_SINK_ALL_EXCEPTIONS(description)
+  };
+  auto& fcb =
+    initFbr(std::move(wrapper), "spawning internal task", &shutdown_chkpt_);
   fcb.body.state = FiberState::kEmbryonic;
   runnable_.enqueue(fcb);
   // TODO(bd) optionally yield to the new fiber?
