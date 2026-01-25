@@ -31,8 +31,8 @@
  */
 
 /**
- * quick and dirty non-reactor echo server for performing simple tests
- * of reactor network operations
+ * non-reactor reference implementation of echo server for comparison
+ * with experimental reactor versions
  */
 
 #include <arpa/inet.h>
