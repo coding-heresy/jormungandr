@@ -60,6 +60,26 @@ using CtrlBlockId = SafeType<uint16_t, SafeIdType, st::incrementable>;
 JMG_NEW_SAFE_TYPE(CtrlBlockId, uint16_t, SafeIdType, st::incrementable);
 #endif
 
+#if !defined(NDEBUG)
+#define JMG_CHECK_ENQUEUE(block)                              \
+  do {                                                        \
+    JMG_ENFORCE_USING(std::logic_error, !(block).is_enqueued, \
+                      "control block [", (block).id,          \
+                      "] was erroneously enqueued");          \
+    (block).is_enqueued = true;                               \
+  } while (0)
+#define JMG_CHECK_DEQUEUE(block)                             \
+  do {                                                       \
+    JMG_ENFORCE_USING(std::logic_error, (block).is_enqueued, \
+                      "control block [", (block).id,         \
+                      "] was erroneously not enqueued");     \
+    (block).is_enqueued = false;                             \
+  } while (0)
+#else
+#define JMG_CHECK_ENQUEUE(block)
+#define JMG_CHECK_DEQUEUE(block)
+#endif
+
 namespace detail
 {
 constexpr auto kMax = CtrlBlockId(std::numeric_limits<uint16_t>::max());
@@ -85,6 +105,9 @@ public:
     T body;
     Id id;
     Id link;
+#if !defined(NDEBUG)
+    mutable bool is_enqueued = false;
+#endif
   };
 
   ControlBlocks() {
@@ -205,6 +228,7 @@ public:
   CtrlBlockQueue(ControlBlocks<T>& ctrl_blocks) : ctrl_blocks_(ctrl_blocks) {}
 
   void enqueue(const Block& item) {
+    JMG_CHECK_ENQUEUE(item);
     const auto id = item.id;
     if (tail_) {
       auto& tail_block = ctrl_blocks_.getBlock(*tail_);
@@ -227,6 +251,7 @@ public:
     JMG_ENFORCE_USING(std::logic_error, !empty(),
                       "attempted to dequeue an item from an empty queue");
     auto& rslt = ctrl_blocks_.getBlock(*head_);
+    JMG_CHECK_DEQUEUE(rslt);
     if (1 == size()) {
       head_ = std::nullopt;
       tail_ = std::nullopt;
@@ -251,3 +276,6 @@ private:
 };
 
 } // namespace jmg
+
+#undef JMG_CHECK_ENQUEUE
+#undef JMG_CHECK_DEQUEUE
