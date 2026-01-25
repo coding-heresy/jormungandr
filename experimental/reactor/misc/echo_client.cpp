@@ -60,11 +60,11 @@ class ReactorBasedEchoClient : public ReactorBasedClient {
                               "host",
                               "host to connect to (defaults to local host)",
                               Optional>;
-  using PortNum =
-    NamedParam<Port, "port", "port to connect to (defaults to 8888)", Optional>;
-  using CmdLine = CmdLineArgs<HostName, PortNum>;
+  using Port =
+    NamedParam<IpPort, "port", "port to connect to (defaults to 8888)", Optional>;
+  using CmdLine = CmdLineArgs<HostName, Port>;
 
-  static constexpr auto kDfltPort = Port(8888);
+  static constexpr auto kDfltPort = IpPort(8888);
 
 public:
   ReactorBasedEchoClient() = default;
@@ -73,7 +73,7 @@ public:
   void processArguments(const int argc, const char** argv) override {
     const auto cmdline = CmdLine(argc, argv);
     hostname_ = get<HostName>(cmdline, "127.0.0.1"s);
-    port_ = get<PortNum>(cmdline, kDfltPort);
+    port_ = get<Port>(cmdline, kDfltPort);
   }
 
   void execute(Reactor& reactor) override {
@@ -112,7 +112,7 @@ public:
 
 private:
   string hostname_;
-  Port port_;
+  IpPort port_;
 };
 
 JMG_REGISTER_CLIENT(ReactorBasedEchoClient);

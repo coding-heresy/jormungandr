@@ -278,7 +278,7 @@ void Uring::submitSetSockOptReq(const int sd,
 }
 
 void Uring::submitSocketBindReq(const int sd,
-                                const Port port,
+                                const IpPort port,
                                 const DelaySubmission is_delayed,
                                 const optional<UserData> user_data) {
   auto& sqe = getNextSqe();

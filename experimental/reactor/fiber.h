@@ -263,7 +263,7 @@ public:
    * bind a socket to a network interface and (optionally) protocol
    * port on the local host for later use in listening for connections
    */
-  void bindSocketToIfce(SocketDescriptor sd, Port port);
+  void bindSocketToIfce(SocketDescriptor sd, IpPort port);
 
   /**
    * enable connection listening on a socket that was previously bound

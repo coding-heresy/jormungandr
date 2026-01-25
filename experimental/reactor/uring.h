@@ -372,7 +372,7 @@ public:
   void submitSocketBindReq(const SocketDescriptor sd, Extras&&... extras) {
     // TODO(bd) figure out how to support some version of
     // getCommonExtras here
-    auto port = Port(0);
+    auto port = IpPort(0);
     DelaySubmission is_delayed = DelaySubmission::kNoDelay;
     std::optional<UserData> user_data = std::nullopt;
     [[maybe_unused]]
@@ -381,7 +381,7 @@ public:
         is_delayed = arg;
       }
       else if constexpr (jmg::DecayedSameAsT<T, UserData>) { user_data = arg; }
-      else if constexpr (jmg::DecayedSameAsT<T, Port>) { port = arg; }
+      else if constexpr (jmg::DecayedSameAsT<T, IpPort>) { port = arg; }
     };
     (processParam(std::forward<Extras>(extras)), ...);
     submitSocketBindReq(unsafe(sd), port, is_delayed, user_data);
@@ -579,7 +579,7 @@ private:
    * implementation of bind request submission
    */
   void submitSocketBindReq(int sd,
-                           Port port,
+                           IpPort port,
                            DelaySubmission is_delayed,
                            std::optional<UserData> user_data);
 

@@ -45,12 +45,12 @@ namespace jmg
 {
 
 class EchoServer : public Server {
-  using PortNum =
-    NamedParam<Port, "port", "port to listen on (defaults to 8888)", Optional>;
-  using CmdLine = CmdLineArgs<PortNum>;
+  using Port =
+    NamedParam<IpPort, "port", "port to listen on (defaults to 8888)", Optional>;
+  using CmdLine = CmdLineArgs<Port>;
   using AcceptRslt = std::tuple<SocketDescriptor, IpEndpoint>;
 
-  static constexpr auto kDfltPort = Port(8888);
+  static constexpr auto kDfltPort = IpPort(8888);
 
 public:
   EchoServer() = default;
@@ -58,7 +58,7 @@ public:
 
   void startImpl(const int argc, const char** argv) override final {
     const auto cmdline = CmdLine(argc, argv);
-    const auto port = get<PortNum>(cmdline, kDfltPort);
+    const auto port = get<Port>(cmdline, kDfltPort);
     cout << "starting up with PID [" << getpid() << "]...\n";
 
     auto [reactor_start_signal, reactor_start_rcvr] = makeSignaller();
