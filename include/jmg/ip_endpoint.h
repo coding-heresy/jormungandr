@@ -46,6 +46,23 @@ JMG_NEW_SAFE_TYPE(IpPort, uint16_t, SafeIdType);
 #endif
 
 JMG_DEFINE_RUNTIME_EXCEPTION(MalformedIpAddress);
+/**
+ * representation of an IpV4 address as a string in 'dotted decimal'
+ * notation
+ */
+class IpV4Addr {
+public:
+  explicit IpV4Addr(const std::string_view src);
+  explicit IpV4Addr(const struct sockaddr_in& src);
+
+  /**
+   * return the address string
+   */
+  std::string_view str() const { return addr_str_; }
+
+private:
+  std::string addr_str_;
+};
 
 /**
  * representation of an internet protocol endpoint, used for convenience and
@@ -54,6 +71,10 @@ JMG_DEFINE_RUNTIME_EXCEPTION(MalformedIpAddress);
  * TODO(bd) handle IPv6
  */
 class IpEndpoint {
+  /**
+   * populate an IPv4 address structure using a C-style string address
+   * and a port
+   */
   static void makeSysAddr(const char* addr,
                           uint16_t port,
                           sockaddr_in& sys_addr);
@@ -78,10 +99,19 @@ public:
    */
   IpEndpoint(const sockaddr& addr, std::optional<size_t> sz = std::nullopt);
 
+  /**
+   * return the contained IPv4 address structure
+   */
   const sockaddr_in& addr() const { return sys_addr_; }
+
+  /**
+   * return a view on the string representation of the address
+   */
+  std::string_view str() const;
 
 private:
   sockaddr_in sys_addr_;
+  mutable std::optional<std::string> str_addr_ = std::nullopt;
 };
 
 } // namespace jmg
