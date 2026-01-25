@@ -40,8 +40,7 @@
 #include "jmg/util.h"
 
 #include "jmg/reactor/reactor_based_client.h"
-
-#include "simple_tcp_service.h"
+#include "jmg/reactor/simple_tcp_service.h"
 
 /**
  * quick and dirty reactor-based echo client

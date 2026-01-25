@@ -105,9 +105,8 @@ cc_library(
 
 cc_library(
     name = "simple_tcp_service",
-    hdrs = ["misc/simple_tcp_service.h"],
-    srcs = ["misc/simple_tcp_service.cpp"],
-    strip_include_prefix = "misc",
+    hdrs = ["simple_tcp_service.h"],
+    srcs = ["simple_tcp_service.cpp"],
     include_prefix = "jmg/reactor",
     deps = [":reactor"],
 )
