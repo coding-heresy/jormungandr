@@ -947,6 +947,7 @@ please use these abbreviations where appropriate.
 * ctrl  - control/controller
 * ctxt  - context
 * def   - definition
+* dflt  - default
 * fbr   - fiber
 * fd    - file descriptor
 * fld   - field
