@@ -102,9 +102,10 @@ public:
       }
     });
 
+    cout << "awaiting echoed data..." << endl;
     const auto msg =
       work_product.get_future().get(2s, "work completed awaiter");
-    cout << "++++++++++ received echoed data [" << msg << "]\n";
+    cout << "received echoed data [" << msg << "]\n";
   }
 
 private:
