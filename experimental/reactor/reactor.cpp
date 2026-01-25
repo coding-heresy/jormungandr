@@ -552,12 +552,16 @@ void Reactor::resetNotifier() {
 
 void Reactor::spawn(FiberFcn&& fcn) {
   FiberFcn wrapper = [this, fcn = std::move(fcn)](Fiber& fbr) {
+    const auto fbr_id = fbr.getId();
     const auto description =
-      str_cat("executing spawned task on fiber [", fbr.getId(), "]");
+      str_cat("executing spawned task on fiber [", fbr_id, "]");
     try {
       JMG_URING_LOG_DEBUG(uring_, description);
       fcn(fbr);
       JMG_URING_LOG_DEBUG(uring_, "done ", description);
+      auto& fcb = fiber_ctrl_.getBlock(fbr_id);
+      fcb.body.state = FiberState::kTerminated;
+      fiber_ctrl_.release(fbr_id);
       schedule();
     }
     JMG_SINK_ALL_EXCEPTIONS(description)
