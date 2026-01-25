@@ -127,7 +127,7 @@ cc_binary(
 cc_binary(
     name = "echo_server",
     visibility = ["//visibility:public"],
-    srcs = ["misc/non_reactor_echo_server.cpp"],
+    srcs = ["misc/echo_server.cpp"],
     deps = [
         ":reactor",
         "//:jmg_server_main",
