@@ -39,13 +39,20 @@
 namespace jmg
 {
 
+/**
+ * exception thrown when a string fails to parse as a valid IP address
+ * specifier
+ */
+JMG_DEFINE_RUNTIME_EXCEPTION(MalformedIpAddress);
+
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
 using IpPort = SafeType<uint16_t, SafeIdType>;
 #else
 JMG_NEW_SAFE_TYPE(IpPort, uint16_t, SafeIdType);
 #endif
 
-JMG_DEFINE_RUNTIME_EXCEPTION(MalformedIpAddress);
+constexpr auto kAnyIpPort = IpPort(0);
+
 /**
  * representation of an IpV4 address as a string in 'dotted decimal'
  * notation
@@ -84,7 +91,7 @@ public:
    * construct an IpEndpoint from a string address and port
    */
   template<NullTerminatedStringT T>
-  IpEndpoint(const T& addr, IpPort port) {
+  IpEndpoint(const T& addr, IpPort port = kAnyIpPort) {
     if constexpr (CStyleStringT<T>) {
       makeSysAddr(addr, unsafe(port), sys_addr_);
     }
@@ -92,6 +99,7 @@ public:
       // should be either std::string or jmg::c_string_view
       makeSysAddr(addr.data(), unsafe(port), sys_addr_);
     }
+    port_ = port;
   }
 
   /**
@@ -102,7 +110,9 @@ public:
   /**
    * return the contained IPv4 address structure
    */
-  const sockaddr_in& addr() const { return sys_addr_; }
+  const sockaddr_in& addr() const noexcept { return sys_addr_; }
+
+  IpPort port() const noexcept { return port_; }
 
   /**
    * return a view on the string representation of the address
@@ -112,6 +122,7 @@ public:
 private:
   sockaddr_in sys_addr_;
   mutable std::optional<std::string> str_addr_ = std::nullopt;
+  IpPort port_ = kAnyIpPort;
 };
 
 } // namespace jmg
