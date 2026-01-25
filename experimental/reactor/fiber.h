@@ -70,7 +70,6 @@ struct FiberCtrlBlockBody;
  * publicly accessible interface to a reactor fiber object
  */
 class Fiber {
-  using AcceptHandler = std::function<void(Fiber&, SocketDescriptor sd)>;
   using DelaySubmission = uring::DelaySubmission;
   using Event = uring::Event;
   using FiberFcn = std::function<void(Fiber&)>;
