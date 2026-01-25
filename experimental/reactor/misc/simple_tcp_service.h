@@ -38,6 +38,8 @@
 
 #include "jmg/reactor/fiber.h"
 
+JMG_DEFINE_RUNTIME_EXCEPTION(AcceptInterrupted);
+
 namespace jmg
 {
 
@@ -48,10 +50,16 @@ namespace jmg
  */
 class SimpleTcpSvc {
 public:
+  using ShutdownFlag = std::atomic<bool>;
+
+  /**
+   * owner of a socket associated with a live TCP connection
+   */
   class Cnxn {
   public:
     JMG_NON_COPYABLE(Cnxn);
-    JMG_NON_MOVEABLE(Cnxn);
+    // JMG_DEFAULT_MOVEABLE(Cnxn);
+    Cnxn(Cnxn&& src);
     ~Cnxn();
 
     /**
@@ -69,8 +77,45 @@ public:
 
     Cnxn(Fiber& fbr, SocketDescriptor sd);
 
-    Fiber& fbr_;
+    Fiber* fbr_ = nullptr;
     SocketDescriptor sd_;
+  };
+
+  /**
+   * owner of a socket that can accept TCP connections from other
+   * hosts
+   */
+  class CnxnAccepter {
+  public:
+    using AcceptHandler =
+      std::function<void(Fiber&, Cnxn cnxn, IpEndpoint peer)>;
+
+    JMG_DEFAULT_COPYABLE(CnxnAccepter);
+    JMG_DEFAULT_MOVEABLE(CnxnAccepter);
+    ~CnxnAccepter() = default;
+
+    /**
+     * await incoming connection requests and respond to each by
+     * accepting the connection and spawning a new fiber to execute
+     * the provided handler
+     */
+    void acceptCnxn(AcceptHandler&& fcn);
+
+    /**
+     * return the descriptor associated with the listen socket
+     */
+    SocketDescriptor listener() const noexcept { return sd_; }
+
+  private:
+    friend class SimpleTcpSvc;
+
+    CnxnAccepter(Fiber& fbr,
+                 SocketDescriptor sd,
+                 const ShutdownFlag& is_shutdown);
+
+    Fiber* fbr_ = nullptr;
+    SocketDescriptor sd_;
+    const ShutdownFlag* is_shutdown_ = nullptr;
   };
 
   /**
@@ -82,7 +127,12 @@ public:
   // TODO(bd) create connectTo that can be called from outside
   // reactor?
 
-  // TODO(bd) create Listener class
+  /**
+   * create an object that can accept connections from other hosts
+   */
+  static CnxnAccepter listenAt(Fiber& fbr,
+                               const IpEndpoint& endpoint,
+                               const ShutdownFlag& is_shutdown);
 };
 
 } // namespace jmg

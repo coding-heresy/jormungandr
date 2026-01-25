@@ -38,19 +38,28 @@ namespace jmg
 {
 
 SimpleTcpSvc::Cnxn::Cnxn(Fiber& fbr, SocketDescriptor sd)
-  : fbr_(fbr), sd_(sd) {}
+  : fbr_(&fbr), sd_(sd) {}
 
-SimpleTcpSvc::Cnxn::~Cnxn() { fbr_.close(sd_); }
+SimpleTcpSvc::Cnxn::Cnxn(Cnxn&& src) {
+  this->fbr_ = src.fbr_;
+  this->sd_ = src.sd_;
+  src.fbr_ = nullptr;
+  src.sd_ = kInvalidSocketDescriptor;
+}
+
+SimpleTcpSvc::Cnxn::~Cnxn() {
+  if (fbr_ && (kInvalidSocketDescriptor != sd_)) { fbr_->close(sd_); }
+}
 
 void SimpleTcpSvc::Cnxn::sendTo(BufferView msg) {
   const auto sz = msg.size();
-  fbr_.write(sd_, buffer_from(sz));
-  fbr_.write(sd_, msg);
+  fbr_->write(sd_, buffer_from(sz));
+  fbr_->write(sd_, msg);
 }
 
 std::string SimpleTcpSvc::Cnxn::rcvFrom() {
   size_t msg_sz;
-  auto sz = fbr_.read(sd_, buffer_from(msg_sz));
+  auto sz = fbr_->read(sd_, buffer_from(msg_sz));
   // TODO(bd) return empty message on 0 bytes to indicate
   // connection closed?
   JMG_ENFORCE(sz == sizeof(msg_sz),
@@ -58,10 +67,35 @@ std::string SimpleTcpSvc::Cnxn::rcvFrom() {
               sizeof(msg_sz), "] octets but received [", sz, "]");
   std::string msg;
   msg.resize(msg_sz);
-  sz = fbr_.read(sd_, buffer_from(msg));
+  sz = fbr_->read(sd_, buffer_from(msg));
   JMG_ENFORCE(sz == msg_sz, "failed to read incoming message, expected [",
               msg_sz, "] octets but received [", sz, "]");
   return msg;
+}
+
+SimpleTcpSvc::CnxnAccepter::CnxnAccepter(Fiber& fbr,
+                                         const SocketDescriptor sd,
+                                         const ShutdownFlag& is_shutdown)
+  : fbr_(&fbr), sd_(sd), is_shutdown_(&is_shutdown) {}
+
+void SimpleTcpSvc::CnxnAccepter::acceptCnxn(AcceptHandler&& fcn) {
+  try {
+    auto [sd, peer] = fbr_->acceptCnxn(sd_);
+    fbr_->spawn([fcn = std::move(fcn), sd = sd, peer = peer](Fiber& fbr) {
+      try {
+        fcn(fbr, Cnxn(fbr, sd), peer);
+      }
+      JMG_SINK_ALL_EXCEPTIONS("handling accepted connection")
+    });
+  }
+  catch (...) {
+    if (is_shutdown_) {
+      // TODO(bd) validate that this is the correct exception type
+      throw AcceptInterrupted(str_cat("accept call in fiber [", fbr_->getId(),
+                                      "] was interrupted"));
+    }
+    rethrow_exception(current_exception());
+  }
 }
 
 SimpleTcpSvc::Cnxn SimpleTcpSvc::connectTo(Fiber& fbr,
@@ -71,6 +105,21 @@ SimpleTcpSvc::Cnxn SimpleTcpSvc::connectTo(Fiber& fbr,
   fbr.connectTo(sd, endpoint);
   std::move(cleaner).cancel();
   return Cnxn(fbr, sd);
+}
+
+SimpleTcpSvc::CnxnAccepter SimpleTcpSvc::listenAt(
+  Fiber& fbr,
+  const IpEndpoint& endpoint,
+  const ShutdownFlag& is_shutdown) {
+  const auto sd = fbr.openSocket();
+  {
+    const int opt = 1;
+    fbr.setSocketOption(sd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+                        sizeof(opt));
+  }
+  fbr.bindSocketToIfce(sd, endpoint.port());
+  fbr.enableListenSocket(sd);
+  return CnxnAccepter(fbr, sd, is_shutdown);
 }
 
 } // namespace jmg
