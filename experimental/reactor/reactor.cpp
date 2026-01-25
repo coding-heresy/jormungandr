@@ -310,7 +310,11 @@ void Reactor::schedule() {
         }
         // either there are no runnable fibers, or there is an event
         // available
+        JMG_URING_LOG_DEBUG(uring_, "fiber [", active_fbr_id,
+                            "] is awaiting a uring event");
         return uring_->awaitEvent();
+        JMG_URING_LOG_DEBUG(uring_, "fiber [", active_fbr_id,
+                            "] is finished awaiting a uring event");
       }();
 
       if (opt_event) {
@@ -366,6 +370,10 @@ void Reactor::schedule() {
           JMG_URING_LOG_DEBUG(uring_, "uring completion event for fiber [",
                               fbr_id, "]");
           auto& fcb = fiber_ctrl_.getBlock(fbr_id);
+          JMG_ENFORCE_USING(logic_error, FiberState::kBlocked == fcb.body.state,
+                            "received uring completion event for fiber [",
+                            fbr_id, "] that was in state [", fcb.body.state,
+                            "]");
           fcb.body.state = FiberState::kRunnable;
           // save the event in the fiber control block so it can be
           // accessible when the fiber resumes
