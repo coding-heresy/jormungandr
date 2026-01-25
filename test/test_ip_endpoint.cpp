@@ -38,7 +38,7 @@
 using namespace jmg;
 
 TEST(IpEndpointTest, SmokeTest) {
-  const auto local_host_eighty_eights = IpEndpoint("127.0.0.1", Port(8888));
+  const auto local_host_eighty_eights = IpEndpoint("127.0.0.1", IpPort(8888));
   EXPECT_EQ(8888, ntohs(local_host_eighty_eights.addr().sin_port));
   // TODO(bd) figure out how to verify the raw converted address
 }
@@ -46,6 +46,6 @@ TEST(IpEndpointTest, SmokeTest) {
 TEST(IpEndpointTest, MalformedIpAddressTest) {
   // lambda that tries to construct an instance of IpEndpoint using a malformed
   // IP address string
-  auto bad_construction = []() { return IpEndpoint("127.0.0", Port(8888)); };
+  auto bad_construction = []() { return IpEndpoint("127.0.0", IpPort(8888)); };
   EXPECT_THROW(bad_construction(), MalformedIpAddress);
 }

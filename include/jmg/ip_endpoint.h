@@ -40,9 +40,9 @@ namespace jmg
 {
 
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
-using Port = SafeType<uint16_t, SafeIdType>;
+using IpPort = SafeType<uint16_t, SafeIdType>;
 #else
-JMG_NEW_SAFE_TYPE(Port, uint16_t, SafeIdType);
+JMG_NEW_SAFE_TYPE(IpPort, uint16_t, SafeIdType);
 #endif
 
 JMG_DEFINE_RUNTIME_EXCEPTION(MalformedIpAddress);
@@ -63,7 +63,7 @@ public:
    * construct an IpEndpoint from a string address and port
    */
   template<NullTerminatedStringT T>
-  IpEndpoint(const T& addr, Port port) {
+  IpEndpoint(const T& addr, IpPort port) {
     if constexpr (CStyleStringT<T>) {
       makeSysAddr(addr, unsafe(port), sys_addr_);
     }

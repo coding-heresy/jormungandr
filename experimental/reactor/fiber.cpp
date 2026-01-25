@@ -145,7 +145,7 @@ void Fiber::setSocketOption(const SocketDescriptor sd,
   validateEvent("set socket option");
 }
 
-void Fiber::bindSocketToIfce(const SocketDescriptor sd, const Port port) {
+void Fiber::bindSocketToIfce(const SocketDescriptor sd, const IpPort port) {
   // set the user data to the fiber ID so the completion event gets routed
   // back to this thread
   uring_->submitSocketBindReq(sd, port, DelaySubmission::kNoDelay,
