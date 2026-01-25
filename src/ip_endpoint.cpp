@@ -71,7 +71,7 @@ void IpEndpoint::makeSysAddr(const char* addr,
   sys_addr.sin_family = AF_INET;
   JMG_SYSTEM(::inet_pton(AF_INET, addr, &(sys_addr.sin_addr)),
              "converting IP address to binary");
-  sys_addr.sin_port = htons(port);
+  sys_addr.sin_port = ::htons(port);
 }
 
 IpEndpoint::IpEndpoint(const sockaddr& addr, const optional<size_t> sz) {
@@ -81,14 +81,13 @@ IpEndpoint::IpEndpoint(const sockaddr& addr, const optional<size_t> sz) {
               "] is too small, must be at least [", sizeof(sys_addr_), "]");
   memset(&sys_addr_, 0, sizeof(sys_addr_));
   memcpy(&sys_addr_, &addr, sizeof(sys_addr_));
+  port_ = IpPort(::ntohs(sys_addr_.sin_port));
 }
 
 std::string_view IpEndpoint::str() const {
   if (!str_addr_) {
     const auto addr = IpV4Addr(sys_addr_);
-    if (sys_addr_.sin_port != 0) {
-      str_addr_ = str_cat(addr.str(), ":", sys_addr_.sin_port);
-    }
+    if (port_ != kAnyIpPort) { str_addr_ = str_cat(addr.str(), ":", port_); }
     else { str_addr_ = addr.str(); }
   }
   return *str_addr_;
