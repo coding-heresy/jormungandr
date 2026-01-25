@@ -302,12 +302,12 @@ TEST(CmdLineParamTests, TestOptionalsWithDefault) {
   {
     std::array argv{"test_program", "foo", "bar"};
     const auto cmdline = CmdLine(argv.size(), argv.data());
-    EXPECT_EQ("bar"s, get_with_default<OptPosnParam>(cmdline, "blub"s));
+    EXPECT_EQ("bar"s, get<OptPosnParam>(cmdline, "blub"s));
   }
   {
     std::array argv{"test_program", "foo"};
     const auto cmdline = CmdLine(argv.size(), argv.data());
-    EXPECT_EQ("blub"s, get_with_default<OptPosnParam>(cmdline, "blub"s));
+    EXPECT_EQ("blub"s, get<OptPosnParam>(cmdline, "blub"s));
   }
 }
 
