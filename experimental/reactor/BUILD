@@ -104,6 +104,15 @@ cc_library(
 )
 
 cc_library(
+    name = "reactor_based_server",
+    visibility = ["//visibility:public"],
+    hdrs = ["reactor_based_server.h"],
+    srcs = ["reactor_based_server.cpp"],
+    include_prefix = "jmg/reactor",
+    deps = [":reactor"],
+)
+
+cc_library(
     name = "simple_tcp_service",
     hdrs = ["simple_tcp_service.h"],
     srcs = ["simple_tcp_service.cpp"],
@@ -138,6 +147,7 @@ cc_binary(
     deps = [
         ":reactor",
         "//:jmg_server_main",
+        ":reactor_based_server",
         ":simple_tcp_service",
     ],
 )

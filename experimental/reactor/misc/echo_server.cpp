@@ -37,6 +37,7 @@
 
 #include "jmg/reactor/fiber.h"
 #include "jmg/reactor/reactor.h"
+#include "jmg/reactor/reactor_based_server.h"
 #include "jmg/reactor/simple_tcp_service.h"
 
 using namespace std;
@@ -45,7 +46,7 @@ using namespace std::chrono_literals;
 namespace jmg
 {
 
-class EchoServer : public Server {
+class EchoServer : public ReactorBasedServer {
   using Port =
     NamedParam<IpPort, "port", "port to listen on (defaults to 8888)", Optional>;
   using CmdLine = CmdLineArgs<Port>;
@@ -57,52 +58,17 @@ public:
   EchoServer() = default;
   virtual ~EchoServer() = default;
 
-  void startImpl(const int argc, const char** argv) override final {
+  void processArguments(const int argc, const char** argv) override final {
     const auto cmdline = CmdLine(argc, argv);
-    const auto port = get<Port>(cmdline, kDfltPort);
-    cout << "starting up with PID [" << getpid() << "]...\n";
-
-    auto [reactor_start_signal, reactor_start_rcvr] = makeSignaller();
-    auto reactor_worker = thread([&] {
-      try {
-        reactor_start_signal.set_value();
-        reactor_.start();
-      }
-      JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
-    });
-    // 2 seconds is infinity
-    reactor_start_rcvr.get(2s, "reactor start signal");
-    reactor_.execute([this, port = port](Fiber& fbr) {
-      cout << "fiber [" << fbr.getId()
-           << "] executing listener task using port [" << port << "]\n";
-      executeFbrTask(fbr, port);
-    });
-    if (reactor_worker.joinable()) { reactor_worker.join(); }
+    port_ = get<Port>(cmdline, kDfltPort);
   }
 
-  void shutdownImpl() override final {
-    cout << "shutting down...\n";
-    is_shutdown_ = true;
-    if (kInvalidSocketDescriptor != listener_sd_) {
-      ::shutdown(unsafe(listener_sd_), SHUT_RDWR);
-      ::close(unsafe(listener_sd_));
-      reactor_.shutdown();
-    }
-  }
-
-private:
-  using Cnxn = SimpleTcpSvc::Cnxn;
-  using CnxnAccepter = SimpleTcpSvc::CnxnAccepter;
-
-  /**
-   * actual work is done here
-   */
-  void executeFbrTask(Fiber& fbr, const IpPort port) {
+  void startSrvr(Fiber& fbr) override final {
     try {
       // create the listener
       cout << "fiber [" << fbr.getId()
-           << "] creating listener endpoint using port [" << port << "]\n";
-      const auto listen_endpoint = IpEndpoint("127.0.0.1", port);
+           << "] creating listener endpoint using port [" << port_ << "]\n";
+      const auto listen_endpoint = IpEndpoint("127.0.0.1", port_);
       auto listener =
         SimpleTcpSvc::listenAt(fbr, listen_endpoint, is_shutdown_);
       listener_sd_ = listener.listener();
@@ -126,8 +92,19 @@ private:
     JMG_SINK_ALL_EXCEPTIONS("accepting new connections")
   }
 
-  atomic<bool> is_shutdown_;
-  Reactor reactor_;
+  void shutdownSrvr() override final {
+    // shutdown the listener socket, if necessary
+    if (kInvalidSocketDescriptor != listener_sd_) {
+      ::shutdown(unsafe(listener_sd_), SHUT_RDWR);
+      ::close(unsafe(listener_sd_));
+    }
+  }
+
+private:
+  using Cnxn = SimpleTcpSvc::Cnxn;
+  using CnxnAccepter = SimpleTcpSvc::CnxnAccepter;
+
+  IpPort port_;
   SocketDescriptor listener_sd_ = kInvalidSocketDescriptor;
 };
 
