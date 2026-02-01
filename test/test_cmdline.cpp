@@ -41,9 +41,9 @@ using namespace jmg;
 using namespace std;
 
 using PosnParam1 = PosnParam<int, "int", "an integer positional param">;
-using PosnParam2 = PosnParam<string, "str", "a string positional param">;
+using PosnParam2 = PosnStringParam<"str", "a string positional param">;
 using OptPosnParam =
-  PosnParam<string, "opt_str", "an optional string positional param", Optional>;
+  PosnStringParam<"opt_str", "an optional string positional param", Optional>;
 using NamedParam1 = NamedParam<double, "dbl", "a double named param", Required>;
 using NamedParam2 = NamedFlag<"flag", "a flag">;
 using NamedParam3 =

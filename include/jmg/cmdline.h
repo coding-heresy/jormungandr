@@ -73,28 +73,42 @@ concept CmdLineParamT = std::is_base_of_v<detail::CmdLineParamTag, T>;
 // command line parameter field types
 ////////////////////////////////////////////////////////////////////////////////
 
+namespace detail
+{
+/**
+ * concept for the type parameter to be used in the common case of
+ * position parameter fields
+ */
+template<typename T>
+concept NonSpecializedT = !StringLikeT<T> && !VectorT<T> && NonBoolT<T>;
+} // namespace detail
+
 // using a macro instead of a base class cuts down on the boilerplate
-#define PARAM_BOILERPLATE                                                 \
-  static constexpr auto name = kName.value;                               \
-  static constexpr auto desc = kDesc.value;                               \
-  static_assert(name[0] != '-', "parameter name may not begin with '-'"); \
-  static_assert(std::same_as<T, std::string> || !StringLikeT<T>,          \
-                "std::string is the only string-like type allowed for "   \
-                "command line parameters");                               \
-  using type = T
+#define PARAM_BOILERPLATE                   \
+  static constexpr auto name = kName.value; \
+  static constexpr auto desc = kDesc.value; \
+  static_assert(name[0] != '-', "parameter name may not begin with '-'")
 
 /**
  * command line positional parameter
  *
  * NOTE: positional parameters are not allowed to be boolean
  */
-template<NonBoolT T,
+template<detail::NonSpecializedT T,
          StrLiteral kName,
          StrLiteral kDesc,
          TypeFlagT IsRequired = Required>
 struct PosnParam : public FieldDef<T, kName, IsRequired>,
                    private detail::CmdLineParamTag {
   PARAM_BOILERPLATE;
+  using type = T;
+};
+
+template<StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired = Required>
+struct PosnStringParam : public StringField<kName, IsRequired>,
+                         private detail::CmdLineParamTag {
+  PARAM_BOILERPLATE;
+  using type = std::string;
 };
 
 /**
@@ -121,8 +135,14 @@ namespace detail
 {
 template<typename T>
 struct IsPosnParam : std::false_type {};
-template<NonBoolT T, StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
+template<detail::NonSpecializedT T,
+         StrLiteral kName,
+         StrLiteral kDesc,
+         TypeFlagT IsRequired>
 struct IsPosnParam<PosnParam<T, kName, kDesc, IsRequired>> : std::true_type {};
+template<StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
+struct IsPosnParam<PosnStringParam<kName, kDesc, IsRequired>> : std::true_type {
+};
 
 template<typename T>
 struct IsNamedParam : std::false_type {};

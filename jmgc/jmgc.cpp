@@ -65,7 +65,7 @@ using FixFlag =
   NamedFlag<kFixFlag, "file format is QuickFIX protocol, file type is XML">;
 
 using SrcFile =
-  PosnParam<string, "src_file", "the file to read source definitions from">;
+  PosnStringParam<"src_file", "the file to read source definitions from">;
 
 int main(const int argc, const char** argv) {
   try {
