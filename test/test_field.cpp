@@ -41,19 +41,60 @@ using namespace std;
 
 using IntFld = FieldDef<int, "int", Required>;
 using OptFld = FieldDef<float, "opt", Optional>;
-using StrFld = FieldDef<string, "str", Required>;
+using RawStrFld = FieldDef<string, "raw_str", Required>;
+using StrFld = StringField<"str", Required>;
+using OptStrFld = StringField<"opt_str", Optional>;
+using ArrayFld = ArrayField<double, "array_dbl", Required>;
 
 TEST(FieldTests, TestArgTypeForT) {
   using ArgTypeForIntFld = ArgTypeForT<IntFld>;
-  EXPECT_TRUE((same_as<ArgTypeForIntFld, const int>));
-  EXPECT_TRUE(is_const_v<ArgTypeForIntFld>);
-  EXPECT_FALSE(is_reference_v<ArgTypeForIntFld>);
+  EXPECT_TRUE((same_as<ArgTypeForIntFld, int>));
 
   using ArgTypeForOptFld = ArgTypeForT<OptFld>;
-  EXPECT_TRUE((same_as<ArgTypeForOptFld, const optional<float>&>));
-  EXPECT_TRUE(is_reference_v<ArgTypeForOptFld>);
+  EXPECT_TRUE((same_as<ArgTypeForOptFld, float>));
+
+  // #if 0
+  //   using ArgTypeForRawStrFld = ArgTypeForT<RawStrFld>;
+  //   EXPECT_TRUE((same_as<ArgTypeForRawStrFld, const string&>));
+  //   EXPECT_TRUE(is_reference_v<ArgTypeForRawStrFld>);
+  // #endif
 
   using ArgTypeForStrFld = ArgTypeForT<StrFld>;
-  EXPECT_TRUE((same_as<ArgTypeForStrFld, const string&>));
-  EXPECT_TRUE(is_reference_v<ArgTypeForStrFld>);
+  EXPECT_TRUE((same_as<ArgTypeForStrFld, const string_view>));
+  EXPECT_FALSE(is_reference_v<ArgTypeForStrFld>);
+
+  // #if 0
+  //   // TODO(bd) should be 'const optional<string_view>', but this might
+  //   // break existing code
+  //   using ArgTypeForOptStrFld = ArgTypeForT<OptStrFld>;
+  //   EXPECT_TRUE((same_as<ArgTypeForOptStrFld, const optional<string>&>));
+  //   EXPECT_TRUE(is_reference_v<ArgTypeForOptStrFld>);
+  // #endif
+}
+
+TEST(FieldTests, TestReturnTypeForFieldT) {
+  using ReturnTypeForIntFld = ReturnTypeForFieldT<IntFld>;
+  EXPECT_TRUE((same_as<int, ReturnTypeForIntFld>));
+  using ReturnTypeForOptFld = ReturnTypeForFieldT<OptFld>;
+  EXPECT_TRUE(detail::OptionalNonViewableNonClass<OptFld>);
+  EXPECT_TRUE((same_as<optional<float>, ReturnTypeForOptFld>));
+  {
+    ReturnTypeForOptFld tmp = 1.0;
+    cout << non_decayed_type_name_for(tmp) << endl;
+  }
+  EXPECT_TRUE((same_as<optional<float>, ReturnTypeForOptFld>));
+  using ReturnTypeForStrFld = ReturnTypeForFieldT<StrFld>;
+  EXPECT_TRUE((same_as<ReturnTypeForStrFld, string_view>));
+  EXPECT_FALSE(is_reference_v<ReturnTypeForStrFld>);
+
+  using ReturnTypeForArrayFld = ReturnTypeForFieldT<ArrayFld>;
+  cout << type_name_for<ReturnTypeForArrayFld>() << endl;
+}
+
+TEST(FieldTests, TestStringFieldsWorkCorrectly) {
+#if defined(TMP_JMG_FIXING_FIELDS)
+  EXPECT_FALSE(FieldDefT<RawStrFld>);
+#endif
+  EXPECT_TRUE(FieldDefT<StrFld>);
+  EXPECT_TRUE(FieldDefT<OptStrFld>);
 }

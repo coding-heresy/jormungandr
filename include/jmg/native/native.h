@@ -257,6 +257,13 @@ public:
     entry = FldType(arg);
   }
 
+  template<OptionalField Fld>
+  void clear() {
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
+    entry = std::nullopt;
+  }
+
 private:
   adapted_type obj_;
 };

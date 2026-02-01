@@ -210,7 +210,7 @@ TEST(NativeObjectTests, TestSet) {
 
   jmg::set<IntFld>(obj, 20070625);
   EXPECT_EQ(jmg::get<IntFld>(obj), 20070625);
-  jmg::set<OptDblFld>(obj, nullopt);
+  jmg::clear<OptDblFld>(obj);
   {
     auto val = jmg::try_get<OptDblFld>(obj);
     EXPECT_FALSE(pred(val));
@@ -251,11 +251,16 @@ TEST(NativeObjectTests, TestSet) {
   EXPECT_EQ(jmg::get<StrFld>(obj), "blob"sv);
 
   // raw string works for optional string field
-  jmg::set<OptStrFld>(obj, "something"s);
+  jmg::set<OptStrFld>(obj, "something");
   VALIDATE_TRY_GET_OPTIONAL(OptStrFld, obj, "something"sv);
 
   // string from variable works for optional string field
-  const auto something_else = "something else"s;
+  const auto the_other_thing = "the other thing"s;
+  jmg::set<OptStrFld>(obj, the_other_thing);
+  VALIDATE_TRY_GET_OPTIONAL(OptStrFld, obj, "the other thing"sv);
+
+  // string_view from variable works for optional string field
+  const auto something_else = "something else"sv;
   jmg::set<OptStrFld>(obj, something_else);
   VALIDATE_TRY_GET_OPTIONAL(OptStrFld, obj, "something else"sv);
 

@@ -190,6 +190,10 @@ decltype(auto) try_get(const Obj& obj)
   return obj.template try_get<Fld>();
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// definitions of set()
+////////////////////////////////////////////////////////////////////////////////
+
 /**
  * version of set() that will copy
  */
@@ -234,5 +238,16 @@ void set(Obj& obj, typename Fld::type&& arg)
 
 // TODO(bd) add special case to allow array fields to be set from
 // std::array?
+
+////////////////////////////////////////////////////////////////////////////////
+// definition of clear
+////////////////////////////////////////////////////////////////////////////////
+
+template<OptionalField Fld, ObjectDefT Obj>
+void clear(Obj& obj)
+  requires(isMemberOfObject<Fld, Obj>())
+{
+  obj.template clear<Fld>();
+}
 
 } // namespace jmg
