@@ -159,11 +159,19 @@ from `absl::Time` (which provides the underlying implementation).
 
 **TODO come up with a better name for this technique**
 
-OK, the name here is a bait-and-switch because it doesn't provide
-named value parameters for functions in the way that python does (go
-define a `struct` and use designated initializers if that's what
-you're after). Instead, the idea here is to allow the definition of
-variadic function templates that can take some or all of their
+TLDR: This is used to produce variadic function templates which can be
+called with (some of) the arguments in any order and the compiler will
+figure it out for you. The traditional approach to solving the problem
+of having multiple optional parameters is to supply default values in
+the function signature declaration, which results in having to specify
+the default values of all parameters before the one needing a
+non-default parameter. I'm easily annoyed by small inconveniences...
+
+To be fair, the name here is a bait-and-switch because it doesn't
+provide named value parameters for functions in the way that python
+does (go define a `struct` and use designated initializers if that's
+what you're after). Instead, the idea here is to allow the definition
+of variadic function templates that can take some or all of their
 parameters in any order and will figure out at compile time whether or
 not the call is correct (i.e. doesn't involve mutually exclusive
 parameters, is not missing some required parameters, etc). The
@@ -172,9 +180,33 @@ distinct, with _safe types_ used to ensure this property. Under the
 hood, it's powered by a lamda, a fold expression, some metaprogramming
 and a generous helping of `if constexpr`.
 
-## Template Policy Framework
+## Template Aspect Framework
 
-**TODO**
+TLDR: the much more complicated cousin of *Named Value Parameters*
+that is intended to be used in type space.
+
+Consider the case of `std::unordered_map`, whose declaration is:
+```
+template<
+    class Key, class T,
+    class Hash = std::hash<Key>,
+    class KeyEqual = std::equal_to<Key>,
+    class Allocator = std::allocator<std::pair<const Key, T>>
+> class unordered_map;
+```
+If you want to use an allocator other than the default, you need to
+specify both the `Hash` and `KeyEqual` type parameters even when you
+want to use their defaults (likely one reason why the `pmr` namespace
+was created). This annoyed me as much as the equivalent problem for
+function parameters, so I created a (heavily over-produced) solution.
+
+In this solution, a specific "aspect" of the behavior or structure of
+a variadic class template can be associated with a tag type and a
+series of possible "policies" (whose types derive from the tag type)
+by installing a properly configured "resolver" type metafunction that
+will scan the parameter pack and instantiate a relevant policy (or
+instantiate the default policy if none are found in the parameter
+pack).
 
 # Major Frameworks and Subsystems
 
