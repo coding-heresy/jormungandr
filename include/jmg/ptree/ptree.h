@@ -127,6 +127,22 @@ public:
     }
   }
 
+  /**
+   * delegate for jmg::set()
+   */
+  template<FieldDefT FldT, typename T>
+  void set(T val) {
+    static_assert(false, "set() is not yet supported for XML");
+  }
+
+  /**
+   * delegate for jmg::clear()
+   */
+  template<OptionalField FldT>
+  void clear() {
+    static_assert(false, "clear() is not yet supported for XML");
+  }
+
 private:
   // TODO find a more efficient solution for the xpath construction
   // (preferably compile-time)

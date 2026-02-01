@@ -241,6 +241,14 @@ public:
   void set(T val) {
     return static_cast<base*>(this)->template set<FldT>(val);
   }
+
+  /**
+   * delegate for jmg::clear()
+   */
+  template<OptionalField FldT>
+  void clear() {
+    return static_cast<base*>(this)->template clear<FldT>();
+  }
 };
 
 namespace detail

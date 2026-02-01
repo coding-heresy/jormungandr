@@ -96,6 +96,22 @@ public:
     else { return std::nullopt; }
   }
 
+  /**
+   * delegate for jmg::set()
+   */
+  template<FieldDefT FldT, typename T>
+  void set(T val) {
+    static_assert(false, "set() is not yet supported for YAML");
+  }
+
+  /**
+   * delegate for jmg::clear()
+   */
+  template<OptionalField FldT>
+  void clear() {
+    static_assert(false, "clear() is not yet supported for YAML");
+  }
+
 private:
   adapted_type node_;
 };
