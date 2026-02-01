@@ -4,6 +4,7 @@ cc_library(
     visibility = ["//visibility:public"],
     hdrs = [
         "include/jmg/array_proxy.h",
+        "include/jmg/bitwise_scoped_enums.h",
         "include/jmg/cmdline.h",
         "include/jmg/conversion.h",
         "include/jmg/field.h",
