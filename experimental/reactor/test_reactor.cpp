@@ -232,13 +232,12 @@ TEST_F(ReactorTests, TestReadDataFromFile) {
   TmpFile tmpFile(test_data);
   Signaller fbr_executed_signaller;
   string file_data;
-  file_data.resize(test_data.size() + 1);
-  size_t read_sz = 0;
+  file_data.resize(test_data.size());
   reactor.execute([&](Fiber& fbr) mutable {
     const auto fd = fbr.openFile(tmpFile.name(), FileOpenFlags::kRead);
     {
       auto guard = Cleanup([&]() { fbr.close(fd); });
-      read_sz = fbr.read(fd, buffer_from(file_data));
+      fbr.read(fd, buffer_from(file_data));
     }
     fbr_executed_signaller.set_value();
   });
@@ -251,8 +250,6 @@ TEST_F(ReactorTests, TestReadDataFromFile) {
 
     {
       // validate the data read from the file
-      EXPECT_EQ(read_sz, test_data.size());
-      file_data.resize(read_sz);
       EXPECT_EQ(file_data, test_data);
     }
   }

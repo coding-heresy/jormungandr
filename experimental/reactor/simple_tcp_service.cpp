@@ -59,17 +59,10 @@ void SimpleTcpSvc::Cnxn::sendTo(BufferView msg) {
 
 std::string SimpleTcpSvc::Cnxn::rcvFrom() {
   size_t msg_sz;
-  auto sz = fbr_->read(sd_, buffer_from(msg_sz));
-  // TODO(bd) return empty message on 0 bytes to indicate
-  // connection closed?
-  JMG_ENFORCE(sz == sizeof(msg_sz),
-              "failed to read incoming message header, expected [",
-              sizeof(msg_sz), "] octets but received [", sz, "]");
+  fbr_->read(sd_, buffer_from(msg_sz));
   std::string msg;
   msg.resize(msg_sz);
-  sz = fbr_->read(sd_, buffer_from(msg));
-  JMG_ENFORCE(sz == msg_sz, "failed to read incoming message, expected [",
-              msg_sz, "] octets but received [", sz, "]");
+  fbr_->read(sd_, buffer_from(msg));
   return msg;
 }
 

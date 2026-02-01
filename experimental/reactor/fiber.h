@@ -333,10 +333,12 @@ public:
   // reading and writing data
 
   /**
-   * read data from an open file descriptor
+   * read all data from an open descriptor
    */
-  template<ReadableDescriptorT T>
-  size_t read(T fd, BufferProxy buf) {
+  template<WritableDescriptorT T>
+  void read(T fd, BufferProxy buf) {
+    // TODO(bd) throw exception if attempting to read no data?
+    if (0 == buf.size()) { return; }
     auto iov = iov_from(buf);
     // set the user data to the fiber ID so the completion event gets routed
     // back to this thread
@@ -352,16 +354,19 @@ public:
     // return from scheduler
     const auto event = getEvent("read data");
     const auto& cqe = *(event);
-    return static_cast<size_t>(cqe.res);
+    const auto sz = static_cast<size_t>(cqe.res);
+    JMG_ENFORCE(sz == buf.size(), "failed reading data, read [", sz,
+                "] bytes but expected to read [", buf.size(), "]");
   }
 
   /**
-   * write data to an open file descriptor
+   * write all data to an open descriptor
    */
   template<WritableDescriptorT T>
-  size_t write(T fd, BufferView data) {
-    if (data.empty()) { return 0; }
-    auto iov = iov_from(data);
+  void write(T fd, BufferView buf) {
+    // TODO(bd) throw exception if attempting to write no data?
+    if (buf.empty()) { return; }
+    auto iov = iov_from(buf);
     // set the user data to the fiber ID so the completion event gets routed
     // back to this thread
     uring_->submitWriteReq(fd, iov, DelaySubmission::kNoDelay,
@@ -376,7 +381,9 @@ public:
     // return from scheduler
     const auto event = getEvent("write data");
     const auto& cqe = *(event);
-    return static_cast<size_t>(cqe.res);
+    const auto sz = static_cast<size_t>(cqe.res);
+    JMG_ENFORCE(sz == buf.size(), "failed writing data, write [", sz,
+                "] bytes but expected to write [", buf.size(), "]");
   }
 
 private:
