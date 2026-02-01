@@ -503,6 +503,16 @@ template<typename T>
 std::string type_name_for() {
   // the actual type of std::string is annoying
   if constexpr (SameAsDecayedT<std::string, T>) { return "std::string"; }
+  else if constexpr (SameAsDecayedT<std::optional<std::string>, T>) {
+    return "std::optional<std::string>";
+  }
+  // the actual type of std::string_view is also annoying
+  else if constexpr (SameAsDecayedT<std::string_view, T>) {
+    return "std::string_view";
+  }
+  else if constexpr (SameAsDecayedT<std::optional<std::string_view>, T>) {
+    return "std::optional<std::string_view>";
+  }
   return demangle(typeid(T));
 }
 
