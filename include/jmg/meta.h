@@ -379,6 +379,18 @@ inline constexpr size_t entryIdx() {
 // compile time
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * tag that is used as the base class of policy tags to allow
+ * PolicyResolverT to recognize them
+ */
+struct AspectPolicyTag {};
+
+/**
+ * concept for AspectPolicyTag
+ */
+template<typename T>
+concept AspectPolicyTagT = std::derived_from<Decay<T>, AspectPolicyTag>;
+
 namespace detail
 {
 using namespace meta::placeholders;
@@ -391,6 +403,10 @@ using IsSubclassMemberOf =
 template<typename T, TypeListT Lst>
 using IsNotSubclassMemberOf = meta::not_<detail::IsSubclassMemberOf<T, Lst>>;
 
+/**
+ * type metaprogram that determines if a list of policies are all
+ * correctly associated with an aspect of the class
+ */
 template<TypeListT AllTags, TypeListT PolicyList>
 struct PolicyChecker {
   using NotSubclassPred =
@@ -401,8 +417,12 @@ struct PolicyChecker {
 template<TypeListT AllTags, TypeListT PolicyList>
 using PolicyListValidT = meta::_t<PolicyChecker<AllTags, PolicyList>>;
 
-template<typename BasePolicy,
-         typename DefaultPolicy,
+/**
+ * implementation of the policy resolver type metafunction that is
+ * declared outside of the "detail" namespace
+ */
+template<AspectPolicyTagT BasePolicy,
+         AspectPolicyTagT DefaultPolicy,
          TypeListT AllTags,
          TypeListT PolicyList>
   requires(std::is_base_of_v<BasePolicy, DefaultPolicy>
@@ -416,7 +436,11 @@ struct PolicyResolver {
 };
 } // namespace detail
 
-template<typename BasePolicy,
+/**
+ * type metafunction that computes the "policy" type to be used to
+ * specialize the object using the "aspect"
+ */
+template<AspectPolicyTagT BasePolicy,
          typename DefaultPolicy,
          TypeListT AllTags,
          TypeListT PolicyList>

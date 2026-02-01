@@ -148,13 +148,16 @@ protected:
  * specification of policies for how to iterate over the elements of a
  * container proxied as an array
  */
-struct ItrPolicyTag {};
+struct ItrPolicyTag : public AspectPolicyTag {};
 
 /**
  * policy that specifies using the raw iterator from the underlying
  * container in ArrayProxy
+ *
+ * NOTE: this should be used when the underlying container supports
+ * the standard range semantics
  */
-template<typename SrcContainerT>
+template<std::ranges::range SrcContainerT>
 struct RawItrPolicy : ItrPolicyTag {
   static auto begin(const SrcContainerT* src) { return std::begin(*src); }
   static auto end(const SrcContainerT* src) { return std::end(*src); }
@@ -199,14 +202,14 @@ struct ProxiedItrPolicy : ItrPolicyTag {
  * specification of policies for how to retrieve the size of a
  * container proxied as an array
  */
-struct SizePolicyTag {};
+struct SizeRetrievalPolicyTag : public AspectPolicyTag {};
 
 /**
  * policy that retrieves the size of the array by directly querying
  * the raw container interface
  */
 template<typename SrcContainerT>
-struct DefaultSizePolicy : SizePolicyTag {
+struct DefaultSizePolicy : SizeRetrievalPolicyTag {
   static size_t size(const SrcContainerT* src) { return src->size(); }
 };
 
@@ -224,13 +227,13 @@ struct DefaultSizePolicy : SizePolicyTag {
 template<typename ProxiedT, typename... PoliciesT>
 class ViewingArrayProxy {
   using Policies = meta::list<PoliciesT...>;
-  using AllPolicyTags = meta::list<ItrPolicyTag, SizePolicyTag>;
+  using AllPolicyTags = meta::list<ItrPolicyTag, SizeRetrievalPolicyTag>;
   using DefaultItrPolicy = RawItrPolicy<ProxiedT>;
   using ItrPolicy =
     PolicyResolverT<ItrPolicyTag, DefaultItrPolicy, AllPolicyTags, Policies>;
   using DefaultSzPolicy = DefaultSizePolicy<ProxiedT>;
   using SizePolicy =
-    PolicyResolverT<SizePolicyTag, DefaultSzPolicy, AllPolicyTags, Policies>;
+    PolicyResolverT<SizeRetrievalPolicyTag, DefaultSzPolicy, AllPolicyTags, Policies>;
 
 public:
   explicit ViewingArrayProxy(const ProxiedT& src) : src_(&src) {}

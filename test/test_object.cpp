@@ -43,7 +43,7 @@ using namespace std;
 
 // Some field names
 using TestField = FieldDef<unsigned, "field", Required>;
-using GroupStringField = FieldDef<string, "group_string_field", Required>;
+using GroupStringField = StringField<"group_string_field", Required>;
 using GroupDblField = FieldDef<double, "group_dbl_field", Required>;
 using GroupOptionalField = FieldDef<int, "group_optional_field", Optional>;
 

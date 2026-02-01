@@ -51,9 +51,9 @@ using namespace std;
 using namespace std::chrono_literals;
 
 using Hostname =
-  PosnParam<string, "hostname", "host name to look up address for">;
+  PosnStringParam<"hostname", "host name to look up address for">;
 using SvcName =
-  PosnParam<string, "service", "service name to look up port for", Optional>;
+  PosnStringParam<"service", "service name to look up port for", Optional>;
 using CmdLine = CmdLineArgs<Hostname, SvcName>;
 
 int main(const int argc, const char** argv) {

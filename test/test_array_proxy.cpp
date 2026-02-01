@@ -48,8 +48,8 @@ const IntVec raw{1, 2, 3};
 } // namespace
 
 TEST(ArrayProxyTests, TestTrivialViewProxy) {
-  // non-owning proxy for a vector of integers that can be iterated
-  // over using the native iterator
+  // non-owning (i.e. viewing) proxy for a vector of integers that can
+  // be iterated over using the native iterator
   using IntVecProxy = ViewingArrayProxy<IntVec, RawItrPolicy<IntVec>>;
   IntVecProxy proxy{raw};
   EXPECT_FALSE(proxy.empty());
@@ -75,8 +75,8 @@ TEST(ArrayProxyTests, TestAdaptingViewProxy) {
   // policy declaring that a iteration over a vector of integers will
   // be accomplished via proxy
   using ItrPolicy = ProxiedItrPolicy<IntVec, ItrProxy>;
-  // non-owning proxy for a vector of integers that can be iterated
-  // over using a proxy iterator
+  // non-owning (i.e. viewing) proxy for a vector of integers that can
+  // be iterated over using a proxy iterator
   using AdaptingProxy = ViewingArrayProxy<IntVec, ItrPolicy>;
 
   const AdaptingProxy proxy{raw};

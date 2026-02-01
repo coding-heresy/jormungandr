@@ -263,11 +263,11 @@ TEST(MetaprogrammingTests, TestEntryIdx) {
 }
 
 TEST(MetaprogrammingTests, TestPolicyResolver) {
-  struct Policy1Tag {};
+  struct Policy1Tag : public AspectPolicyTag {};
   struct DefaultPolicy1 : Policy1Tag {};
   struct OptionalPolicy1 : Policy1Tag {};
 
-  struct Policy2Tag {};
+  struct Policy2Tag : public AspectPolicyTag {};
   struct DefaultPolicy2 : Policy2Tag {};
   struct OptionalPolicy2 : Policy2Tag {};
 

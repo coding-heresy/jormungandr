@@ -67,7 +67,7 @@ namespace xml
  * field definition for the XML element 'tag', which is effectively
  * the name of the element
  */
-struct ElementTag : jmg::FieldDef<std::string, kPlaceholder, Required> {};
+struct ElementTag : jmg::StringField<kPlaceholder, Required> {};
 
 /**
  * Tag type used to define Jormungandr fields associated with
@@ -141,6 +141,15 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // iterator proxy for array of elements
 ////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * class template that supports iteration over the direct children of
+ * an XML node
+ *
+ * NOTE: it is necessary to use a proxy here because the node named
+ * <xmlattr> contains attributes of the current node and should not be
+ * returned as part of a normal child iteration
+ */
 template<typename T>
 class ElementsItrProxy
   : public AdaptingConstItrProxy<boost::property_tree::ptree::const_iterator, T> {
@@ -192,7 +201,7 @@ namespace detail
  * size of the array
  */
 template<typename SrcContainerT>
-struct XmlSizePolicy : SizePolicyTag {
+struct XmlSizePolicy : SizeRetrievalPolicyTag {
   static size_t size(const SrcContainerT* src) {
     return src->size() - src->count("<xmlattr>");
   }
