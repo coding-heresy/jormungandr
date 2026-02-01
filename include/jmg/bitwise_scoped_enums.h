@@ -41,12 +41,12 @@ namespace jmg
 #define MAKE_BINARY_OPS(op)                                              \
   template<ScopedEnumT T>                                                \
   inline constexpr T operator op(const T lhs, const T rhs) {             \
-    using Ul = underlying_type_t<T>;                                     \
+    using Ul = std::underlying_type_t<T>;                                \
     return static_cast<T>(static_cast<Ul>(lhs) op static_cast<Ul>(rhs)); \
   }                                                                      \
   template<ScopedEnumT T>                                                \
-  inline constexpr T& operator op #=(T & lhs, const T rhs) {             \
-    using Ul = underlying_type_t<T>;                                     \
+  inline constexpr T& operator op##=(T & lhs, const T rhs) {             \
+    using Ul = std::underlying_type_t<T>;                                \
     lhs = static_cast<T>(static_cast<Ul>(lhs) op static_cast<Ul>(rhs));  \
     return lhs;                                                          \
   }
@@ -54,12 +54,12 @@ namespace jmg
 #define MAKE_SHIFT_OPS(op)                                              \
   template<ScopedEnumT T>                                               \
   inline constexpr T operator op(const T lhs, const size_t rhs) {       \
-    using Ul = underlying_type_t<T>;                                    \
+    using Ul = std::underlying_type_t<T>;                               \
     return static_cast<T>(static_cast<Ul>(lhs) op rhs);                 \
   }                                                                     \
   template<ScopedEnumT T>                                               \
-  inline constexpr T& operator op #=(T & lhs, const size_t rhs) {       \
-    using Ul = underlying_type_t<T>;                                    \
+  inline constexpr T& operator op##=(T & lhs, const size_t rhs) {       \
+    using Ul = std::underlying_type_t<T>;                               \
     lhs = static_cast<T>(static_cast<Ul>(lhs) << static_cast<Ul>(rhs)); \
     return lhs;                                                         \
   }
@@ -73,7 +73,7 @@ MAKE_SHIFT_OPS(>>)
 
 template<ScopedEnumT T>
 inline constexpr T operator~(const T val) {
-  using Ul = underlying_type_t<T>;
+  using Ul = std::underlying_type_t<T>;
   return static_cast<T>(~(static_cast<Ul>(val)));
 }
 
