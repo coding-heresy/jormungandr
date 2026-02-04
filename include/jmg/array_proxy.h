@@ -305,4 +305,11 @@ struct IsOwningArrayProxy<OwningArrayProxy<Ts...>> : std::true_type {};
 template<typename T>
 concept OwningArrayProxyT = detail::IsOwningArrayProxy<T>{}();
 
+////////////////////////////////////////////////////////////////////////////////
+// ArrayProxyT concept
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept ArrayProxyT = ViewingArrayProxyT<T> || OwningArrayProxyT<T>;
+
 } // namespace jmg

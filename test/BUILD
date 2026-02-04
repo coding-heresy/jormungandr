@@ -96,6 +96,30 @@ cc_test(
     size = "small",
 )
 
+
+proto_library(
+    name = "test_proto",
+    srcs = ["test.proto"],
+)
+
+cc_proto_library(
+    name = "test_proto_cc",
+    deps = [":test_proto"],
+)
+
+cc_test(
+    name = "test_protobuf",
+    srcs = ["test_protobuf.cpp"],
+    deps = [
+        "@com_google_googletest//:gtest_main",
+        "//:jmg",
+        "@protobuf//:protobuf",
+        ":test_proto_cc",
+    ],
+    linkstatic = True,
+    size = "small",
+)
+
 cc_test(
     name = "test_object",
     srcs = ["test_object.cpp"],

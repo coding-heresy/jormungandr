@@ -36,6 +36,7 @@
 #include <span>
 #include <string_view>
 
+#include "jmg/array_proxy.h"
 #include "jmg/meta.h"
 #include "jmg/safe_types.h"
 
@@ -52,6 +53,14 @@ namespace detail
  * tag type used to indicate that a type is a field definition
  */
 struct FieldDefTag {};
+/**
+ * tag type used to indicate that a type is a string field definition
+ */
+struct StringFieldTag {};
+/**
+ * tag type used to indicate that a type is a field definition
+ */
+struct ArrayFieldTag {};
 } // namespace detail
 
 /**
@@ -60,8 +69,7 @@ struct FieldDefTag {};
  * @tparam kName string name of the field
  * @tparam IsRequired indicates if the field is required or optional
  *
- * TODO(bd) constrain T further to prevent FieldDef from being used
- * for string or array types
+ * TODO(bd) should IsRequired default to Optional?
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired>
 struct FieldDef : public detail::FieldDefTag {
@@ -74,9 +82,12 @@ struct FieldDef : public detail::FieldDefTag {
  * special handling for fields containing strings
  * @tparam kName string name of the field
  * @tparam IsRequired indicates if the field is required or optional
+ *
+ * TODO(bd) should IsRequired default to Optional?
  */
 template<StrLiteral kName, TypeFlagT IsRequired>
-struct StringField : public FieldDef<std::string, kName, IsRequired> {
+struct StringField : public FieldDef<std::string, kName, IsRequired>,
+                     detail::StringFieldTag {
   using view_type = std::string_view;
   using const_view_type = std::string_view;
 };
@@ -88,9 +99,11 @@ struct StringField : public FieldDef<std::string, kName, IsRequired> {
  * @tparam IsRequired indicates if the field is required or optional
  *
  * TODO(bd) needs more constraints on T?
+ * TODO(bd) should IsRequired default to Optional?
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired>
-struct ArrayField : public FieldDef<std::vector<T>, kName, IsRequired> {
+struct ArrayField : public FieldDef<std::vector<T>, kName, IsRequired>,
+                    detail::ArrayFieldTag {
   using view_type = std::span<T>;
   using const_view_type = std::span<const T>;
 };
@@ -122,27 +135,43 @@ concept HasFieldType = requires { typename T::type; };
 template<typename T>
 concept HasRequiredSpec = requires { typename T::required; };
 
-template<typename T>
-struct IsStringField : std::false_type {};
-
-template<StrLiteral kName, TypeFlagT IsRequired>
-struct IsStringField<StringField<kName, IsRequired>> : std::true_type {};
-
-template<typename T>
-struct IsArrayField : std::false_type {};
-
-template<typename T, StrLiteral kName, TypeFlagT IsRequired>
-struct IsArrayField<ArrayField<T, kName, IsRequired>> : std::true_type {};
-
 } // namespace detail
 
 /**
- * Concept for field definition
+ * concept for string field
+ */
+template<typename T>
+concept StringFieldT = std::derived_from<T, detail::StringFieldTag>;
+
+/**
+ * concept for array field
+ */
+template<typename T>
+concept ArrayFieldT = std::derived_from<T, detail::ArrayFieldTag>;
+
+/**
+ * concept for field definition
  */
 template<typename T>
 concept FieldDefT =
-  std::derived_from<T, detail::FieldDefTag> && detail::HasFieldName<T>
-  && detail::HasFieldType<T> && detail::HasRequiredSpec<T>;
+  std::derived_from<T, detail::FieldDefTag>
+  // all fields are required to have a name
+  && detail::HasFieldName<T>
+  // all fields are required to have an underlying type
+  && detail::HasFieldType<T>
+  // all fields are required to specify whether they are required or not
+  && detail::HasRequiredSpec<T>
+// TODO(bd) figure out how to more strictly constrain string and
+// array field definitions in a way that supports ArrayView and
+// ArrayProxy
+#if defined(JMG_TODO_USE_STRICTER_FIELD_TYPE_REQUIREMENTS)
+  // string fields must use the specialized StringField definition
+  && (!SameAsDecayedT<std::string, RemoveOptionalT<typename T::type>>
+      || StringFieldT<T>)
+  // array fields must use the specialized ArrayField definition
+  &&(!VectorT<RemoveOptionalT<typename T::type>> || ArrayFieldT<T>)
+#endif
+  ;
 
 /**
  * concept for required field, used by jmg::get
@@ -153,30 +182,12 @@ concept RequiredField =
 
 /**
  * concept for optional field, used by jmg::try_get
+ *
+ * TODO(bd) should be named OptionalFieldT
  */
 template<typename T>
 concept OptionalField =
   FieldDefT<T> && std::same_as<typename T::required, std::false_type>;
-
-/**
- * concept for string field
- */
-template<typename T>
-concept StringFieldT = detail::IsStringField<T>{}();
-
-/**
- * concept for array field
- */
-template<typename T>
-concept ArrayFieldT = detail::IsArrayField<T>{}();
-
-/**
- * concept for non-viewable field (i.e. field that has non-viewable
- * type)
- */
-template<typename T>
-concept NonViewableFieldT =
-  FieldDefT<T> && !(StringFieldT<T> || ArrayFieldT<T>);
 
 /**
  * concept for viewable field (i.e. field that has viewable type)
@@ -185,20 +196,27 @@ template<typename T>
 concept ViewableFieldT = StringFieldT<T> || ArrayFieldT<T>;
 
 /**
+ * concept for non-viewable field (i.e. field that has non-viewable
+ * type)
+ *
+ * TODO(bd) replace all instances with !ViewableFieldT ?
+ */
+template<typename T>
+concept NonViewableFieldT = FieldDefT<T> && !ViewableFieldT<T>;
+
+/**
  * concept for optional non-viewable field (i.e. optional field that
  * has non-viewable type)
  */
 template<typename T>
-concept OptionalNonViewableFieldT =
-  OptionalField<T> && !(StringFieldT<T> || ArrayFieldT<T>);
+concept OptionalNonViewableFieldT = OptionalField<T> && NonViewableFieldT<T>;
 
 /**
  * concept for optional viewable field (i.e. optional field that has
  * viewable type)
  */
 template<typename T>
-concept OptionalViewableFieldT =
-  OptionalField<T> && (StringFieldT<T> || ArrayFieldT<T>);
+concept OptionalViewableFieldT = OptionalField<T> && ViewableFieldT<T>;
 
 /**
  * concept for optional string field
@@ -237,38 +255,47 @@ using OptionalizedFldType =
 
 using Optionalize = meta::quote_trait<detail::OptionalizedFldType>;
 
-////////////////////////////////////////////////////////////////////////////////
-// type metafunction for calculating the correct argument type to use
-// when setting a value for a field
-////////////////////////////////////////////////////////////////////////////////
-
 namespace detail
 {
 template<typename T>
-concept RequiredNonClass = !ClassT<typename T::type> && RequiredField<T>;
+concept RequiredNonViewable = RequiredField<T> && NonViewableFieldT<T>;
 
 template<typename T>
-concept RequiredClass = ClassT<typename T::type> && RequiredField<T>
-                        && !StringFieldT<T> && !ArrayFieldT<T>;
+concept RequiredViewable = RequiredField<T> && ViewableFieldT<T>;
 
 template<typename T>
-concept RequiredViewable =
-  RequiredField<T> && (StringFieldT<T> || ArrayFieldT<T>);
+concept RequiredNonViewableNonClass =
+  RequiredField<T> && NonViewableFieldT<T> && !ClassT<typename T::type>;
 
 template<typename T>
-concept OptionalNonViewable =
-  OptionalField<T> && !StringFieldT<T> && !ArrayFieldT<T>;
+concept RequiredNonViewableClass =
+  RequiredField<T> && NonViewableFieldT<T> && ClassT<typename T::type>;
 
 template<typename T>
-concept OptionalViewable =
-  OptionalField<T> && (StringFieldT<T> || ArrayFieldT<T>);
+concept OptionalNonViewable = OptionalField<T> && NonViewableFieldT<T>;
+
+template<typename T>
+concept OptionalNonViewableClass =
+  OptionalField<T> && !ViewableFieldT<T> && ClassT<typename T::type>;
+
+template<typename T>
+concept OptionalNonViewableNonClass =
+  OptionalField<T> && !ViewableFieldT<T> && !ClassT<typename T::type>;
+
+template<typename T>
+concept OptionalViewable = OptionalField<T> && ViewableFieldT<T>;
+
+////////////////////////////////////////////////////////////////////////////////
+// type metafunction for computing the correct argument type to use
+// when setting a value for a field
+////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
 struct ArgTypeFor {
-  using type = const T::type;
+  using type = T::type;
 };
 
-template<RequiredClass T>
+template<RequiredNonViewableClass T>
 struct ArgTypeFor<T> {
   using type = const T::type&;
 };
@@ -278,12 +305,22 @@ struct ArgTypeFor<T> {
   using type = const T::const_view_type;
 };
 
-template<OptionalField T>
+template<OptionalNonViewableClass T>
 struct ArgTypeFor<T> {
-  using type = const std::optional<typename T::type>&;
+  using type = const typename T::type&;
 };
 
-template<typename T>
+template<OptionalViewableFieldT T>
+struct ArgTypeFor<T> {
+  using type = typename T::const_view_type;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// type metafunction for computing the correct type to use when
+// returning the value of a field
+////////////////////////////////////////////////////////////////////////////////
+
+template<FieldDefT T>
 struct ReturnTypeForField {
   using type = ReturnTypeForAnyT<typename T::type>;
 };
@@ -293,8 +330,21 @@ struct ReturnTypeForField<T> {
   using type = typename T::const_view_type;
 };
 
-template<OptionalNonViewable T>
-struct ReturnTypeForField<T> : public ArgTypeFor<T> {};
+template<OptionalNonViewableClass T>
+struct ReturnTypeForField<T> {
+  // TODO(bd) systematically return raw pointer instead of
+  // std::optional for optional class fields?
+#if defined(JMG_TODO_USE_PTR_FOR_OPT_CLASS_RETURN)
+  using type = const typename T::type*;
+#else
+  using type = const std::optional<typename T::type>&;
+#endif
+};
+
+template<OptionalNonViewableNonClass T>
+struct ReturnTypeForField<T> {
+  using type = std::optional<typename T::type>;
+};
 
 template<OptionalViewable T>
 struct ReturnTypeForField<T> {
