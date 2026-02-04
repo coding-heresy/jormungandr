@@ -24,6 +24,7 @@ cc_library(
         "include/jmg/util.h",
         # jmg language object types below here
         "include/jmg/cbe/cbe.h",
+        "include/jmg/protobuf/protobuf.h",
         "include/jmg/ptree/ptree.h",
         "include/jmg/quickfix/quickfix.h",
         "include/jmg/native/native.h",
@@ -49,6 +50,7 @@ cc_library(
         "@ericniebler_meta//:meta",
         "@doom_strong_type//:strong_type",
         "@liburing",
+        "@protobuf//:protobuf",
         "@yaml-cpp//:yaml-cpp",
     ],
 )

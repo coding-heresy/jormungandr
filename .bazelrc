@@ -25,6 +25,10 @@ build --cxxopt='-Werror'
 #build --cxxopt='-Wpedantic'
 #build --cxxopt='-pedantic-errors'
 
+build --cxxopt='-Wno-deprecated-declarations'
+build --cxxopt='-Wno-unused-parameter'
+build --cxxopt='-Wno-missing-field-initializers'
+
 # TODO(bd) use hermetic toolchain
 
 # gcc toolchain
