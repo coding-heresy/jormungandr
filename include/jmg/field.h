@@ -177,16 +177,14 @@ concept FieldDefT =
  * concept for required field, used by jmg::get
  */
 template<typename T>
-concept RequiredField =
+concept RequiredFieldT =
   FieldDefT<T> && std::same_as<typename T::required, std::true_type>;
 
 /**
  * concept for optional field, used by jmg::try_get
- *
- * TODO(bd) should be named OptionalFieldT
  */
 template<typename T>
-concept OptionalField =
+concept OptionalFieldT =
   FieldDefT<T> && std::same_as<typename T::required, std::false_type>;
 
 /**
@@ -209,20 +207,20 @@ concept NonViewableFieldT = FieldDefT<T> && !ViewableFieldT<T>;
  * has non-viewable type)
  */
 template<typename T>
-concept OptionalNonViewableFieldT = OptionalField<T> && NonViewableFieldT<T>;
+concept OptionalNonViewableFieldT = OptionalFieldT<T> && NonViewableFieldT<T>;
 
 /**
  * concept for optional viewable field (i.e. optional field that has
  * viewable type)
  */
 template<typename T>
-concept OptionalViewableFieldT = OptionalField<T> && ViewableFieldT<T>;
+concept OptionalViewableFieldT = OptionalFieldT<T> && ViewableFieldT<T>;
 
 /**
  * concept for optional string field
  */
 template<typename T>
-concept OptionalStringFieldT = OptionalField<T> && StringFieldT<T>;
+concept OptionalStringFieldT = OptionalFieldT<T> && StringFieldT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // self-documenting aliases to be used when indicating whether a field
@@ -258,32 +256,32 @@ using Optionalize = meta::quote_trait<detail::OptionalizedFldType>;
 namespace detail
 {
 template<typename T>
-concept RequiredNonViewable = RequiredField<T> && NonViewableFieldT<T>;
+concept RequiredNonViewable = RequiredFieldT<T> && NonViewableFieldT<T>;
 
 template<typename T>
-concept RequiredViewable = RequiredField<T> && ViewableFieldT<T>;
+concept RequiredViewable = RequiredFieldT<T> && ViewableFieldT<T>;
 
 template<typename T>
 concept RequiredNonViewableNonClass =
-  RequiredField<T> && NonViewableFieldT<T> && !ClassT<typename T::type>;
+  RequiredFieldT<T> && NonViewableFieldT<T> && !ClassT<typename T::type>;
 
 template<typename T>
 concept RequiredNonViewableClass =
-  RequiredField<T> && NonViewableFieldT<T> && ClassT<typename T::type>;
+  RequiredFieldT<T> && NonViewableFieldT<T> && ClassT<typename T::type>;
 
 template<typename T>
-concept OptionalNonViewable = OptionalField<T> && NonViewableFieldT<T>;
+concept OptionalNonViewable = OptionalFieldT<T> && NonViewableFieldT<T>;
 
 template<typename T>
 concept OptionalNonViewableClass =
-  OptionalField<T> && !ViewableFieldT<T> && ClassT<typename T::type>;
+  OptionalFieldT<T> && !ViewableFieldT<T> && ClassT<typename T::type>;
 
 template<typename T>
 concept OptionalNonViewableNonClass =
-  OptionalField<T> && !ViewableFieldT<T> && !ClassT<typename T::type>;
+  OptionalFieldT<T> && !ViewableFieldT<T> && !ClassT<typename T::type>;
 
 template<typename T>
-concept OptionalViewable = OptionalField<T> && ViewableFieldT<T>;
+concept OptionalViewable = OptionalFieldT<T> && ViewableFieldT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // type metafunction for computing the correct argument type to use

@@ -173,7 +173,7 @@ protected:
 TEST_F(ProtoTests, TestConcepts) {
   EXPECT_TRUE(jmg::protobuf::detail::HasProtoFieldId<Int32>);
   EXPECT_TRUE(jmg::protobuf::ProtoFieldT<Str>);
-  EXPECT_TRUE(jmg::OptionalField<OptBool>);
+  EXPECT_TRUE(jmg::OptionalFieldT<OptBool>);
 }
 
 TEST_F(ProtoTests, TestGet) {

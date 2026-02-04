@@ -69,18 +69,18 @@ TEST(JmgExampleTests, TestGroups) {
 
 TEST(JmgExampleTests, TestFields) {
   EXPECT_TRUE(FieldDefT<Number>);
-  EXPECT_TRUE(RequiredField<Number>);
-  EXPECT_TRUE(RequiredField<Street>);
-  EXPECT_TRUE(OptionalField<Apartment>);
-  EXPECT_TRUE(RequiredField<City>);
-  EXPECT_TRUE(RequiredField<State>);
-  EXPECT_TRUE(RequiredField<Zip>);
-  EXPECT_TRUE(RequiredField<FirstName>);
-  EXPECT_TRUE(RequiredField<LastName>);
-  EXPECT_TRUE(OptionalField<MiddleName>);
-  EXPECT_TRUE(RequiredField<PersonAge>);
-  EXPECT_TRUE(RequiredField<Ints>);
-  EXPECT_TRUE(RequiredField<Reals>);
+  EXPECT_TRUE(RequiredFieldT<Number>);
+  EXPECT_TRUE(RequiredFieldT<Street>);
+  EXPECT_TRUE(OptionalFieldT<Apartment>);
+  EXPECT_TRUE(RequiredFieldT<City>);
+  EXPECT_TRUE(RequiredFieldT<State>);
+  EXPECT_TRUE(RequiredFieldT<Zip>);
+  EXPECT_TRUE(RequiredFieldT<FirstName>);
+  EXPECT_TRUE(RequiredFieldT<LastName>);
+  EXPECT_TRUE(OptionalFieldT<MiddleName>);
+  EXPECT_TRUE(RequiredFieldT<PersonAge>);
+  EXPECT_TRUE(RequiredFieldT<Ints>);
+  EXPECT_TRUE(RequiredFieldT<Reals>);
 #if defined(CBE_ENCODING_TEST)
   // TODO(bd) fix these concepts to work correctly
   // EXPECT_TRUE(StringFieldT<Street>);

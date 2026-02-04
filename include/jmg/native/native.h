@@ -153,7 +153,7 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField Fld>
+  template<RequiredFieldT Fld>
   decltype(auto) get() const {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     using Rslt = ReturnTypeForFieldT<Fld>;
@@ -167,7 +167,7 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField Fld>
+  template<OptionalFieldT Fld>
   decltype(auto) try_get() const {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     if constexpr (ViewableFieldT<Fld>) {
@@ -257,7 +257,7 @@ public:
     entry = FldType(arg);
   }
 
-  template<OptionalField Fld>
+  template<OptionalFieldT Fld>
   void clear() {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     auto& entry = std::get<kIdx>(obj_);

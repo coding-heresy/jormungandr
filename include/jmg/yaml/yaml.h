@@ -56,15 +56,15 @@ public:
    * NOTE: due to the way that yaml-cpp is implemented, returning
    * references is very troublesome
    */
-  template<RequiredField FldT>
-  typename FldT::type get() const {
-    using RsltT = typename FldT::type;
-    const char* name = FldT::name;
-    if constexpr (SafeT<typename FldT::type>) {
+  template<RequiredFieldT Fld>
+  typename Fld::type get() const {
+    using RsltT = typename Fld::type;
+    const char* name = Fld::name;
+    if constexpr (SafeT<typename Fld::type>) {
       using UnsafeT = UnsafeTypeFromT<RsltT>;
       return RsltT(node_[name].as<UnsafeT>());
     }
-    else if constexpr (OwningArrayProxyT<typename FldT::type>) {
+    else if constexpr (OwningArrayProxyT<typename Fld::type>) {
       return RsltT(YAML::Node(node_[name]));
     }
     else { return node_[name].as<RsltT>(); }
@@ -73,22 +73,22 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField FldT>
-  std::optional<typename FldT::type> try_get() const {
-    const char* name = FldT::name;
+  template<OptionalFieldT Fld>
+  std::optional<typename Fld::type> try_get() const {
+    const char* name = Fld::name;
     if (const auto entry = node_[name]; entry) {
-      if constexpr (SafeT<typename FldT::type>) {
-        using SafeT = typename FldT::type;
+      if constexpr (SafeT<typename Fld::type>) {
+        using SafeT = typename Fld::type;
         using RsltT = std::optional<SafeT>;
         using UnsafeT = UnsafeTypeFromT<SafeT>;
         return RsltT(entry.as<UnsafeT>());
       }
-      else if constexpr (OwningArrayProxyT<typename FldT::type>) {
-        using RsltT = std::optional<typename FldT::type>;
+      else if constexpr (OwningArrayProxyT<typename Fld::type>) {
+        using RsltT = std::optional<typename Fld::type>;
         return RsltT(YAML::Node(entry));
       }
       else {
-        using EffT = typename FldT::type;
+        using EffT = typename Fld::type;
         using RsltT = std::optional<EffT>;
         return RsltT(entry.as<EffT>());
       }
@@ -99,7 +99,7 @@ public:
   /**
    * delegate for jmg::set()
    */
-  template<FieldDefT FldT, typename T>
+  template<FieldDefT Fld, typename T>
   void set(T val) {
     static_assert(false, "set() is not yet supported for YAML");
   }
@@ -107,7 +107,7 @@ public:
   /**
    * delegate for jmg::clear()
    */
-  template<OptionalField FldT>
+  template<OptionalFieldT Fld>
   void clear() {
     static_assert(false, "clear() is not yet supported for YAML");
   }

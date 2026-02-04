@@ -207,7 +207,7 @@ public:
                           "] does not match size of matching flags span [",
                           matches.size(), "]");
         constexpr auto param_idx = meta::find_index<ParamList, T>{}();
-        const auto is_required = RequiredField<T>;
+        const auto is_required = RequiredFieldT<T>;
         if constexpr (NamedParamT<T>) {
           ////////////////////
           // handling of named parameters
@@ -317,7 +317,7 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField Param>
+  template<RequiredFieldT Param>
   typename Param::type get() const {
     constexpr auto idx = meta::find_index<ParamList, Param>{}();
     return std::get<idx>(values_);
@@ -326,7 +326,7 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField Param>
+  template<OptionalFieldT Param>
   typename std::optional<typename Param::type> try_get() const {
     // NOTE: non-required fields are stored in values_ already wrapped
     // in std::optional so the implementation of try_get() is the same
@@ -381,7 +381,7 @@ private:
   template<FieldDefT Fld>
   static void nameOf(std::ostream& strm, const bool named) {
     using namespace std::string_literals;
-    constexpr bool is_opt = OptionalField<Fld>;
+    constexpr bool is_opt = OptionalFieldT<Fld>;
     if (named) {
       if constexpr (NamedParamT<Fld>) {
         strm << " ";
@@ -433,7 +433,7 @@ private:
       if (ScanState::Opts != state) { return !kValidateNamed; }
     }
     else if constexpr (PosnParamT<T>) {
-      if constexpr (RequiredField<T>) {
+      if constexpr (RequiredFieldT<T>) {
         if (ScanState::Opts == state) {
           // first required positional parameter
           state = ScanState::ReqdPosns;
