@@ -90,7 +90,7 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField Fld>
+  template<RequiredFieldT Fld>
   auto get() const {
     if constexpr (std::same_as<ElementTag, Fld>) { return key_of(*elem_); }
     else if constexpr (std::derived_from<Fld, ElementAttr>) {
@@ -105,7 +105,7 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField Fld>
+  template<OptionalFieldT Fld>
   std::optional<typename Fld::type> try_get() const {
     if constexpr (std::derived_from<Fld, ElementAttr>) {
       auto rslt = value_of(*elem_).get_optional<typename Fld::type>(
@@ -138,7 +138,7 @@ public:
   /**
    * delegate for jmg::clear()
    */
-  template<OptionalField FldT>
+  template<OptionalFieldT FldT>
   void clear() {
     static_assert(false, "clear() is not yet supported for XML");
   }

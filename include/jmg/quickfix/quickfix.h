@@ -63,7 +63,7 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField Fld>
+  template<RequiredFieldT Fld>
   typename Fld::type get() const {
     return getImpl<Fld>();
   }
@@ -96,7 +96,7 @@ template<typename T>
 concept FixTagT = requires(T) { std::same_as<decltype(T::kFixTag), uint32_t>; };
 
 template<typename T>
-concept RequiredFixFieldT = RequiredField<T> && FixTagT<T>;
+concept RequiredFixFieldT = RequiredFieldT<T> && FixTagT<T>;
 
 template<typename T>
 concept OptionalFixFieldT = OptionalField<T> && FixTagT<T>;

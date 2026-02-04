@@ -221,7 +221,7 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField FldT>
+  template<RequiredFieldT FldT>
   decltype(auto) get() const {
     return static_cast<const base*>(this)->template get<FldT>();
   }
@@ -229,7 +229,7 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField FldT>
+  template<OptionalFieldT FldT>
   decltype(auto) try_get() const {
     return static_cast<const base*>(this)->template try_get<FldT>();
   }
@@ -245,7 +245,7 @@ public:
   /**
    * delegate for jmg::clear()
    */
-  template<OptionalField FldT>
+  template<OptionalFieldT FldT>
   void clear() {
     return static_cast<base*>(this)->template clear<FldT>();
   }
@@ -501,7 +501,7 @@ class Deserializer {
     using Fields = typename Obj::Fields;
     using Fld = meta::at<Fields, meta::size_t<kFldIdx>>;
     constexpr auto id = static_cast<size_t>(Fld::kFldId);
-    constexpr bool is_required = RequiredField<Fld>;
+    constexpr bool is_required = RequiredFieldT<Fld>;
     required[id] = is_required;
     if constexpr (kFldIdx + 1 < Fields::size()) {
       setRequiredFieldFlags<kFldIdx + 1>(required);

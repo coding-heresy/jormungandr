@@ -158,7 +158,7 @@ inline constexpr bool isMemberOfObject() {
 /**
  * get the value associated with a required field
  */
-template<RequiredField Fld, ObjectDefT Obj>
+template<RequiredFieldT Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
 {
@@ -169,7 +169,7 @@ decltype(auto) get(const Obj& obj)
  * get the value associated with an optional field, returning a
  * default value if no value is present in the object
  */
-template<OptionalField Fld, ObjectDefT Obj>
+template<OptionalFieldT Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForT<Fld>> dflt)
   requires(isMemberOfObject<Fld, Obj>())
 {
@@ -183,7 +183,7 @@ decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForT<Fld>> dflt)
  * get the value associated with an optional field, return
  * std::nullopt if no value is present in the object
  */
-template<OptionalField Fld, ObjectDefT Obj>
+template<OptionalFieldT Fld, ObjectDefT Obj>
 decltype(auto) try_get(const Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
 {
@@ -243,7 +243,7 @@ void set(Obj& obj, typename Fld::type&& arg)
 // definition of clear
 ////////////////////////////////////////////////////////////////////////////////
 
-template<OptionalField Fld, ObjectDefT Obj>
+template<OptionalFieldT Fld, ObjectDefT Obj>
 void clear(Obj& obj)
   requires(isMemberOfObject<Fld, Obj>())
 {

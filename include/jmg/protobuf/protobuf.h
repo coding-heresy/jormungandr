@@ -235,7 +235,7 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredField Fld>
+  template<RequiredFieldT Fld>
   ReturnTypeForFieldT<Fld> get() const {
     using Type = typename Fld::type;
     static constexpr auto field_name = std::string_view(Fld::name);
@@ -247,7 +247,7 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField Fld>
+  template<OptionalFieldT Fld>
   ReturnTypeForFieldT<Fld> try_get() const {
     using Type = typename Fld::type;
     using Rslt = ReturnTypeForFieldT<Fld>;
