@@ -189,10 +189,10 @@ template<OptionalFieldT Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForT<Fld>> dflt)
   requires(isMemberOfObject<Fld, Obj>())
 {
-  using ReturnT = RemoveOptionalT<ReturnTypeForFieldT<Fld>>;
+  using Rslt = RemoveOptionalT<ReturnTypeForFieldT<Fld>>;
   auto opt_val = obj.template try_get<Fld>();
-  if (opt_val) { return ReturnT(*opt_val); }
-  return ReturnT(dflt);
+  if (opt_val) { return Rslt(*opt_val); }
+  return Rslt(dflt);
 }
 
 /**
