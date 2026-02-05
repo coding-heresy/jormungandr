@@ -52,17 +52,17 @@ namespace vws = std::ranges::views;
 // describes a legal definition of a set of Jormungandr/JMG objects
 ////////////////////////////////////////////////////////////////////////////////
 
-using Name = FieldDef<string, "name", Required>;
-using Type = FieldDef<string, "type", Required>;
-using SubType = FieldDef<string, "subtype", Optional>;
-using Concept = FieldDef<string, "concept", Optional>;
+using Name = StringField<"name", Required>;
+using Type = StringField<"type", Required>;
+using SubType = StringField<"subtype", Optional>;
+using Concept = StringField<"concept", Optional>;
 using CbeId = FieldDef<uint32_t, "cbe_id", Optional>;
 using RequiredFlag = FieldDef<bool, "required", Optional>;
 
 // enumeration
 // TODO(bd) should EnumValue be optional?
 using EnumValue = FieldDef<int64_t, "value", Required>;
-using EnumUlType = FieldDef<string, "underlying_type", Optional>;
+using EnumUlType = StringField<"underlying_type", Optional>;
 using Enumeration = yaml::Object<Name, EnumValue>;
 using EnumValues = FieldDef<yaml::Array<Enumeration>, "values", Optional>;
 
@@ -79,7 +79,7 @@ using ObjGrpFields = FieldDef<yaml::Array<ObjGrpField>, "fields", Required>;
 using ObjGrp = yaml::Object<Name, ObjGrpFields>;
 
 // top-level fields
-using Package = FieldDef<string, "package", Required>;
+using Package = StringField<"package", Required>;
 using Types = FieldDef<yaml::Array<TypeDef>, "types", Optional>;
 using Groups = FieldDef<yaml::Array<ObjGrp>, "groups", Optional>;
 using Objects = FieldDef<yaml::Array<ObjGrp>, "objects", Required>;
