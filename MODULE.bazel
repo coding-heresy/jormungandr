@@ -105,6 +105,26 @@ archive_override(
 )
 
 ########################################
+# more concepts for c++ standard library types
+########################################
+
+bazel_dep(
+    name = "more_concepts",
+    version = "0.0.0",
+)
+
+archive_override(
+    module_name = "more_concepts",
+    integrity = "sha256-Opzeu3mNTbwuR22F9O7s4CeVgEx0jrEyR4Ff8V6/6TM=",
+    strip_prefix = "more_concepts-ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb",
+    urls = ["https://github.com/MiSo1289/more_concepts/archive/ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb.tar.gz"],
+    patches = [
+        "//patches:more_concepts.patch",
+    ],
+    patch_strip = 1,
+)
+
+########################################
 # quickfix
 ########################################
 

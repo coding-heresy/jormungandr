@@ -50,6 +50,7 @@ cc_library(
         "@ericniebler_meta//:meta",
         "@doom_strong_type//:strong_type",
         "@liburing",
+        "@more_concepts",
         "@protobuf//:protobuf",
         "@yaml-cpp//:yaml-cpp",
     ],
