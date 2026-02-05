@@ -176,8 +176,8 @@ template<detail::NonSpecializedTypeT T,
          StrLiteral kName,
          TypeFlagT IsRequired,
          int kId>
-struct ProtoField : public jmg::FieldDef<T, kName, IsRequired>,
-                    detail::ProtoFieldTag {
+struct FieldDef : public jmg::FieldDef<T, kName, IsRequired>,
+                  detail::ProtoFieldTag {
   static constexpr auto id = kId;
   static_assert(kId > 0, "protobuf field identifier must be non-negative");
 };
