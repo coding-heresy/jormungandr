@@ -108,6 +108,9 @@ constexpr auto unwrap(const T& wrapped) {
 // containers
 ////////////////////////////////////////////////////////////////////////////////
 
+// TODO(bd) investigate claims that some boost unordered containers
+// are faster than abseil
+
 template<typename... Ts>
 using Dict = absl::flat_hash_map<Ts...>;
 
