@@ -151,6 +151,30 @@ bazel_dep(
     version = "33.4",
 )
 
+bazel_dep(
+    name = "toolchains_protoc",
+    version = "0.6.1",
+)
+
+protoc = use_extension(
+    "@toolchains_protoc//protoc:extensions.bzl",
+    "protoc",
+)
+
+protoc.toolchain(
+    google_protobuf = "com_google_protobuf",
+    # NOTE: this version is specific to protobuf 33.4
+    version = "v29.4",
+)
+
+use_repo(
+    protoc,
+    "com_google_protobuf",
+    "toolchains_protoc_hub",
+)
+
+register_toolchains("@toolchains_protoc_hub//:all")
+
 ########################################
 # strong type aliases from Doom
 ########################################

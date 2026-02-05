@@ -25,9 +25,15 @@ build --cxxopt='-Werror'
 #build --cxxopt='-Wpedantic'
 #build --cxxopt='-pedantic-errors'
 
+# TODO(bd) the following warning suppressions are required to get
+# protobuf to build correctly
 build --cxxopt='-Wno-deprecated-declarations'
 build --cxxopt='-Wno-unused-parameter'
 build --cxxopt='-Wno-missing-field-initializers'
+
+# use hermetic binary toolchain for protoc instead of building it from
+# source out of the protobuf module
+common --incompatible_enable_proto_toolchain_resolution
 
 # TODO(bd) use hermetic toolchain
 
