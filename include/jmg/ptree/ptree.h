@@ -254,4 +254,8 @@ using ElementsRequired = std::true_type;
   struct field_name : jmg::FieldDef<field_type, str_name, is_required##_type>, \
                       ptree::xml::ElementAttr {}
 
+#define JMG_XML_STR_FIELD_DEF(field_name, str_name, is_required)      \
+  struct field_name : jmg::StringField<str_name, is_required##_type>, \
+                      ptree::xml::ElementAttr {}
+
 // TODO add a separate macro for defining a field that wraps an array?
