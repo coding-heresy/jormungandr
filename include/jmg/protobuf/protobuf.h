@@ -172,8 +172,10 @@ concept NonSpecializedTypeT =
  * @tparam IsRequired indicates if the field is required or optional
  * @tparam kId Protobuf field ID
  */
-// TODO(bd) support sub-objects in addition to scalar fields
-template<ScalarTypeT T, StrLiteral kName, TypeFlagT IsRequired, int kId>
+template<detail::NonSpecializedTypeT T,
+         StrLiteral kName,
+         TypeFlagT IsRequired,
+         int kId>
 struct ProtoField : public jmg::FieldDef<T, kName, IsRequired>,
                     detail::ProtoFieldTag {
   static constexpr auto id = kId;
@@ -306,11 +308,7 @@ private:
   }
 
   template<FieldDefT Fld>
-#if 0
-  ReturnTypeForFieldT<Fld> getByType(const FieldDescriptor& field_des) const {
-#else
   auto getByType(const FieldDescriptor& field_des) const {
-#endif
     using Type = typename Fld::type;
 #if !defined(NDEBUG)
     enforcePresence(field_des, Fld::name);
