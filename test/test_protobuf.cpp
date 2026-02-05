@@ -41,8 +41,23 @@ using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
 
+////////////////////
+// aliases for protobuf types
+
+using InnerMsg = jmg::test::InnerMsg;
 using TestMsg = jmg::test::TestMsg;
 using TestOptMsg = jmg::test::TestOptMsg;
+
+////////////////////
+// fields for InnerMsg
+
+using InnerInt32 = protobuf::ProtoField<int32_t, "inner_int_32", Required, 1>;
+using OptInnerStr = protobuf::StringField<"opt_inner_str", Optional, 2>;
+
+using InnerMsgObj = protobuf::Object<InnerMsg, InnerInt32, OptInnerStr>;
+
+////////////////////
+// fields for TestMsg
 
 using Boolean = protobuf::ProtoField<bool, "boolean", Required, 1>;
 
@@ -144,6 +159,9 @@ protected:
     msg_.set_bytes_str("bar");
 
     msg_.add_ints(2011);
+
+    auto& inner_msg = *(msg_.mutable_inner_msg());
+    inner_msg.set_inner_int_32(1989);
 
     // initialize all_full_
     all_full_.set_opt_bool(false);
