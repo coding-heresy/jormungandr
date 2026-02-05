@@ -119,10 +119,26 @@ using ExpandedFields =
 // declaration of an object
 ////////////////////////////////////////////////////////////////////////////////
 
+namespace detail
+{
+
+/**
+ * tag type used to indicate that a type is an object definition
+ */
+struct ObjectTag {};
+
+} // namespace detail
+
 template<FieldOrGroupT... Flds>
-struct ObjectDef {
+struct ObjectDef : public detail::ObjectTag {
   using Fields = ExpandedFields<meta::list<Flds...>>;
 };
+
+/**
+ * concept for a JMG object
+ */
+template<typename T>
+concept ObjectT = std::derived_from<Decay<T>, detail::ObjectTag>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains an object to be valid
