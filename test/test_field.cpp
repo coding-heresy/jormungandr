@@ -35,6 +35,7 @@
 #include <string>
 
 #include "jmg/field.h"
+#include "jmg/types.h"
 
 using namespace jmg;
 using namespace std;
@@ -51,12 +52,19 @@ using OptStrFld = StringField<"opt_str", Optional>;
 using ArrayFld = ArrayField<double, "array_dbl", Required>;
 using OptArrayFld = ArrayField<uint64_t, "array_dbl", Optional>;
 
+// class fields
+using TimePointFld = FieldDef<TimePoint, "tp", Required>;
+
 TEST(FieldTests, TestArgTypeForT) {
   using ArgTypeForIntFld = ArgTypeForT<IntFld>;
   EXPECT_TRUE((same_as<ArgTypeForIntFld, int>));
 
   using ArgTypeForOptFld = ArgTypeForT<OptFld>;
   EXPECT_TRUE((same_as<ArgTypeForOptFld, float>));
+
+  // TODO(bd) also support non-const ref return type?
+  using ArgTypeForTpFld = ArgTypeForT<TimePointFld>;
+  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTpFld>));
 }
 
 TEST(FieldTests, TestReturnTypeForFieldT) {
@@ -65,6 +73,10 @@ TEST(FieldTests, TestReturnTypeForFieldT) {
 
   using ReturnTypeForOptFld = ReturnTypeForFieldT<OptFld>;
   EXPECT_TRUE((same_as<optional<float>, ReturnTypeForOptFld>));
+
+  // TODO(bd) should be 'const TimePoint&' for the argument type?
+  using ReturnTypeForTpFld = ReturnTypeForFieldT<TimePointFld>;
+  EXPECT_TRUE((same_as<TimePoint&, ReturnTypeForTpFld>));
 }
 
 TEST(FieldTests, TestStringFieldsWorkCorrectly) {
