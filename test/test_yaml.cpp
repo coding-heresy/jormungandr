@@ -59,6 +59,7 @@ using ComplexArray = FieldDef<ComplexArrayProxy, "complex", Required>;
 // OptComplexArray is an optional array of non-primitive elements
 using OptComplexArray = FieldDef<ComplexArrayProxy, "opt_complex", Optional>;
 
+// TODO(bd) correctly support StringField
 using GroupStringField = FieldDef<string, "group_string_field", Required>;
 using GroupDblField = FieldDef<double, "group_dbl_field", Required>;
 using GroupOptionalField = FieldDef<int, "group_optional_field", Optional>;
