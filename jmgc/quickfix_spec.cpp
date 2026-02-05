@@ -83,22 +83,22 @@ constexpr string_view kTrailerDef = "MsgTrailer";
 ////////////////////////////////////////////////////////////////////////////////
 
 // top level fields
-JMG_XML_FIELD_DEF(ProtocolType, "type", string, true);
-JMG_XML_FIELD_DEF(MajorVersion, "major", string, true);
-JMG_XML_FIELD_DEF(MinorVersion, "minor", string, true);
-JMG_XML_FIELD_DEF(SvcPackVersion, "servicepack", string, true);
+JMG_XML_STR_FIELD_DEF(ProtocolType, "type", true);
+JMG_XML_STR_FIELD_DEF(MajorVersion, "major", true);
+JMG_XML_STR_FIELD_DEF(MinorVersion, "minor", true);
+JMG_XML_STR_FIELD_DEF(SvcPackVersion, "servicepack", true);
 // fields for message definitions
-JMG_XML_FIELD_DEF(FixMsgName, "name", string, true);
-JMG_XML_FIELD_DEF(FixMsgType, "msgtype", string, true);
-JMG_XML_FIELD_DEF(FixMsgCategory, "msgcat", string, true);
-JMG_XML_FIELD_DEF(RequiredFlag, "required", string, true);
+JMG_XML_STR_FIELD_DEF(FixMsgName, "name", true);
+JMG_XML_STR_FIELD_DEF(FixMsgType, "msgtype", true);
+JMG_XML_STR_FIELD_DEF(FixMsgCategory, "msgcat", true);
+JMG_XML_STR_FIELD_DEF(RequiredFlag, "required", true);
 // fields for FIX field definitions
-JMG_XML_FIELD_DEF(FixFieldName, "name", string, true);
-JMG_XML_FIELD_DEF(FixFieldTag, "number", string, true);
-JMG_XML_FIELD_DEF(FixFieldType, "type", string, true);
+JMG_XML_STR_FIELD_DEF(FixFieldName, "name", true);
+JMG_XML_STR_FIELD_DEF(FixFieldTag, "number", true);
+JMG_XML_STR_FIELD_DEF(FixFieldType, "type", true);
 // fields for FIX enum value  declarations
-JMG_XML_FIELD_DEF(EnumValue, "enum", string, true);
-JMG_XML_FIELD_DEF(EnumDescription, "description", string, true);
+JMG_XML_STR_FIELD_DEF(EnumValue, "enum", true);
+JMG_XML_STR_FIELD_DEF(EnumDescription, "description", true);
 
 ////////////////////////////////////////////////////////////////////////////////
 // objects associated with FIX message definitions
