@@ -141,13 +141,28 @@ using ProtoFieldId = SafeType<int, SafeIdType>;
 JMG_NEW_SAFE_TYPE(ProtoFieldId, int, SafeIdType);
 #endif
 
+namespace detail
+{
 /**
  * tag type used to indicate that a type is a protobuf field
  * definition
  */
-namespace detail
-{
 struct ProtoFieldTag {};
+
+/**
+ * tag type used to indicate that a JMG object wraps a protobuf
+ * message
+ */
+struct ProtobufObjectTag {};
+
+/**
+ * concept for a supported underlying field type that is not either a
+ * string or an array
+ */
+template<typename T>
+concept NonSpecializedTypeT =
+  ScalarTypeT<T> || std::derived_from<Decay<T>, ProtobufObjectTag>;
+
 } // namespace detail
 
 /**
@@ -187,7 +202,7 @@ struct StringField : public jmg::StringField<kName, IsRequired>,
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired, int kId>
 // TODO(bd) add support for arrays of sub-objects
-  requires(isMemberOfList<T, ScalarTypes>() || SameAsDecayedT<T, std::string>)
+  requires(isMemberOfList<T, ScalarTypes>() || SameAsDecayedT<std::string, T>)
 struct ArrayField : public jmg::ArrayField<T, kName, IsRequired>,
                     detail::ProtoFieldTag {
   static constexpr auto id = kId;
@@ -222,7 +237,7 @@ concept ProtoFieldT =
  * duplicate field IDs
  */
 template<HeavyProtoMsgT Msg, ProtoFieldT... Fields>
-class Object : public ObjectDef<Fields...> {
+class Object : public ObjectDef<Fields...>, detail::ProtobufObjectTag {
   using Descriptor = google::protobuf::Descriptor;
   using Reflection = google::protobuf::Reflection;
   using FieldDescriptor = google::protobuf::FieldDescriptor;
