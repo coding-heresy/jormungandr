@@ -3,6 +3,11 @@ syntax = "proto2";
 
 package jmg.test;
 
+message InnerMsg {
+  required int32 inner_int_32 = 1;
+  optional string opt_inner_str = 2;
+}
+
 message TestMsg {
   required bool boolean = 1;
 
@@ -23,6 +28,8 @@ message TestMsg {
   required bytes bytes_str = 13;
 
   repeated int32 ints = 14;
+
+  required InnerMsg inner_msg = 15;
 }
 
 message TestOptMsg {
@@ -43,4 +50,6 @@ message TestOptMsg {
 
   optional string opt_str = 12;
   optional bytes opt_bytes_str = 13;
+
+  optional InnerMsg opt_inner_msg = 14;
 }
