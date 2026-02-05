@@ -32,9 +32,11 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <ranges>
 #include <string>
 #include <tuple>
+#include <unordered_set>
 
 #include "jmg/util.h"
 
@@ -43,6 +45,7 @@ using namespace std;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
+namespace rng = std::ranges;
 namespace vws = std::ranges::views;
 
 TEST(GeneralUtilitiesTest, TestStreamTupleOut) {
@@ -87,6 +90,19 @@ TEST(GeneralUtilitiesTest, TestStreamOctetOut) {
                | vws::transform([](const uint8_t arg) { return Octet(arg); }),
              " "sv, kOctetFmt);
   EXPECT_EQ("00000000 00000001 00000010 00000011 00000100"s, bitwise_octets_str);
+}
+
+TEST(GeneralUtilitiesTest, TestInserterator) {
+  const auto keys = std::array{1, 2, 3};
+
+  std::unordered_set<int> int_set;
+  int_set.reserve(keys.size());
+  rng::copy(keys, inserterator(int_set));
+
+  EXPECT_EQ(keys.size(), int_set.size());
+
+  // TODO(bd) use zip view to test insertion of keys and values into
+  // unordered_map
 }
 
 TEST(GeneralUtilitiesTest, TestGetFromArgs) {

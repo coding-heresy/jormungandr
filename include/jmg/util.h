@@ -42,6 +42,7 @@
 #include <absl/strings/str_cat.h>
 #include <absl/strings/str_format.h>
 #include <absl/strings/str_join.h>
+#include <more_concepts/associative_containers.hpp>
 
 #include "meta.h"
 #include "preprocessor.h"
@@ -201,6 +202,20 @@ void* as_void_ptr(T* ptr) {
     }
     else { return reinterpret_cast<void*>(ptr); }
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// helper functions for associative containers
+////////////////////////////////////////////////////////////////////////////////
+
+// unique_associative_container<C>
+
+template<more_concepts::unique_associative_container AssocContainer>
+auto inserterator(AssocContainer& container) {
+  // standard way to use an insert iterator with a container is to
+  // call std::inserter on the container, additionally providing its
+  // 'end' iterator as the insertion hint
+  return std::inserter(container, container.end());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
