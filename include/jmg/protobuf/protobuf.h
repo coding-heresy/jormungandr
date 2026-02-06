@@ -243,14 +243,14 @@ concept ProtoFieldT =
  * duplicate field IDs
  */
 template<HeavyProtoMsgT Msg, ProtoFieldT... Fields>
-class ObjectDef : public jmg::ObjectDef<Fields...>, public detail::ObjectTag {
+class Object : public jmg::ObjectDef<Fields...>, public detail::ObjectTag {
   using Descriptor = google::protobuf::Descriptor;
   using Reflection = google::protobuf::Reflection;
   using FieldDescriptor = google::protobuf::FieldDescriptor;
 
 public:
-  ObjectDef() = delete;
-  explicit ObjectDef(const Msg& msg)
+  Object() = delete;
+  explicit Object(const Msg& msg)
     : msg_(msg), pd_(*(msg.GetDescriptor())), mr_(*(msg.GetReflection())) {}
 
   /**
