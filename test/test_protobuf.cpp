@@ -54,7 +54,7 @@ using TestOptMsg = jmg::test::TestOptMsg;
 using InnerInt32 = protobuf::FieldDef<int32_t, "inner_int_32", Required, 1>;
 using OptInnerStr = protobuf::StringField<"opt_inner_str", Optional, 2>;
 
-using InnerMsgObj = protobuf::ObjectDef<InnerMsg, InnerInt32, OptInnerStr>;
+using InnerMsgObj = protobuf::Object<InnerMsg, InnerInt32, OptInnerStr>;
 
 ////////////////////
 // fields for TestMsg
@@ -87,26 +87,26 @@ using InnerMsgFld = protobuf::FieldDef<InnerMsgObj, "inner_msg", Required, 15>;
 
 // TODO(bd) handle repeated non-primitive, non-string fields
 
-using TestMsgObj = protobuf::ObjectDef<TestMsg,
-                                       Boolean,
-                                       Int32,
-                                       UInt32,
-                                       SFixed32,
-                                       Fixed32,
-                                       Int64,
-                                       UInt64,
-                                       SFixed64,
-                                       Fixed64,
-                                       Flt,
-                                       Dbl,
-                                       Str,
-                                       BytesStr,
-                                       Ints
+using TestMsgObj = protobuf::Object<TestMsg,
+                                    Boolean,
+                                    Int32,
+                                    UInt32,
+                                    SFixed32,
+                                    Fixed32,
+                                    Int64,
+                                    UInt64,
+                                    SFixed64,
+                                    Fixed64,
+                                    Flt,
+                                    Dbl,
+                                    Str,
+                                    BytesStr,
+                                    Ints
 #if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-                                       ,
-                                       InnerMsgFld
+                                    ,
+                                    InnerMsgFld
 #endif
-                                       >;
+                                    >;
 
 using OptBool = protobuf::FieldDef<bool, "opt_bool", Optional, 1>;
 
@@ -131,25 +131,25 @@ using OptInnerMsgFld =
   protobuf::FieldDef<InnerMsgObj, "opt_inner_msg", Optional, 14>;
 #endif
 
-using TestOptMsgObj = protobuf::ObjectDef<TestOptMsg,
-                                          OptBool,
-                                          OptInt32,
-                                          OptUInt32,
-                                          OptSFixed32,
-                                          OptFixed32,
-                                          OptInt64,
-                                          OptUInt64,
-                                          OptSFixed64,
-                                          OptFixed64,
-                                          OptFlt,
-                                          OptDbl,
-                                          OptStr,
-                                          OptBytesStr
+using TestOptMsgObj = protobuf::Object<TestOptMsg,
+                                       OptBool,
+                                       OptInt32,
+                                       OptUInt32,
+                                       OptSFixed32,
+                                       OptFixed32,
+                                       OptInt64,
+                                       OptUInt64,
+                                       OptSFixed64,
+                                       OptFixed64,
+                                       OptFlt,
+                                       OptDbl,
+                                       OptStr,
+                                       OptBytesStr
 #if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-                                          ,
-                                          OptInnerMsgFld
+                                       ,
+                                       OptInnerMsgFld
 #endif
-                                          >;
+                                       >;
 
 ////////////////////////////////////////////////////////////////////////////////
 // test fixture
