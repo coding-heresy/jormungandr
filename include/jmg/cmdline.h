@@ -80,7 +80,7 @@ namespace detail
  * position parameter fields
  */
 template<typename T>
-concept NonSpecializedT = !StringLikeT<T> && !VectorT<T> && NonBoolT<T>;
+concept NonSpecializedT = !StringLikeT<T> && NonBoolT<T>;
 } // namespace detail
 
 // using a macro instead of a base class cuts down on the boilerplate
@@ -90,7 +90,7 @@ concept NonSpecializedT = !StringLikeT<T> && !VectorT<T> && NonBoolT<T>;
   static_assert(name[0] != '-', "parameter name may not begin with '-'")
 
 /**
- * command line positional parameter
+ * positional parameter
  *
  * NOTE: positional parameters are not allowed to be boolean
  */
@@ -104,6 +104,9 @@ struct PosnParam : public FieldDef<T, kName, IsRequired>,
   using type = T;
 };
 
+/**
+ * positional string parameter
+ */
 template<StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired = Required>
 struct PosnStringParam : public StringField<kName, IsRequired>,
                          private detail::CmdLineParamTag {
@@ -112,7 +115,7 @@ struct PosnStringParam : public StringField<kName, IsRequired>,
 };
 
 /**
- * command line named parameter
+ * named parameter
  */
 template<typename T, StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
 struct NamedParam : public FieldDef<T, kName, IsRequired>,
@@ -122,6 +125,9 @@ struct NamedParam : public FieldDef<T, kName, IsRequired>,
                 "named boolean parameters must be required");
 };
 
+/**
+ * named flag parameter
+ */
 template<StrLiteral kName, StrLiteral kDesc>
 struct NamedFlag : public NamedParam<bool, kName, kDesc, Required> {};
 
