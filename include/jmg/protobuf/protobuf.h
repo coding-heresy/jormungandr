@@ -153,7 +153,7 @@ struct ProtoFieldTag {};
  * tag type used to indicate that a JMG object wraps a protobuf
  * message
  */
-struct ProtobufObjectTag {};
+struct ObjectTag {};
 
 /**
  * concept for a supported underlying field type that is not either a
@@ -161,7 +161,7 @@ struct ProtobufObjectTag {};
  */
 template<typename T>
 concept NonSpecializedTypeT =
-  ScalarTypeT<T> || std::derived_from<Decay<T>, ProtobufObjectTag>;
+  ScalarTypeT<T> || std::derived_from<Decay<T>, detail::ObjectTag>;
 
 } // namespace detail
 
@@ -172,7 +172,11 @@ concept NonSpecializedTypeT =
  * @tparam IsRequired indicates if the field is required or optional
  * @tparam kId Protobuf field ID
  */
+#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
 template<detail::NonSpecializedTypeT T,
+#else
+template<ScalarTypeT T,
+#endif
          StrLiteral kName,
          TypeFlagT IsRequired,
          int kId>
@@ -239,14 +243,14 @@ concept ProtoFieldT =
  * duplicate field IDs
  */
 template<HeavyProtoMsgT Msg, ProtoFieldT... Fields>
-class Object : public ObjectDef<Fields...>, detail::ProtobufObjectTag {
+class ObjectDef : public jmg::ObjectDef<Fields...>, public detail::ObjectTag {
   using Descriptor = google::protobuf::Descriptor;
   using Reflection = google::protobuf::Reflection;
   using FieldDescriptor = google::protobuf::FieldDescriptor;
 
 public:
-  Object() = delete;
-  explicit Object(const Msg& msg)
+  ObjectDef() = delete;
+  explicit ObjectDef(const Msg& msg)
     : msg_(msg), pd_(*(msg.GetDescriptor())), mr_(*(msg.GetReflection())) {}
 
   /**
@@ -336,6 +340,12 @@ private:
     else if constexpr (jmg::SameAsDecayedT<double, Type>) {
       return mr_.GetDouble(msg_, &field_des);
     }
+#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
+    else if constexpr (jmg::ObjectT<Decay<Type>>) {
+      const auto& sub_msg = mr_.GetMessage(msg_, &field_des);
+      return dynamic_cast<ReturnTypeForFieldT<Fld>>(sub_msg);
+    }
+#endif
     else if constexpr (StringFieldT<Fld>) {
       // NOTE: scratch space should never be required because
       // getByType should never be called when the field is not

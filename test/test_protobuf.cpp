@@ -54,7 +54,7 @@ using TestOptMsg = jmg::test::TestOptMsg;
 using InnerInt32 = protobuf::FieldDef<int32_t, "inner_int_32", Required, 1>;
 using OptInnerStr = protobuf::StringField<"opt_inner_str", Optional, 2>;
 
-using InnerMsgObj = protobuf::Object<InnerMsg, InnerInt32, OptInnerStr>;
+using InnerMsgObj = protobuf::ObjectDef<InnerMsg, InnerInt32, OptInnerStr>;
 
 ////////////////////
 // fields for TestMsg
@@ -79,25 +79,34 @@ using BytesStr = protobuf::StringField<"bytes_str", Required, 13>;
 
 using Ints = protobuf::ArrayField<int32_t, "ints", Required, 14>;
 
+#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
+using InnerMsgFld = protobuf::FieldDef<InnerMsgObj, "inner_msg", Required, 15>;
+#endif
+
 // TODO(bd) handle repeated string fields
 
 // TODO(bd) handle repeated non-primitive, non-string fields
 
-using TestMsgObj = protobuf::Object<TestMsg,
-                                    Boolean,
-                                    Int32,
-                                    UInt32,
-                                    SFixed32,
-                                    Fixed32,
-                                    Int64,
-                                    UInt64,
-                                    SFixed64,
-                                    Fixed64,
-                                    Flt,
-                                    Dbl,
-                                    Str,
-                                    BytesStr,
-                                    Ints>;
+using TestMsgObj = protobuf::ObjectDef<TestMsg,
+                                       Boolean,
+                                       Int32,
+                                       UInt32,
+                                       SFixed32,
+                                       Fixed32,
+                                       Int64,
+                                       UInt64,
+                                       SFixed64,
+                                       Fixed64,
+                                       Flt,
+                                       Dbl,
+                                       Str,
+                                       BytesStr,
+                                       Ints
+#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
+                                       ,
+                                       InnerMsgFld
+#endif
+                                       >;
 
 using OptBool = protobuf::FieldDef<bool, "opt_bool", Optional, 1>;
 
@@ -117,20 +126,30 @@ using OptDbl = protobuf::FieldDef<double, "opt_dbl", Optional, 11>;
 using OptStr = protobuf::StringField<"opt_str", Optional, 12>;
 using OptBytesStr = protobuf::StringField<"opt_bytes_str", Optional, 13>;
 
-using TestOptMsgObj = protobuf::Object<TestOptMsg,
-                                       OptBool,
-                                       OptInt32,
-                                       OptUInt32,
-                                       OptSFixed32,
-                                       OptFixed32,
-                                       OptInt64,
-                                       OptUInt64,
-                                       OptSFixed64,
-                                       OptFixed64,
-                                       OptFlt,
-                                       OptDbl,
-                                       OptStr,
-                                       OptBytesStr>;
+#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
+using OptInnerMsgFld =
+  protobuf::FieldDef<InnerMsgObj, "opt_inner_msg", Optional, 14>;
+#endif
+
+using TestOptMsgObj = protobuf::ObjectDef<TestOptMsg,
+                                          OptBool,
+                                          OptInt32,
+                                          OptUInt32,
+                                          OptSFixed32,
+                                          OptFixed32,
+                                          OptInt64,
+                                          OptUInt64,
+                                          OptSFixed64,
+                                          OptFixed64,
+                                          OptFlt,
+                                          OptDbl,
+                                          OptStr,
+                                          OptBytesStr
+#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
+                                          ,
+                                          OptInnerMsgFld
+#endif
+                                          >;
 
 ////////////////////////////////////////////////////////////////////////////////
 // test fixture
@@ -192,6 +211,8 @@ TEST_F(ProtoTests, TestConcepts) {
   EXPECT_TRUE(jmg::protobuf::detail::HasProtoFieldId<Int32>);
   EXPECT_TRUE(jmg::protobuf::ProtoFieldT<Str>);
   EXPECT_TRUE(jmg::OptionalFieldT<OptBool>);
+  EXPECT_TRUE(jmg::protobuf::detail::NonSpecializedTypeT<int>);
+  EXPECT_TRUE(jmg::protobuf::detail::NonSpecializedTypeT<InnerMsgObj>);
 }
 
 TEST_F(ProtoTests, TestGet) {
@@ -219,6 +240,13 @@ TEST_F(ProtoTests, TestGet) {
   EXPECT_TRUE(SpanT<decltype(ints)>);
   EXPECT_EQ(1, ints.size());
   EXPECT_EQ(msg_.ints(0), ints[0]);
+
+#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
+  const auto& inner_msg = jmg::get<InnerMsgFld>(obj);
+  EXPECT_TRUE(ObjectT<decltype(inner_msg)>);
+  EXPECT_EQ(msg_.inner_msg().inner_int_32(), jmg::get<InnerInt32>(inner_msg));
+  EXPECT_FALSE(jmg::try_get<OptInnerStr>(inner_msg));
+#endif
 }
 
 #define VALIDATE_OPT_FLD(fld, obj, val)          \
