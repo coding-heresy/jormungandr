@@ -317,15 +317,19 @@ TEST(CmdLineParamTests, TestSafeTypes) {
 
   using SafeName =
     NamedParam<TestIdStr, "str_id", "a safe string ID named param", Required>;
+  using OptSafeName =
+    NamedParam<TestId32, "opt_safe",
+               "an optional safe 32 bit integer ID named param", Optional>;
   using SafePosn =
     PosnParam<TestId32, "int_id", "a safe 32 bit integer ID positional param">;
 
-  using CmdLine = CmdLineArgs<SafeName, SafePosn>;
+  using CmdLine = CmdLineArgs<SafeName, OptSafeName, SafePosn>;
 
   std::array argv{"test_program", "-str_id", "foo", "20010911"};
   const auto cmdline = CmdLine(argv.size(), argv.data());
   EXPECT_EQ(TestIdStr("foo"), jmg::get<SafeName>(cmdline));
   EXPECT_EQ(TestId32(20010911), jmg::get<SafePosn>(cmdline));
+  EXPECT_FALSE(jmg::try_get<OptSafeName>(cmdline));
 }
 
 #undef EXPECT_CMDLINE_ERROR
