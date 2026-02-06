@@ -47,7 +47,7 @@ using InnerField = FieldDef<int, "inner", Required>;
 using InnerObject = yaml::Object<InnerField>;
 using ComplexArrayProxy = yaml::Array<InnerObject>;
 
-using StrField = FieldDef<string, "str", Required>;
+using StrField = StringField<"str", Required>;
 using IntField = FieldDef<int, "int", Required>;
 using OptField = FieldDef<double, "opt", Optional>;
 using Id32Field = FieldDef<Id32, "id32", Required>;
@@ -59,8 +59,7 @@ using ComplexArray = FieldDef<ComplexArrayProxy, "complex", Required>;
 // OptComplexArray is an optional array of non-primitive elements
 using OptComplexArray = FieldDef<ComplexArrayProxy, "opt_complex", Optional>;
 
-// TODO(bd) correctly support StringField
-using GroupStringField = FieldDef<string, "group_string_field", Required>;
+using GroupStringField = StringField<"group_string_field", Required>;
 using GroupDblField = FieldDef<double, "group_dbl_field", Required>;
 using GroupOptionalField = FieldDef<int, "group_optional_field", Optional>;
 using TestFieldGroup =
@@ -72,7 +71,15 @@ using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field,
                              PrimitiveArray, ComplexArray, OptComplexArray>;
 // clang-format on
 
-TEST(YamlTests, FieldRetrieval) {
+TEST(YamlTests, TestConcepts) {
+  using ReturnTypeForStrFld = ReturnTypeForFieldT<StrField>;
+  EXPECT_TRUE((same_as<string_view, ReturnTypeForStrFld>));
+
+  using ReturnTypeForIntFld = ReturnTypeForFieldT<IntField>;
+  EXPECT_TRUE((same_as<int, ReturnTypeForIntFld>));
+}
+
+TEST(YamlTests, TestFieldRetrieval) {
   // build initial tree of nodes, some portions of the tree are not
   // constructed until later in order to test the handling of optional
   // fields
