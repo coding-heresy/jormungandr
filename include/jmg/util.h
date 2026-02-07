@@ -208,14 +208,30 @@ void* as_void_ptr(T* ptr) {
 // helper functions for associative containers
 ////////////////////////////////////////////////////////////////////////////////
 
-// unique_associative_container<C>
+/**
+ * concept for a container type that supports push_back()
+ */
+template<typename Container>
+concept BackPushableT = requires(Container& container) {
+  typename Container::value_type;
+  container.push_back(std::declval<typename Container::value_type>());
+};
 
-template<more_concepts::unique_associative_container AssocContainer>
-auto inserterator(AssocContainer& container) {
-  // standard way to use an insert iterator with a container is to
-  // call std::inserter on the container, additionally providing its
-  // 'end' iterator as the insertion hint
-  return std::inserter(container, container.end());
+/**
+ * generate an insertion iterator suitable for the usual case of
+ * inserting new items into a container
+ */
+template<typename Container>
+auto inserterator(Container& container) {
+  if constexpr (BackPushableT<Container>) {
+    return std::back_inserter(container);
+  }
+  else {
+    // standard way to use an insert iterator with an associative
+    // container is to call std::inserter on the container,
+    // additionally providing its 'end' iterator as the insertion hint
+    return std::inserter(container, container.end());
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
