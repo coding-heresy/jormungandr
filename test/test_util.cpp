@@ -101,6 +101,13 @@ TEST(GeneralUtilitiesTest, TestInserterator) {
 
   EXPECT_EQ(keys.size(), int_set.size());
 
+  std::vector<int> int_vec;
+  int_vec.reserve(keys.size());
+  ;
+  rng::copy(keys, inserterator(int_vec));
+
+  EXPECT_EQ(keys.size(), int_vec.size());
+
   // TODO(bd) use zip view to test insertion of keys and values into
   // unordered_map
 }
