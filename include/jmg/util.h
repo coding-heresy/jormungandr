@@ -259,6 +259,17 @@ inline char to_lower(char chr) { return static_cast<char>(std::tolower(chr)); }
  */
 inline char to_upper(char chr) { return static_cast<char>(std::toupper(chr)); }
 
+/**
+ * convert a string from snake_case to CamelCase or camelCase
+ */
+std::string snakeCaseToCamelCase(std::string_view str,
+                                 bool capitalize_leading = true);
+
+/**
+ * convert a string from CamelCase or camelCase to snake_case
+ */
+std::string camelCaseToSnakeCase(std::string_view str);
+
 ////////////////////////////////////////////////////////////////////////////////
 // retrieve a specific type from a parameter pack
 ////////////////////////////////////////////////////////////////////////////////
