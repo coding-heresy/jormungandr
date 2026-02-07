@@ -179,11 +179,10 @@ template<ScalarTypeT T,
 #endif
          StrLiteral kName,
          TypeFlagT IsRequired,
-         int kId>
+         uint32_t kFieldId>
 struct FieldDef : public jmg::FieldDef<T, kName, IsRequired>,
                   detail::ProtoFieldTag {
-  static constexpr auto id = kId;
-  static_assert(kId > 0, "protobuf field identifier must be non-negative");
+  static constexpr auto kFldId = kFieldId;
 };
 
 /**
@@ -192,11 +191,10 @@ struct FieldDef : public jmg::FieldDef<T, kName, IsRequired>,
  * @tparam IsRequired indicates if the field is required or optional
  * @tparam kId Protobuf field ID
  */
-template<StrLiteral kName, TypeFlagT IsRequired, int kId>
+template<StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 struct StringField : public jmg::StringField<kName, IsRequired>,
                      detail::ProtoFieldTag {
-  static constexpr auto id = kId;
-  static_assert(kId > 0, "protobuf field identifier must be non-negative");
+  static constexpr auto kFldId = kFieldId;
 };
 
 /**
@@ -206,13 +204,12 @@ struct StringField : public jmg::StringField<kName, IsRequired>,
  * @tparam IsRequired indicates if the field is required or optional
  * @tparam kId Protobuf field ID
  */
-template<typename T, StrLiteral kName, TypeFlagT IsRequired, int kId>
+template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 // TODO(bd) add support for arrays of sub-objects
   requires(isMemberOfList<T, ScalarTypes>() || SameAsDecayedT<std::string, T>)
 struct ArrayField : public jmg::ArrayField<T, kName, IsRequired>,
                     detail::ProtoFieldTag {
-  static constexpr auto id = kId;
-  static_assert(kId > 0, "protobuf field identifier must be non-negative");
+  static constexpr auto kFldId = kFieldId;
 };
 
 namespace detail
@@ -223,7 +220,7 @@ namespace detail
  * integer constant.
  */
 template<typename T>
-concept HasProtoFieldId = requires { std::same_as<decltype(T::id), int>; };
+concept HasProtoFieldId = requires { std::same_as<decltype(T::kFldId), int>; };
 
 } // namespace detail
 
@@ -260,7 +257,7 @@ public:
   ReturnTypeForFieldT<Fld> get() const {
     using Type = typename Fld::type;
     static constexpr auto field_name = std::string_view(Fld::name);
-    const auto& field_des = getFieldDescriptor<Fld::id>(field_name);
+    const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
     enforcePresence(field_des, field_name);
     return getByType<Fld>(field_des);
   }
@@ -273,7 +270,7 @@ public:
     using Type = typename Fld::type;
     using Rslt = ReturnTypeForFieldT<Fld>;
     static constexpr auto field_name = std::string_view(Fld::name);
-    const auto& field_des = getFieldDescriptor<Fld::id>(field_name);
+    const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
     if (!isPresent(field_des)) { return std::nullopt; }
     return Rslt(getByType<Fld>(field_des));
   }
@@ -282,7 +279,7 @@ private:
   /**
    * retrieve the descriptor for a specific field of the protobuf
    */
-  template<int kFldId>
+  template<uint32_t kFldId>
   const FieldDescriptor& getFieldDescriptor(
     const std::string_view field_name) const {
     const auto* ptr = pd_.FindFieldByNumber(kFldId);
