@@ -33,6 +33,7 @@ cc_library(
     srcs = [
         "src/cbe.cpp",
         "src/ip_endpoint.cpp",
+        "src/util.cpp",
         "src/server.cpp",
         "src/system.cpp",
     ],

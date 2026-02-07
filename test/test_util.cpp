@@ -135,3 +135,19 @@ TEST(GeneralUtilitiesTest, TestAbseilRework) {
     EXPECT_EQ("foo,bar"s, str_join(strs, ","sv));
   }
 }
+
+// TODO(bd) investigate more corner cases?
+TEST(GeneralUtilitiesTest, TestSnakeCaseToCamelCase) {
+  EXPECT_EQ("Foo"s, snakeCaseToCamelCase("foo"));
+  EXPECT_EQ("foo"s, snakeCaseToCamelCase("foo", false /*capitalize_leading */));
+  EXPECT_EQ("FooBar"s, snakeCaseToCamelCase("foo_bar"));
+  EXPECT_EQ("blub"s,
+            snakeCaseToCamelCase("blub_", false /*capitalize_leading */));
+}
+
+TEST(GeneralUtilitiesTest, TestCamelCaseToSnakeCase) {
+  EXPECT_EQ("foo"s, camelCaseToSnakeCase("Foo"));
+  EXPECT_EQ("foo"s, camelCaseToSnakeCase("foo"));
+  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("FooBar"));
+  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("fooBar"));
+}
