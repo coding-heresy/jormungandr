@@ -127,6 +127,12 @@ TEST(ConversionTests, TestStringFromThreadId) {
   EXPECT_TRUE(ctre::match<"^[0-9]+$">(thread_id));
 }
 
+TEST(ConversionTests, TestStringFromcharacter) {
+  const auto chr = char('0');
+  string str = from(chr);
+  EXPECT_EQ("0"s, str);
+}
+
 ////////////////////
 // conversions between time points and string types
 
