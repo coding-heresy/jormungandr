@@ -126,6 +126,16 @@ struct NamedParam : public FieldDef<T, kName, IsRequired>,
 };
 
 /**
+ * named string parameter
+ */
+template<StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired = Required>
+struct NamedStringParam : public StringField<kName, IsRequired>,
+                          private detail::CmdLineParamTag {
+  PARAM_BOILERPLATE;
+  using type = std::string;
+};
+
+/**
  * named flag parameter
  */
 template<StrLiteral kName, StrLiteral kDesc>
