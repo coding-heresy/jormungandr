@@ -183,6 +183,15 @@ struct ConvertImpl {
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
     ////////////////////////////////////////////////////////////
+    // this section converts from char to string
+    ////////////////////////////////////////////////////////////
+    else if constexpr (SameAsDecayedT<char, Src>) {
+      if constexpr (std::same_as<std::string, Tgt>) {
+        return std::string(1, src);
+      }
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+    }
+    ////////////////////////////////////////////////////////////
     // this section converts from struct sockaddr_in to string
     //
     // TODO(bd) support struct sockaddr, struct sockaddr_in6 and
