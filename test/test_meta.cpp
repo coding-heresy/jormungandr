@@ -121,6 +121,9 @@ TEST(MetaprogrammingTests, TestCStyleStringConcept) {
   // std::string and std::string_view don't match
   EXPECT_FALSE(CStyleStringT<string>);
   EXPECT_FALSE(CStyleStringT<string_view>);
+
+  // single character doesn't match
+  EXPECT_FALSE(CStyleStringT<char>);
 }
 
 TEST(MetaprogrammingTests, TestStringLikeConcepts) {
