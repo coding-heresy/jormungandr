@@ -722,19 +722,36 @@ function is called.
 There are a few helper functions used in the code to simplify certain
 awkward interactions that regularly occur when using standard library
 functions and classes:
-* key_of - get the `key_type` from the `value_type` object stored in a
-  dictionary
-* value_of - get the `mapped_type` from the `value_type` object stored
-  in a dictionary
-* always_emplace - calls `try_emplace` on a dictionary and throws an
+* `key_of` - get the _key_type_ from the _value_type_ object stored in
+  a dictionary
+* `value_of` - get the _mapped_type_ from the _value_type_ object
+  stored in a dictionary
+* `emplace_uniq` - calls `try_emplace` on a dictionary and throws an
   exception if the insertion wasn't successful (i.e. the key is a
   duplicate of one that already exists in the dictionary)
-* always_insert - calls `insert` on a set and throws an exception if
+* `insert_uniq` - calls `insert` on a set and throws an exception if
   the insertion wasn't successful (i.e. the item is a duplicate of one
   that already exists in the set)
-* as_void_ptr - takes a pointer argument and converts it to a
+* `as_void_ptr` - takes a pointer argument and converts it to a
   non-`const` `void*`, which is useful when dealing with some
   low-level code.
+* `inserterator` - a factory function that simplifies adding elements
+  to containers using iteration. Call it an a container and it returns
+  the result of calling `std::back_inserter` for containers that
+  support it or `std::inserter` (with `container.end()` as the
+  insertion hint) for containers that don't
+* `pred` - a shorter synonym for `static_cast<bool>()`
+* `to_lower`/`to_upper` - like `std::tolower`/`std::toupper` but takes
+  and returns `char` instead of `int` to avoid messy type conversions
+  working in ASCII character encoding
+
+There are also functions for less common cases that I found a need
+for:
+* `snakeCaseToCamelCase` - does what it says on the tin. Aarguably, it
+  could be called `snakeCaseToPascalCase` because the default value
+  for the second parameter produces a string with the first character
+  capitalized, but I personally never use the term _Pascal Case_
+* `camelCaseToSnakeCase` - also what you would expect
 
 # Coding Standards
 
