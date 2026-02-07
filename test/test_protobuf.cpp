@@ -51,36 +51,36 @@ using TestOptMsg = jmg::test::TestOptMsg;
 ////////////////////
 // fields for InnerMsg
 
-using InnerInt32 = protobuf::FieldDef<int32_t, "inner_int_32", Required, 1>;
-using OptInnerStr = protobuf::StringField<"opt_inner_str", Optional, 2>;
+using InnerInt32 = protobuf::FieldDef<int32_t, "inner_int_32", Required, 1U>;
+using OptInnerStr = protobuf::StringField<"opt_inner_str", Optional, 2U>;
 
 using InnerMsgObj = protobuf::Object<InnerMsg, InnerInt32, OptInnerStr>;
 
 ////////////////////
 // fields for TestMsg
 
-using Boolean = protobuf::FieldDef<bool, "boolean", Required, 1>;
+using Boolean = protobuf::FieldDef<bool, "boolean", Required, 1U>;
 
-using Int32 = protobuf::FieldDef<int32_t, "int_32", Required, 2>;
-using UInt32 = protobuf::FieldDef<uint32_t, "uint_32", Required, 3>;
-using SFixed32 = protobuf::FieldDef<int32_t, "sfixed_32", Required, 4>;
-using Fixed32 = protobuf::FieldDef<uint32_t, "fixed_32", Required, 5>;
+using Int32 = protobuf::FieldDef<int32_t, "int_32", Required, 2U>;
+using UInt32 = protobuf::FieldDef<uint32_t, "uint_32", Required, 3U>;
+using SFixed32 = protobuf::FieldDef<int32_t, "sfixed_32", Required, 4U>;
+using Fixed32 = protobuf::FieldDef<uint32_t, "fixed_32", Required, 5U>;
 
-using Int64 = protobuf::FieldDef<int64_t, "int_64", Required, 6>;
-using UInt64 = protobuf::FieldDef<uint64_t, "uint_64", Required, 7>;
-using SFixed64 = protobuf::FieldDef<int64_t, "sfixed_64", Required, 8>;
-using Fixed64 = protobuf::FieldDef<uint64_t, "fixed_64", Required, 9>;
+using Int64 = protobuf::FieldDef<int64_t, "int_64", Required, 6U>;
+using UInt64 = protobuf::FieldDef<uint64_t, "uint_64", Required, 7U>;
+using SFixed64 = protobuf::FieldDef<int64_t, "sfixed_64", Required, 8U>;
+using Fixed64 = protobuf::FieldDef<uint64_t, "fixed_64", Required, 9U>;
 
-using Flt = protobuf::FieldDef<float, "flt", Required, 10>;
-using Dbl = protobuf::FieldDef<double, "dbl", Required, 11>;
+using Flt = protobuf::FieldDef<float, "flt", Required, 10U>;
+using Dbl = protobuf::FieldDef<double, "dbl", Required, 11U>;
 
-using Str = protobuf::StringField<"str", Required, 12>;
-using BytesStr = protobuf::StringField<"bytes_str", Required, 13>;
+using Str = protobuf::StringField<"str", Required, 12U>;
+using BytesStr = protobuf::StringField<"bytes_str", Required, 13U>;
 
-using Ints = protobuf::ArrayField<int32_t, "ints", Required, 14>;
+using Ints = protobuf::ArrayField<int32_t, "ints", Required, 14U>;
 
 #if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-using InnerMsgFld = protobuf::FieldDef<InnerMsgObj, "inner_msg", Required, 15>;
+using InnerMsgFld = protobuf::FieldDef<InnerMsgObj, "inner_msg", Required, 15U>;
 #endif
 
 // TODO(bd) handle repeated string fields
