@@ -249,6 +249,16 @@ bool pred(const T& val) {
   return static_cast<bool>(val);
 }
 
+/**
+ * lowercase conversion that uses char instead of int
+ */
+inline char to_lower(char chr) { return static_cast<char>(std::tolower(chr)); }
+
+/**
+ * uppercase conversion that uses char instead of int
+ */
+inline char to_upper(char chr) { return static_cast<char>(std::toupper(chr)); }
+
 ////////////////////////////////////////////////////////////////////////////////
 // retrieve a specific type from a parameter pack
 ////////////////////////////////////////////////////////////////////////////////
