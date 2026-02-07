@@ -243,7 +243,7 @@ public:
           types_.push_back(make_tuple(def_name,
                                       StrongAlias(correctedTypeName(type_name),
                                                   *cncpt)));
-          always_insert("known types", known_types_, def_name);
+          insert_uniq("known types", known_types_, def_name);
         }
         else if (kEnum == type_name) {
           const auto& enumerations = try_get<EnumValues>(def);
@@ -271,7 +271,7 @@ public:
           enums_.push_back(make_tuple(def_name,
                                       DefEnum{.ul_type = ul_type,
                                               .values = std::move(def_values)}));
-          always_insert("enumerations", known_enums_, def_name);
+          insert_uniq("enumerations", known_enums_, def_name);
         }
         else if (kArray == type_name) {
           // TODO(bd) support array aliases?
@@ -477,11 +477,11 @@ private:
                                                 .sub_type_name = field_sub_type,
                                                 .required = required,
                                                 .extra_data = extra_data}));
-          always_emplace("fields", fields_indices_, field_name, idx);
+          emplace_uniq("fields", fields_indices_, field_name, idx);
         }
         fields.push_back(std::move(field_name));
       }
-      always_emplace(description, rslt, spec_name, std::move(fields));
+      emplace_uniq(description, rslt, spec_name, std::move(fields));
     }
     return rslt;
   }

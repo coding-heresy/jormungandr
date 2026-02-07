@@ -169,10 +169,10 @@ auto& value_of(auto& rec) { return std::get<1>(rec); }
  * exists
  */
 template<typename DictContainer, typename Key, typename... Vals>
-void always_emplace(std::string_view description,
-                    DictContainer& dict,
-                    const Key& key,
-                    Vals&&... vals) {
+void emplace_uniq(std::string_view description,
+                  DictContainer& dict,
+                  const Key& key,
+                  Vals&&... vals) {
   const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
   JMG_ENFORCE(inserted, "unsupported duplicate key [", key, "] for ",
               description);
@@ -182,9 +182,9 @@ void always_emplace(std::string_view description,
  * emplace a new item in a set or throw an exception if the item already exists
  */
 template<typename SetContainer, typename Value>
-void always_insert(std::string_view description,
-                   SetContainer& set_container,
-                   Value&& value) {
+void insert_uniq(std::string_view description,
+                 SetContainer& set_container,
+                 Value&& value) {
   const auto [_, inserted] = set_container.insert(std::forward<Value>(value));
   JMG_ENFORCE(inserted, "unsupported duplicate value [", value, "] for ",
               description);
