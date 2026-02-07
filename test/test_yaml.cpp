@@ -52,6 +52,8 @@ using IntField = FieldDef<int, "int", Required>;
 using OptField = FieldDef<double, "opt", Optional>;
 using Id32Field = FieldDef<Id32, "id32", Required>;
 
+// InnerObj is a single InnerObject
+using InnerObj = FieldDef<InnerObject, "object", Required>;
 // PrimitiveArray is an array of primitive (i.e. non-object) elements
 using PrimitiveArray = FieldDef<vector<int>, "primitive", Required>;
 // ComplexArray is an array of non-primitive (i.e. object) elements
@@ -66,9 +68,9 @@ using TestFieldGroup =
   FieldGroupDef<GroupStringField, GroupDblField, GroupOptionalField>;
 
 // clang-format off
-using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field,
-                             TestFieldGroup,
-                             PrimitiveArray, ComplexArray, OptComplexArray>;
+using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field, InnerObj,
+                             PrimitiveArray, ComplexArray, OptComplexArray,
+                             TestFieldGroup>;
 // clang-format on
 
 TEST(YamlTests, TestConcepts) {
@@ -93,6 +95,11 @@ TEST(YamlTests, TestFieldRetrieval) {
   raw["primitive"].push_back("20010911");
   {
     YAML::Node node;
+    node["inner"] = "20070625";
+    raw["object"] = std::move(node);
+  }
+  {
+    YAML::Node node;
     node["inner"] = "20010911";
     raw["complex"].push_back(std::move(node));
   }
@@ -109,6 +116,10 @@ TEST(YamlTests, TestFieldRetrieval) {
   EXPECT_EQ(20010911U, unsafe(jmg::get<Id32Field>(obj)));
   EXPECT_EQ("group"s, jmg::get<GroupStringField>(obj));
   EXPECT_DOUBLE_EQ(-1.0, jmg::get<GroupDblField>(obj));
+  {
+    const auto& inner_obj = jmg::get<InnerObj>(obj);
+    EXPECT_EQ(20070625, jmg::get<InnerField>(inner_obj));
+  }
   {
     const auto& primitive = jmg::get<PrimitiveArray>(obj);
     EXPECT_EQ(2, primitive.size());
