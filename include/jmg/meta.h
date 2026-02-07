@@ -200,9 +200,10 @@ concept StaticStringConstT =
 
 template<typename T>
 concept CStyleStringT =
-  SameAsDecayedT<char*, T> || SameAsDecayedT<const char*, T>
-  || std::same_as<std::remove_extent_t<Decay<T>>, char>
-  || std::same_as<std::remove_extent_t<Decay<T>>, const char>;
+  !SameAsDecayedT<char, T>
+  && (SameAsDecayedT<char*, T> || SameAsDecayedT<const char*, T>
+      || std::same_as<std::remove_extent_t<Decay<T>>, char>
+      || std::same_as<std::remove_extent_t<Decay<T>>, const char>);
 
 template<typename T>
 concept StdStringLikeT =
@@ -524,6 +525,16 @@ std::string type_name_for() {
 template<typename T>
 std::string type_name_for(const T& t) {
   return type_name_for<Decay<T>>();
+}
+
+/**
+ * return the demangled name of the type of a value
+ *
+ * Intended for use in development and debugging.
+ */
+template<typename T>
+std::string non_decayed_type_name_for(const T& t) {
+  return type_name_for<T>();
 }
 
 /**
