@@ -51,12 +51,11 @@ using NamedParam3 =
   NamedParam<unsigned, "opt_int", "an optional integer named parameter", Optional>;
 
 TEST(CmdLineParamTests, TestConcepts) {
-  // CmdLineParamT
-  EXPECT_FALSE(CmdLineParamT<int>);
-  EXPECT_TRUE(CmdLineParamT<PosnParam1>);
-  EXPECT_TRUE(CmdLineParamT<PosnParam2>);
-  EXPECT_TRUE(CmdLineParamT<NamedParam1>);
-  EXPECT_TRUE(CmdLineParamT<NamedParam2>);
+  EXPECT_FALSE(cmdline::FieldT<int>);
+  EXPECT_TRUE(cmdline::FieldT<PosnParam1>);
+  EXPECT_TRUE(cmdline::FieldT<PosnParam2>);
+  EXPECT_TRUE(cmdline::FieldT<NamedParam1>);
+  EXPECT_TRUE(cmdline::FieldT<NamedParam2>);
 
   // PosnParamT
   EXPECT_FALSE(PosnParamT<string>);
