@@ -46,3 +46,10 @@ namespace jmg_cbe_spec
 void process(const std::string_view filePath);
 
 } // namespace jmg_cbe_spec
+
+namespace jmg_protobuf_spec
+{
+
+void process(const std::string_view filePath);
+
+} // namespace jmg_protobuf_spec

@@ -45,6 +45,9 @@ using namespace std;
 
 namespace vws = std::ranges::views;
 
+namespace
+{
+
 ////////////////////////////////////////////////////////////////////////////////
 // Jormungandr field definitions at various levels
 //
@@ -57,6 +60,8 @@ using Type = StringField<"type", Required>;
 using SubType = StringField<"subtype", Optional>;
 using Concept = StringField<"concept", Optional>;
 using CbeId = FieldDef<uint32_t, "cbe_id", Optional>;
+using ProtobufPackage = StringField<"protobuf_package", Optional>;
+using ProtobufId = FieldDef<uint32_t, "protobuf_id", Optional>;
 using RequiredFlag = FieldDef<bool, "required", Optional>;
 
 // enumeration
@@ -66,12 +71,16 @@ using EnumUlType = StringField<"underlying_type", Optional>;
 using Enumeration = yaml::Object<Name, EnumValue>;
 using EnumValues = FieldDef<yaml::Array<Enumeration>, "values", Optional>;
 
+// attributes of a package
+using PkgDef = yaml::Object<Name, ProtobufPackage>;
+
 // objects in the 'types' section
 using TypeDef =
   yaml::Object<Name, Type, SubType, Concept, EnumUlType, EnumValues>;
 
 // objects in the 'groups' and 'objects' sections
-using ObjGrpField = yaml::Object<Name, Type, SubType, CbeId, RequiredFlag>;
+using ObjGrpField =
+  yaml::Object<Name, Type, SubType, CbeId, ProtobufId, RequiredFlag>;
 using ObjGrpFields = FieldDef<yaml::Array<ObjGrpField>, "fields", Required>;
 
 // objects in the 'groups' and 'objects' sections have a name and a
@@ -79,7 +88,7 @@ using ObjGrpFields = FieldDef<yaml::Array<ObjGrpField>, "fields", Required>;
 using ObjGrp = yaml::Object<Name, ObjGrpFields>;
 
 // top-level fields
-using Package = StringField<"package", Required>;
+using Package = FieldDef<PkgDef, "package", Required>;
 using Types = FieldDef<yaml::Array<TypeDef>, "types", Optional>;
 using Groups = FieldDef<yaml::Array<ObjGrp>, "groups", Optional>;
 using Objects = FieldDef<yaml::Array<ObjGrp>, "objects", Required>;
@@ -90,10 +99,7 @@ using Spec = yaml::Object<Package, Types, Groups, Objects>;
 // constants
 ////////////////////////////////////////////////////////////////////////////////
 
-namespace
-{
-
-const Set<string> primitive_types = {"array"s,              //
+const Set<string> primitive_types = {"bool"s,     "array"s, //
                                      "double"s,   "float"s, //
                                      "int8_t"s,   "int16_t"s,
                                      "int32_t"s,  "int64_t"s, //
@@ -109,6 +115,8 @@ const Set<string> allowed_concepts = {"aritmetic"s, "key"s};
 /**
  * corrections that may be applied to convert the string values of types
  * specified in the file to types used in field definitions
+ *
+ * TODO(bd) this may no longer be necessary
  */
 string correctedTypeName(const string_view type_name) {
   if ("string" == type_name) { return str_cat("std::", type_name); }
@@ -128,11 +136,18 @@ struct YamlEncodingPolicy {
   static constexpr auto kHeaderFile = "jmg/yaml/yaml.h"sv;
   static constexpr auto kNamespace = "yaml"sv;
   struct FieldData {};
+
+  /**
+   * YAML-specific field processing
+   */
   template<typename T>
-  static FieldData processField(const T& fld) {
-    ignore = fld;
+  static FieldData processField(const T& /* fld */) {
     return FieldData();
   }
+
+  /**
+   * YAML-specific field emission
+   */
   template<typename T>
   static string emitField(const string_view name, const T& field_def) {
     string rslt = str_cat("using ", name, " = jmg::FieldDef<");
@@ -165,6 +180,10 @@ struct CbeEncodingPolicy {
   struct FieldData {
     uint32_t id;
   };
+
+  /**
+   * CBE-specific field processing
+   */
   template<typename T>
   static FieldData processField(const T& fld) {
     const auto cbe_id = try_get<CbeId>(fld);
@@ -173,6 +192,10 @@ struct CbeEncodingPolicy {
     // TODO(bd) add code to check for duplicate field IDs?
     return FieldData{.id = *cbe_id};
   }
+
+  /**
+   * CBE-specific field emission
+   */
   template<typename T>
   static string emitField(const string_view name, const T& field_def) {
     string rslt = str_cat("using ", name, " = ");
@@ -188,6 +211,58 @@ struct CbeEncodingPolicy {
     else { str_append(rslt, "jmg::cbe::FieldDef<", field_def.type_name, ", "); }
     const auto id = field_def.extra_data.id;
     str_append(rslt, "\"", name, "\", ",
+               (field_def.required ? "jmg::Required"sv : "jmg::Optional"sv));
+    str_append(rslt, ", ", id, "U /* kFldId */>;\n\n");
+    return rslt;
+  }
+};
+
+/**
+ * policy for processing a file or data stream encoded in protobuf
+ * format
+ */
+struct ProtobufEncodingPolicy {
+  static constexpr auto kHeaderFile = "jmg/protobuf/protobuf.h"sv;
+  static constexpr auto kNamespace = "protobuf"sv;
+  struct FieldData {
+    uint32_t id;
+  };
+
+  /**
+   * protobuf-specific field processing
+   */
+  template<typename T>
+  static FieldData processField(const T& fld) {
+    const auto protobuf_id = try_get<ProtobufId>(fld);
+    JMG_ENFORCE(pred(protobuf_id), "field [", get<Name>(fld),
+                "] is missing required protobuf ID");
+
+    // TODO(bd) add code to check for duplicate field IDs?
+    return FieldData{.id = *protobuf_id};
+  }
+
+  /**
+   * protobuf-specific field emission
+   */
+  template<typename T>
+  static string emitField(const string_view name, const T& field_def) {
+    // NOTE: naming standard for types is CamelCase
+    string rslt = str_cat("using ", snakeCaseToCamelCase(name), " = ");
+    if ("string" == field_def.type_name) {
+      str_append(rslt, "jmg::protobuf::StringField<");
+    }
+    else if ("array" == field_def.type_name) {
+      JMG_ENFORCE(field_def.sub_type_name.has_value(), "field [", name,
+                  "] is an array but has no subtype");
+      str_append(rslt, "jmg::protobuf::ArrayField<",
+                 correctedTypeName(*(field_def.sub_type_name)), ", ");
+    }
+    else {
+      str_append(rslt, "jmg::protobuf::FieldDef<", field_def.type_name, ", ");
+    }
+    const auto id = field_def.extra_data.id;
+    // NOTE: protobuf naming standard for fields is snake_case
+    str_append(rslt, "\"", camelCaseToSnakeCase(name), "\", ",
                (field_def.required ? "jmg::Required"sv : "jmg::Optional"sv));
     str_append(rslt, ", ", id, "U /* kFldId */>;\n\n");
     return rslt;
@@ -228,7 +303,10 @@ class AllJmgDefs {
 
 public:
   AllJmgDefs(const Spec& spec) {
-    package_ = get<Package>(spec);
+    const auto& pkg = get<Package>(spec);
+    package_ = get<Name>(pkg);
+
+    // EncodingPolicy::processPackage
 
     // process types
     const auto types = try_get<Types>(spec);
@@ -501,6 +579,7 @@ private:
   ////////////////////////////////////////////////////////////////////////////////
 
   string package_;
+  optional<string> protobuf_pkg_;
 
   // types
   vector<tuple<string, StrongAlias>> types_;
@@ -518,31 +597,51 @@ private:
   StringLists objects_;
 };
 
+namespace
+{
+
+////////////////////////////////////////////////////////////////////////////////
+// support functions
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * all processing steps for a YAML file, parameterized by the JMG encoding policy
+ */
+template<typename Policy>
+void processYamlFile(const string_view file_path) {
+  JMG_ENFORCE(file_path.ends_with(".yml") || file_path.ends_with(".yaml"),
+              "encountered non-YAML file [", file_path,
+              "] when attempting to process a JMG specification");
+  const auto yaml = LoadFile(string(file_path));
+  const auto defs = AllJmgDefs<Policy>(Spec(yaml));
+  defs.emit();
+}
+
+} // namespace
+
 namespace jmg_yml_spec
 {
 
-void process(const string_view filePath) {
-  JMG_ENFORCE(filePath.ends_with(".yml") || filePath.ends_with(".yaml"),
-              "encountered non-YAML file [", filePath,
-              "] when attempting to process a JMG specification");
-  const auto yaml = LoadFile(string(filePath));
-
-  const auto defs = AllJmgDefs<YamlEncodingPolicy>(Spec(yaml));
-  defs.emit();
+void process(const string_view file_path) {
+  processYamlFile<YamlEncodingPolicy>(file_path);
 }
 
 } // namespace jmg_yml_spec
 
 namespace jmg_cbe_spec
 {
-void process(const string_view filePath) {
-  JMG_ENFORCE(filePath.ends_with(".yml") || filePath.ends_with(".yaml"),
-              "encountered non-YAML file [", filePath,
-              "] when attempting to process a JMG specification");
-  const auto yaml = LoadFile(string(filePath));
 
-  const auto defs = AllJmgDefs<CbeEncodingPolicy>(Spec(yaml));
-  defs.emit();
+void process(const string_view file_path) {
+  processYamlFile<CbeEncodingPolicy>(file_path);
 }
 
 } // namespace jmg_cbe_spec
+
+namespace jmg_protobuf_spec
+{
+
+void process(const string_view file_path) {
+  processYamlFile<ProtobufEncodingPolicy>(file_path);
+}
+
+} // namespace jmg_protobuf_spec
