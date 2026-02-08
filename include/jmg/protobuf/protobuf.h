@@ -62,7 +62,8 @@ template<typename T>
 concept ScalarTypeT = isMemberOfList<T, ScalarTypes>();
 
 /**
- * concept for protobuf messages
+ * concept for protobuf messages (NOT for JMG objects that wrap
+ * protobuf messages)
  */
 template<typename T>
 concept ProtoMsgT =
@@ -143,25 +144,21 @@ JMG_NEW_SAFE_TYPE(ProtoFieldId, int, SafeIdType);
 
 namespace detail
 {
-/**
- * tag type used to indicate that a type is a protobuf field
- * definition
- */
-struct ProtoFieldTag {};
+JMG_TAG_TYPE(Field);
+JMG_TAG_TYPE(Object);
+} // namespace detail
 
-/**
- * tag type used to indicate that a JMG object wraps a protobuf
- * message
- */
-struct ObjectTag {};
+JMG_OBJECT_CONCEPT();
+
+namespace detail
+{
 
 /**
  * concept for a supported underlying field type that is not either a
  * string or an array
  */
 template<typename T>
-concept NonSpecializedTypeT =
-  ScalarTypeT<T> || std::derived_from<Decay<T>, detail::ObjectTag>;
+concept NonSpecializedTypeT = ScalarTypeT<T> || protobuf::ObjectT<T>;
 
 } // namespace detail
 
@@ -180,8 +177,8 @@ template<ScalarTypeT T,
          StrLiteral kName,
          TypeFlagT IsRequired,
          uint32_t kFieldId>
-struct FieldDef : public jmg::FieldDef<T, kName, IsRequired>,
-                  detail::ProtoFieldTag {
+struct Field : public jmg::FieldDef<T, kName, IsRequired>,
+               public detail::FieldTag {
   static constexpr auto kFldId = kFieldId;
 };
 
@@ -193,7 +190,7 @@ struct FieldDef : public jmg::FieldDef<T, kName, IsRequired>,
  */
 template<StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 struct StringField : public jmg::StringField<kName, IsRequired>,
-                     detail::ProtoFieldTag {
+                     detail::FieldTag {
   static constexpr auto kFldId = kFieldId;
 };
 
@@ -208,7 +205,7 @@ template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 // TODO(bd) add support for arrays of sub-objects
   requires(isMemberOfList<T, ScalarTypes>() || SameAsDecayedT<std::string, T>)
 struct ArrayField : public jmg::ArrayField<T, kName, IsRequired>,
-                    detail::ProtoFieldTag {
+                    detail::FieldTag {
   static constexpr auto kFldId = kFieldId;
 };
 
@@ -228,10 +225,8 @@ concept HasProtoFieldId = requires { std::same_as<decltype(T::kFldId), int>; };
  * Concept for field definition
  */
 template<typename T>
-concept ProtoFieldT =
-  std::derived_from<T, detail::ProtoFieldTag> && jmg::detail::HasFieldName<T>
-  && jmg::detail::HasFieldType<T> && jmg::detail::HasRequiredSpec<T>
-  && detail::HasProtoFieldId<T>;
+concept FieldT = std::derived_from<T, detail::FieldTag> && jmg::FieldDefT<T>
+                 && detail::HasProtoFieldId<T>;
 
 /**
  * wrapper type for protobuf object
@@ -239,7 +234,7 @@ concept ProtoFieldT =
  * TODO(bd) use metaprogramming to enforce that there can be no
  * duplicate field IDs
  */
-template<HeavyProtoMsgT Msg, ProtoFieldT... Fields>
+template<HeavyProtoMsgT Msg, protobuf::FieldT... Fields>
 class Object : public jmg::ObjectDef<Fields...>, public detail::ObjectTag {
   using Descriptor = google::protobuf::Descriptor;
   using Reflection = google::protobuf::Reflection;
