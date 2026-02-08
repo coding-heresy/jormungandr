@@ -1,0 +1,107 @@
+diff --git a/.gitignore b/.gitignore
+index 297154e..163b61b 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -2,9 +2,14 @@
+ .idea
+ .vscode
+ .vs
++*~
+ 
+ # Common build folder names
+ build
+ build-*
+ cmake-build-*
+ out
++bazel-*
++
++# Common build artifacts
++MODULE.bazel.lock
+diff --git a/BUILD b/BUILD
+new file mode 100644
+index 0000000..24af204
+--- /dev/null
++++ b/BUILD
+@@ -0,0 +1,27 @@
++
++cc_library(
++    name = "more_concepts",
++    visibility = ["//visibility:public"],
++    hdrs = [
++        "include/more_concepts/associative_containers.hpp",
++        "include/more_concepts/base_concepts.hpp",
++        "include/more_concepts/base_containers.hpp",
++        "include/more_concepts/detail/mock_iterator.hpp",
++        "include/more_concepts/detail/type_traits.hpp",
++        "include/more_concepts/mock_iterator.hpp",
++        "include/more_concepts/more_concepts.hpp",
++        "include/more_concepts/sequence_containers.hpp",
++    ],
++    strip_include_prefix = "include",
++)
++
++cc_test(
++    name = "unittests",
++    visibility = ["//visibility:public"],
++    srcs = [
++        "tests/more_concepts/test_containers.cpp",
++        "tests/more_concepts/test_main.cpp",
++        "tests/more_concepts/test_mock_iterator.cpp",
++    ],
++    deps = [":more_concepts"],
++)
+diff --git a/MODULE.bazel b/MODULE.bazel
+new file mode 100644
+index 0000000..417aee6
+--- /dev/null
++++ b/MODULE.bazel
+@@ -0,0 +1,5 @@
++
++module(
++    name = "more_concepts",
++    version = "0.0.0",
++)
+diff --git a/tests/more_concepts/test_containers.cpp b/tests/more_concepts/test_containers.cpp
+index 8e861c3..6887e56 100644
+--- a/tests/more_concepts/test_containers.cpp
++++ b/tests/more_concepts/test_containers.cpp
+@@ -367,7 +367,7 @@ namespace
+         test_key_type,
+ 
+         test_set>{};
+-    
++
+     constexpr auto ordered_multiple_sets = require_ordered_multiple_associative_containers<
+         test_key_type,
+         test_key_type,
+@@ -385,7 +385,7 @@ namespace
+         test_key_type,
+ 
+         test_unordered_multiset>{};
+-    
++
+     constexpr auto ordered_unique_maps = require_ordered_unique_map_containers<
+         test_kv_type,
+         test_key_type,
+diff --git a/tests/more_concepts/test_mock_iterator.cpp b/tests/more_concepts/test_mock_iterator.cpp
+index c127b50..d39acfe 100644
+--- a/tests/more_concepts/test_mock_iterator.cpp
++++ b/tests/more_concepts/test_mock_iterator.cpp
+@@ -5,7 +5,7 @@
+ namespace
+ {
+     using test_value_type = int;
+-    
++
+     using mock_input_iterator = more_concepts::mock_const_iterator<
+         test_value_type, std::input_iterator_tag>;
+     using mock_forward_iterator = more_concepts::mock_const_iterator<
+@@ -16,7 +16,7 @@ namespace
+         test_value_type, std::random_access_iterator_tag>;
+     using mock_contiguous_iterator = more_concepts::mock_const_iterator<
+         test_value_type, std::contiguous_iterator_tag>;
+-    
++
+     using mock_output_iterator = more_concepts::mock_mutable_iterator<
+         test_value_type, std::output_iterator_tag>;
+     using mock_mutable_input_iterator = more_concepts::mock_mutable_iterator<
