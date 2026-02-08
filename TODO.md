@@ -3,7 +3,14 @@
 
 ## Misc Standardization
 
-* use `JMG_TAG_TYPE` to declare all tag types
+* Use `JMG_TAG_TYPE` to declare all tag types
+* Update standard `JMG_OBJECT_CONCEPT` to include a requirement to be
+  derived from `jmg::ObjectDefT`?
+
+* Review the handling of optional fields in _yaml_ encoding and
+  consider whether it correctly fits the standard patterns.
+  * If not, what modifications should be made to either the _yaml_
+    encoding or to the standard patterns?
 
 ## Naming
 
@@ -59,7 +66,10 @@ concepts and type metafunctions:
   * stage 1 - all mutation through `jmg::set()`
   * stage 2 - investigate alternatives for collections
     * alternative 1 - introduce e.g. `jmg::add()` et.al. similar to
-      handling of `repeated` fields in protobuf
+      handling of `repeated` fields in protobuf.
+      * Note that some work along these lines has already been done
+        with the `clear()` member function in the _native_ encoding
+        object.
     * alternative 2 - develop proxy objects where necessary to support
       emulation of the style of interaction used in the standard
       library
