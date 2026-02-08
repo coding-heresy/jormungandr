@@ -186,7 +186,7 @@ decltype(auto) get(const Obj& obj)
  * default value if no value is present in the object
  */
 template<OptionalFieldT Fld, ObjectDefT Obj>
-decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForT<Fld>> dflt)
+decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForFieldT<Fld>> dflt)
   requires(isMemberOfObject<Fld, Obj>())
 {
   using Rslt = RemoveOptionalT<ReturnTypeForFieldT<Fld>>;
@@ -214,7 +214,7 @@ decltype(auto) try_get(const Obj& obj)
  * version of set() that will copy
  */
 template<FieldDefT Fld, ObjectDefT Obj>
-void set(Obj& obj, ArgTypeForT<Fld> arg)
+void set(Obj& obj, ArgTypeForFieldT<Fld> arg)
   requires(isMemberOfObject<Fld, Obj>())
 {
   obj.template set<Fld>(arg);

@@ -199,7 +199,7 @@ public:
    * delegate for jmg::set() for non-viewable types
    */
   template<NonViewableFieldT Fld>
-  void set(ArgTypeForT<Fld> arg) {
+  void set(ArgTypeForFieldT<Fld> arg) {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     auto& entry = std::get<kIdx>(obj_);
     entry = arg;
@@ -210,7 +210,7 @@ public:
    * type
    */
   template<ViewableFieldT Fld>
-  void set(ArgTypeForT<Fld> arg) {
+  void set(ArgTypeForFieldT<Fld> arg) {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     auto& entry = std::get<kIdx>(obj_);
     // construct the owning type from the argument view type
