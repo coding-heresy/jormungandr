@@ -363,3 +363,7 @@ using ReturnTypeForFieldT = detail::ReturnTypeForField<T>::type;
 inline constexpr char kPlaceholder[] = "";
 
 } // namespace jmg
+
+#define JMG_FIELD_CONCEPT() \
+  template<typename T>      \
+  concept FieldT = std::is_base_of_v<detail::FieldTag, T>

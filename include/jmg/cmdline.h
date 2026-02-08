@@ -60,15 +60,7 @@ JMG_TAG_TYPE(Object);
 static constexpr auto kPosDelimit = std::string_view("--");
 } // namespace detail
 
-/**
- * concept for command line parameters
- *
- * NOTE: using std::is_base_of_v instead of std::derived_from due to
- * the fact that CmdLineParamTag is expected to be a private base
- * class
- */
-template<typename T>
-concept FieldT = std::is_base_of_v<detail::FieldTag, T>;
+JMG_FIELD_CONCEPT();
 
 ////////////////////////////////////////////////////////////////////////////////
 // command line parameter field types
