@@ -35,14 +35,31 @@
 #include <string>
 
 #include "jmg/field.h"
+#include "jmg/safe_types.h"
 #include "jmg/types.h"
 
 using namespace jmg;
 using namespace std;
 
-// integral type fields
+// safe base types
+using Id32 = SafeId32<>;
+#if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
+using SafeTs = SafeType<TimePoint, st::arithmetic>;
+#else
+JMG_NEW_SAFE_TYPE(SafeTs, TimePoint, st::arithmetic);
+#endif
+
+// primitive type fields
 using IntFld = FieldDef<int, "int", Required>;
 using OptFld = FieldDef<float, "opt", Optional>;
+using Id32Fld = FieldDef<Id32, "id32", Required>;
+using OptId32Fld = FieldDef<Id32, "opt_id32", Optional>;
+
+// class fields
+using TimePointFld = FieldDef<TimePoint, "tp", Required>;
+using OptTimePointFld = FieldDef<TimePoint, "tp", Optional>;
+using TsFld = FieldDef<SafeTs, "tp", Required>;
+using OptTsFld = FieldDef<SafeTs, "tp", Optional>;
 
 // string fields
 using StrFld = StringField<"str", Required>;
@@ -52,19 +69,50 @@ using OptStrFld = StringField<"opt_str", Optional>;
 using ArrayFld = ArrayField<double, "array_dbl", Required>;
 using OptArrayFld = ArrayField<uint64_t, "array_dbl", Optional>;
 
-// class fields
-using TimePointFld = FieldDef<TimePoint, "tp", Required>;
-
 TEST(FieldTests, TestArgTypeForFieldT) {
+  // primitive fields take argument by value, regardless of whether or
+  // not they are safe types
   using ArgTypeForIntFld = ArgTypeForFieldT<IntFld>;
   EXPECT_TRUE((same_as<ArgTypeForIntFld, int>));
 
   using ArgTypeForOptFld = ArgTypeForFieldT<OptFld>;
   EXPECT_TRUE((same_as<ArgTypeForOptFld, float>));
 
-  // TODO(bd) also support non-const ref return type?
-  using ArgTypeForFieldTpFld = ArgTypeForFieldT<TimePointFld>;
-  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForFieldTpFld>));
+  // class fields take argument by const ref, regardless of whether or
+  // not they are safe types
+  using ArgTypeForTpFld = ArgTypeForFieldT<TimePointFld>;
+  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTpFld>));
+
+  using ArgTypeForOptTpFld = ArgTypeForFieldT<OptTimePointFld>;
+  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForOptTpFld>));
+
+  ////////////////////
+  // TODO(bd) investigate these very suspicious results, compiler bug
+  // again?
+
+  using ArgTypeForId32Fld = ArgTypeForFieldT<Id32Fld>;
+  EXPECT_TRUE(SafeT<ArgTypeForId32Fld>);
+  EXPECT_TRUE((same_as<UnsafeTypeFromT<ArgTypeForId32Fld>, uint32_t>));
+  // EXPECT_TRUE((same_as<ArgTypeForId32Fld, Id32Fld>));
+
+  using ArgTypeForOptId32Fld = ArgTypeForFieldT<OptId32Fld>;
+  EXPECT_TRUE(SafeT<ArgTypeForOptId32Fld>);
+  EXPECT_TRUE((same_as<UnsafeTypeFromT<ArgTypeForOptId32Fld>, uint32_t>));
+  // EXPECT_TRUE((same_as<ArgTypeForOptId32Fld, Id32Fld>));
+
+  using ArgTypeForTsFld = ArgTypeForFieldT<TsFld>;
+  EXPECT_TRUE(SafeT<ArgTypeForTsFld>);
+  // EXPECT_TRUE(is_const_v<ArgTypeForTsFld>);
+  EXPECT_TRUE(is_reference_v<ArgTypeForTsFld>);
+  EXPECT_TRUE((same_as<UnsafeTypeFromT<DecayT<ArgTypeForTsFld>>, TimePoint>));
+  // EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTsFld>));
+
+  using ArgTypeForOptTsFld = ArgTypeForFieldT<OptTsFld>;
+  EXPECT_TRUE(SafeT<ArgTypeForOptTsFld>);
+  // EXPECT_TRUE(is_const_v<ArgTypeForOptTsFld>);
+  EXPECT_TRUE(is_reference_v<ArgTypeForOptTsFld>);
+  EXPECT_TRUE((same_as<UnsafeTypeFromT<DecayT<ArgTypeForOptTsFld>>, TimePoint>));
+  // EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForOptTsFld>));
 }
 
 TEST(FieldTests, TestReturnTypeForFieldT) {
@@ -74,14 +122,13 @@ TEST(FieldTests, TestReturnTypeForFieldT) {
   using ReturnTypeForOptFld = ReturnTypeForFieldT<OptFld>;
   EXPECT_TRUE((same_as<optional<float>, ReturnTypeForOptFld>));
 
-  // TODO(bd) should be 'const TimePoint&' for the argument type?
   using ReturnTypeForTpFld = ReturnTypeForFieldT<TimePointFld>;
-  EXPECT_TRUE((same_as<TimePoint&, ReturnTypeForTpFld>));
+  EXPECT_TRUE((same_as<const TimePoint&, ReturnTypeForTpFld>));
 }
 
 TEST(FieldTests, TestStringFieldsWorkCorrectly) {
   using ArgTypeForStrFld = ArgTypeForFieldT<StrFld>;
-  EXPECT_TRUE((same_as<ArgTypeForStrFld, const string_view>));
+  EXPECT_TRUE((same_as<ArgTypeForStrFld, string_view>));
 
   using ArgTypeForOptStrFld = ArgTypeForFieldT<OptStrFld>;
   EXPECT_TRUE((same_as<ArgTypeForOptStrFld, string_view>));

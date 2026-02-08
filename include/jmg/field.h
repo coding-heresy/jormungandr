@@ -189,6 +189,8 @@ concept OptionalFieldT =
 
 /**
  * concept for viewable field (i.e. field that has viewable type)
+ *
+ * TODO(bd) handle safe string types correctly
  */
 template<typename T>
 concept ViewableFieldT = StringFieldT<T> || ArrayFieldT<T>;
@@ -196,31 +198,9 @@ concept ViewableFieldT = StringFieldT<T> || ArrayFieldT<T>;
 /**
  * concept for non-viewable field (i.e. field that has non-viewable
  * type)
- *
- * TODO(bd) replace all instances with !ViewableFieldT ?
  */
 template<typename T>
 concept NonViewableFieldT = FieldDefT<T> && !ViewableFieldT<T>;
-
-/**
- * concept for optional non-viewable field (i.e. optional field that
- * has non-viewable type)
- */
-template<typename T>
-concept OptionalNonViewableFieldT = OptionalFieldT<T> && NonViewableFieldT<T>;
-
-/**
- * concept for optional viewable field (i.e. optional field that has
- * viewable type)
- */
-template<typename T>
-concept OptionalViewableFieldT = OptionalFieldT<T> && ViewableFieldT<T>;
-
-/**
- * concept for optional string field
- */
-template<typename T>
-concept OptionalStringFieldT = OptionalFieldT<T> && StringFieldT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // self-documenting aliases to be used when indicating whether a field
@@ -255,33 +235,44 @@ using Optionalize = meta::quote_trait<detail::OptionalizedFldType>;
 
 namespace detail
 {
-template<typename T>
-concept RequiredNonViewable = RequiredFieldT<T> && NonViewableFieldT<T>;
+
+////////////////////
+// required field types
 
 template<typename T>
 concept RequiredViewable = RequiredFieldT<T> && ViewableFieldT<T>;
 
 template<typename T>
-concept RequiredNonViewableNonClass =
-  RequiredFieldT<T> && NonViewableFieldT<T> && !ClassT<typename T::type>;
+concept RequiredSafePrimitive =
+  RequiredFieldT<T> && SafePrimitiveT<typename T::type>;
 
 template<typename T>
-concept RequiredNonViewableClass =
-  RequiredFieldT<T> && NonViewableFieldT<T> && ClassT<typename T::type>;
+concept RequiredSafeClass = RequiredFieldT<T> && SafeClassT<typename T::type>;
 
 template<typename T>
-concept OptionalNonViewable = OptionalFieldT<T> && NonViewableFieldT<T>;
+concept RequiredUnsafeClass =
+  RequiredFieldT<T> && NonViewableFieldT<T> && UnsafeClassT<typename T::type>;
 
-template<typename T>
-concept OptionalNonViewableClass =
-  OptionalFieldT<T> && !ViewableFieldT<T> && ClassT<typename T::type>;
-
-template<typename T>
-concept OptionalNonViewableNonClass =
-  OptionalFieldT<T> && !ViewableFieldT<T> && !ClassT<typename T::type>;
+////////////////////
+// optional field types
 
 template<typename T>
 concept OptionalViewable = OptionalFieldT<T> && ViewableFieldT<T>;
+
+template<typename T>
+concept OptionalSafePrimitive =
+  OptionalFieldT<T> && SafePrimitiveT<typename T::type>;
+
+template<typename T>
+concept OptionalUnsafePrimitive =
+  OptionalFieldT<T> && UnsafePrimitiveT<typename T::type>;
+
+template<typename T>
+concept OptionalSafeClass = OptionalFieldT<T> && SafeClassT<typename T::type>;
+
+template<typename T>
+concept OptionalUnsafeClass =
+  OptionalFieldT<T> && NonViewableFieldT<T> && UnsafeClassT<typename T::type>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // type metafunction for computing the correct argument type to use
@@ -293,24 +284,52 @@ struct ArgTypeForField {
   using type = T::type;
 };
 
-template<RequiredNonViewableClass T>
+////////////////////
+// required field types
+
+template<RequiredViewable T>
+struct ArgTypeForField<T> {
+  // TODO(bd) should this be const_view_type?
+  using type = T::view_type;
+};
+
+template<RequiredSafePrimitive T>
+struct ArgTypeForField<T> {
+  using type = T::type;
+};
+
+template<RequiredSafeClass T>
 struct ArgTypeForField<T> {
   using type = const T::type&;
 };
 
-template<RequiredViewable T>
+template<RequiredUnsafeClass T>
 struct ArgTypeForField<T> {
-  using type = const T::const_view_type;
+  using type = const T::type&;
 };
 
-template<OptionalNonViewableClass T>
+////////////////////
+// optional field types
+
+template<OptionalViewable T>
 struct ArgTypeForField<T> {
-  using type = const typename T::type&;
+  // TODO(bd) should this be const_view_type?
+  using type = T::view_type;
 };
 
-template<OptionalViewableFieldT T>
+template<OptionalSafePrimitive T>
 struct ArgTypeForField<T> {
-  using type = typename T::const_view_type;
+  using type = T::type;
+};
+
+template<OptionalSafeClass T>
+struct ArgTypeForField<T> {
+  using type = const T::type&;
+};
+
+template<OptionalUnsafeClass T>
+struct ArgTypeForField<T> {
+  using type = const T::type&;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -320,18 +339,52 @@ struct ArgTypeForField<T> {
 
 template<FieldDefT T>
 struct ReturnTypeForField {
-  using type = ReturnTypeForAnyT<typename T::type>;
+  using type = T::type;
 };
+
+////////////////////
+// required field types
 
 template<RequiredViewable T>
 struct ReturnTypeForField<T> {
-  using type = typename T::const_view_type;
+  using type = T::const_view_type;
 };
 
-template<OptionalNonViewableClass T>
+template<RequiredSafePrimitive T>
 struct ReturnTypeForField<T> {
-  // TODO(bd) systematically return raw pointer instead of
-  // std::optional for optional class fields?
+  using type = T::type;
+};
+
+template<RequiredSafeClass T>
+struct ReturnTypeForField<T> {
+  using type = const T::type&;
+};
+
+template<RequiredUnsafeClass T>
+struct ReturnTypeForField<T> {
+  using type = const T::type&;
+};
+
+////////////////////
+// optional field types
+
+template<OptionalViewable T>
+struct ReturnTypeForField<T> {
+  using type = std::optional<typename T::const_view_type>;
+};
+
+template<OptionalSafePrimitive T>
+struct ReturnTypeForField<T> {
+  using type = std::optional<typename T::type>;
+};
+
+template<OptionalUnsafePrimitive T>
+struct ReturnTypeForField<T> {
+  using type = std::optional<typename T::type>;
+};
+
+template<OptionalSafeClass T>
+struct ReturnTypeForField<T> {
 #if defined(JMG_TODO_USE_PTR_FOR_OPT_CLASS_RETURN)
   using type = const typename T::type*;
 #else
@@ -339,14 +392,13 @@ struct ReturnTypeForField<T> {
 #endif
 };
 
-template<OptionalNonViewableNonClass T>
+template<OptionalUnsafeClass T>
 struct ReturnTypeForField<T> {
-  using type = std::optional<typename T::type>;
-};
-
-template<OptionalViewable T>
-struct ReturnTypeForField<T> {
-  using type = std::optional<typename T::const_view_type>;
+#if defined(JMG_TODO_USE_PTR_FOR_OPT_CLASS_RETURN)
+  using type = const typename T::type*;
+#else
+  using type = const std::optional<typename T::type>&;
+#endif
 };
 
 } // namespace detail
