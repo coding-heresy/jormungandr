@@ -42,6 +42,13 @@ namespace jmg::native
 
 namespace detail
 {
+JMG_TAG_TYPE(Object);
+} // namespace detail
+
+JMG_OBJECT_CONCEPT();
+
+namespace detail
+{
 using namespace meta::placeholders;
 
 // NOTE: a bunch of code to cleanly handle the case where std::nullopt
@@ -115,10 +122,10 @@ constexpr bool isAdaptedObject() {
  * class template for a standard interface object associated with a
  * raw tuple
  *
- * @todo(bd) apply more constraints to the allowable types for fields
+ * TODO(bd) apply more constraints to the allowable types for fields
  */
 template<FieldDefT... Flds>
-class Object : public ObjectDef<Flds...> {
+class Object : public ObjectDef<Flds...>, public detail::ObjectTag {
   using base = ObjectDef<Flds...>;
 
 public:
@@ -179,7 +186,7 @@ public:
       // of std::nullopt
       else { return Rslt(); }
     }
-    else if constexpr (ObjectDefT<typename Fld::type>) {
+    else if constexpr (native::ObjectT<typename Fld::type>) {
       const auto& val = std::get<kIdx>(obj_);
       // NOTE: optional object returns raw, non-owning pointer
       if (val) { return &(*val); }
