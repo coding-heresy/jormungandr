@@ -289,27 +289,27 @@ concept OptionalViewable = OptionalFieldT<T> && ViewableFieldT<T>;
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-struct ArgTypeFor {
+struct ArgTypeForField {
   using type = T::type;
 };
 
 template<RequiredNonViewableClass T>
-struct ArgTypeFor<T> {
+struct ArgTypeForField<T> {
   using type = const T::type&;
 };
 
 template<RequiredViewable T>
-struct ArgTypeFor<T> {
+struct ArgTypeForField<T> {
   using type = const T::const_view_type;
 };
 
 template<OptionalNonViewableClass T>
-struct ArgTypeFor<T> {
+struct ArgTypeForField<T> {
   using type = const typename T::type&;
 };
 
 template<OptionalViewableFieldT T>
-struct ArgTypeFor<T> {
+struct ArgTypeForField<T> {
   using type = typename T::const_view_type;
 };
 
@@ -352,7 +352,7 @@ struct ReturnTypeForField<T> {
 } // namespace detail
 
 template<typename T>
-using ArgTypeForT = detail::ArgTypeFor<T>::type;
+using ArgTypeForFieldT = detail::ArgTypeForField<T>::type;
 
 template<typename T>
 using ReturnTypeForFieldT = detail::ReturnTypeForField<T>::type;

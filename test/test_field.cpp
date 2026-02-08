@@ -55,16 +55,16 @@ using OptArrayFld = ArrayField<uint64_t, "array_dbl", Optional>;
 // class fields
 using TimePointFld = FieldDef<TimePoint, "tp", Required>;
 
-TEST(FieldTests, TestArgTypeForT) {
-  using ArgTypeForIntFld = ArgTypeForT<IntFld>;
+TEST(FieldTests, TestArgTypeForFieldT) {
+  using ArgTypeForIntFld = ArgTypeForFieldT<IntFld>;
   EXPECT_TRUE((same_as<ArgTypeForIntFld, int>));
 
-  using ArgTypeForOptFld = ArgTypeForT<OptFld>;
+  using ArgTypeForOptFld = ArgTypeForFieldT<OptFld>;
   EXPECT_TRUE((same_as<ArgTypeForOptFld, float>));
 
   // TODO(bd) also support non-const ref return type?
-  using ArgTypeForTpFld = ArgTypeForT<TimePointFld>;
-  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTpFld>));
+  using ArgTypeForFieldTpFld = ArgTypeForFieldT<TimePointFld>;
+  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForFieldTpFld>));
 }
 
 TEST(FieldTests, TestReturnTypeForFieldT) {
@@ -80,10 +80,10 @@ TEST(FieldTests, TestReturnTypeForFieldT) {
 }
 
 TEST(FieldTests, TestStringFieldsWorkCorrectly) {
-  using ArgTypeForStrFld = ArgTypeForT<StrFld>;
+  using ArgTypeForStrFld = ArgTypeForFieldT<StrFld>;
   EXPECT_TRUE((same_as<ArgTypeForStrFld, const string_view>));
 
-  using ArgTypeForOptStrFld = ArgTypeForT<OptStrFld>;
+  using ArgTypeForOptStrFld = ArgTypeForFieldT<OptStrFld>;
   EXPECT_TRUE((same_as<ArgTypeForOptStrFld, string_view>));
 
   using ReturnTypeForStrFld = ReturnTypeForFieldT<StrFld>;
