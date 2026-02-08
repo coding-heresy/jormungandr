@@ -366,4 +366,4 @@ inline constexpr char kPlaceholder[] = "";
 
 #define JMG_FIELD_CONCEPT() \
   template<typename T>      \
-  concept FieldT = std::is_base_of_v<detail::FieldTag, T>
+  concept FieldT = jmg::FieldDefT<T> && std::is_base_of_v<detail::FieldTag, T>
