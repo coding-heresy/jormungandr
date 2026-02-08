@@ -45,6 +45,13 @@ namespace jmg::ptree
 
 namespace detail
 {
+JMG_TAG_TYPE(Object);
+} // namespace detail
+
+JMG_OBJECT_CONCEPT();
+
+namespace detail
+{
 /**
  * Annoying conversion from boost::optional to std::optional
  *
@@ -80,7 +87,8 @@ struct ElementAttr {};
  * structured as XML
  */
 template<typename... Fields>
-class Object : public ObjectDef<ElementTag, Fields...> {
+class Object : public ObjectDef<ElementTag, Fields...>,
+               public detail::ObjectTag {
 public:
   using adapted_type = boost::property_tree::ptree::value_type;
 
@@ -223,7 +231,7 @@ struct XmlSizePolicy : SizeRetrievalPolicyTag {
   }
 };
 
-template<ObjectDefT Obj>
+template<ptree::ObjectT Obj>
 struct ElementsArrayTypeFactory {
   using ItrProxy = ElementsItrProxy<Obj>;
   using ItrPolicy = ProxiedItrPolicy<boost::property_tree::ptree, ItrProxy>;
@@ -232,7 +240,7 @@ struct ElementsArrayTypeFactory {
     ViewingArrayProxy<boost::property_tree::ptree, ItrPolicy, SzPolicy>;
 };
 } // namespace detail
-template<ObjectDefT Obj>
+template<ptree::ObjectT Obj>
 using ElementsArrayT = meta::_t<detail::ElementsArrayTypeFactory<Obj>>;
 
 /**
