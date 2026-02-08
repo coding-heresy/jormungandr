@@ -47,13 +47,20 @@
 namespace jmg::quickfix
 {
 
+namespace detail
+{
+JMG_TAG_TYPE(Object);
+} // namespace detail
+
+JMG_OBJECT_CONCEPT();
+
 constexpr auto kTimeStampFmt = TimePointFmt("%E4Y%m%d-%H:%M:%S");
 constexpr auto kTimeStampMillisecFmt = TimePointFmt("%E4Y%m%d-%H:%M:%S.#E3f");
 constexpr auto kDateOnlyFmt = TimePointFmt("%E4Y%m%d");
 
 #if defined(USE_NATIVE_QUICKFIX_MSG)
-template<typename... Fields>
-class Object : public ObjectDef<Fields...> {
+template<jmg::FieldDefT... Fields>
+class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
 public:
   using adapted_type = FIX::Message;
 
@@ -105,8 +112,8 @@ concept OptionalFixFieldT = OptionalField<T> && FixTagT<T>;
  * quick and dirty implementation of FIX message object used for
  * testing until the quitckfix library is fully integrated
  */
-template<typename... Fields>
-class Object : public ObjectDef<Fields...> {
+template<jmg::FieldDefT... Fields>
+class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
 public:
   Object() = delete;
   Object(const std::string_view msg,
