@@ -1,6 +1,10 @@
 
 # Quick Lists of Short to Medium Term TODO Items
 
+## Misc Standardization
+
+* use `JMG_TAG_TYPE` to declare all tag types
+
 ## Naming
 
 * Concepts and type metafunctions shall be named with a trailing `T`.
