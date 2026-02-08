@@ -181,18 +181,18 @@
 // helper macros for commonly used declarations
 ////////////////////////////////////////////////////////////////////////////////
 
-#define JMG_DEFAULT_COPYABLE(Class)  \
-  Class(const Class& src) = default; \
-  Class& operator=(const Class& rhs) = default
+#define JMG_DEFAULT_COPYABLE(class)  \
+  class(const class& src) = default; \
+  class& operator=(const class& rhs) = default
 
-#define JMG_NON_COPYABLE(Class)     \
-  Class(const Class& src) = delete; \
-  Class& operator=(const Class& rhs) = delete
+#define JMG_NON_COPYABLE(class)     \
+  class(const class& src) = delete; \
+  class& operator=(const class& rhs) = delete
 
-#define JMG_DEFAULT_MOVEABLE(Class) \
-  Class(Class&& src) = default;     \
-  Class& operator=(Class&& rhs) = default
+#define JMG_DEFAULT_MOVEABLE(class) \
+  class(class && src) = default;    \
+  class& operator=(class&& rhs) = default
 
-#define JMG_NON_MOVEABLE(Class) \
-  Class(Class&& src) = delete;  \
-  Class& operator=(Class&& rhs) = delete
+#define JMG_NON_MOVEABLE(class) \
+  class(class && src) = delete; \
+  class& operator=(class&& rhs) = delete
