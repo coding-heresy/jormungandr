@@ -145,7 +145,7 @@ using UnsafeTypeFromT = typename T::value_type;
  * type that wraps it
  */
 template<SafeT T>
-struct SafeRefOf {
+struct SafeRefOfT {
   using Unsafe = T::value_type;
   // convert to non-const reference
   constexpr static T& from(Unsafe& ref) { return reinterpret_cast<T&>(ref); }

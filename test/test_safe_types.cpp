@@ -90,7 +90,7 @@ TEST(SafeTypeTests, TestConcepts) {
     EXPECT_FALSE((is_same_v<decltype(t1), decltype(t3)>)); \
   } while (0)
 
-TEST(SafeTypesTests, TypesAreStrong) {
+TEST(SafeTypesTests, TestTypesAreStrong) {
   CONFIRM_STRONG_TYPES(TestId32, OtherId32);
   CONFIRM_STRONG_TYPES(TestIdStr, OtherIdStr);
   CONFIRM_STRONG_TYPES(NonBaseType1, NonBaseType2);
@@ -98,12 +98,12 @@ TEST(SafeTypesTests, TypesAreStrong) {
 
 #undef CONFIRM_STRONG_TYPES
 
-TEST(SafeTypesTests, RetrieveUnsafeType) {
+TEST(SafeTypesTests, TestRetrieveUnsafeType) {
   EXPECT_TRUE((is_same_v<uint32_t, UnsafeTypeFromT<TestId32>>));
   EXPECT_TRUE((is_same_v<string, UnsafeTypeFromT<TestIdStr>>));
 }
 
-TEST(SafeTypesTests, StreamOutput) {
+TEST(SafeTypesTests, TestStreamOutput) {
   const auto id = TestId32(42);
   ostringstream strm;
   strm << id;
@@ -119,7 +119,7 @@ TEST(SafeTypesTests, StreamOutput) {
     EXPECT_NE(id1, id3);                     \
   } while (0)
 
-TEST(SafeTypesTests, IdsAreComparable) {
+TEST(SafeTypesTests, TestIdsAreComparable) {
   CONFIRM_COMPARABLE(TestId32, 42, 20010911);
   CONFIRM_COMPARABLE(TestIdStr, "foo"s, "bar"s);
 }
@@ -139,7 +139,7 @@ TEST(SafeTypesTests, IdsAreComparable) {
     EXPECT_EQ(dict.at(key), value);                                       \
   } while (0)
 
-TEST(SafeTypesTests, IdsAreHashable) {
+TEST(SafeTypesTests, TestIdsAreHashable) {
   CONFIRM_DICT_HANDLING(unordered_map, TestId32, string, 20010911, "foo"s);
   CONFIRM_DICT_HANDLING(unordered_map, TestIdStr, int, "foo"s, 20010911);
   CONFIRM_DICT_HANDLING(map, TestId32, string, 20010911, "foo"s);
@@ -154,10 +154,10 @@ using TestSafeInt = SafeType<int32_t>;
 JMG_NEW_SIMPLE_SAFE_TYPE(TestSafeInt, int32_t);
 #endif
 
-TEST(SafeTypeTests, SafeRefOfTest) {
+TEST(SafeTypeTests, TestSafeRefOfT) {
   int32_t val;
   auto& unsafe_ref = val;
-  auto& safe_ref = SafeRefOf<TestSafeInt>::from(unsafe_ref);
+  auto& safe_ref = SafeRefOfT<TestSafeInt>::from(unsafe_ref);
   EXPECT_TRUE((DecayedSameAsT<decltype(safe_ref), TestSafeInt>));
 }
 
