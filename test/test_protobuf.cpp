@@ -51,7 +51,7 @@ using TestOptMsg = jmg::test::TestOptMsg;
 ////////////////////
 // fields for InnerMsg
 
-using InnerInt32 = protobuf::FieldDef<int32_t, "inner_int_32", Required, 1U>;
+using InnerInt32 = protobuf::Field<int32_t, "inner_int_32", Required, 1U>;
 using OptInnerStr = protobuf::StringField<"opt_inner_str", Optional, 2U>;
 
 using InnerMsgObj = protobuf::Object<InnerMsg, InnerInt32, OptInnerStr>;
@@ -59,20 +59,20 @@ using InnerMsgObj = protobuf::Object<InnerMsg, InnerInt32, OptInnerStr>;
 ////////////////////
 // fields for TestMsg
 
-using Boolean = protobuf::FieldDef<bool, "boolean", Required, 1U>;
+using Boolean = protobuf::Field<bool, "boolean", Required, 1U>;
 
-using Int32 = protobuf::FieldDef<int32_t, "int_32", Required, 2U>;
-using UInt32 = protobuf::FieldDef<uint32_t, "uint_32", Required, 3U>;
-using SFixed32 = protobuf::FieldDef<int32_t, "sfixed_32", Required, 4U>;
-using Fixed32 = protobuf::FieldDef<uint32_t, "fixed_32", Required, 5U>;
+using Int32 = protobuf::Field<int32_t, "int_32", Required, 2U>;
+using UInt32 = protobuf::Field<uint32_t, "uint_32", Required, 3U>;
+using SFixed32 = protobuf::Field<int32_t, "sfixed_32", Required, 4U>;
+using Fixed32 = protobuf::Field<uint32_t, "fixed_32", Required, 5U>;
 
-using Int64 = protobuf::FieldDef<int64_t, "int_64", Required, 6U>;
-using UInt64 = protobuf::FieldDef<uint64_t, "uint_64", Required, 7U>;
-using SFixed64 = protobuf::FieldDef<int64_t, "sfixed_64", Required, 8U>;
-using Fixed64 = protobuf::FieldDef<uint64_t, "fixed_64", Required, 9U>;
+using Int64 = protobuf::Field<int64_t, "int_64", Required, 6U>;
+using UInt64 = protobuf::Field<uint64_t, "uint_64", Required, 7U>;
+using SFixed64 = protobuf::Field<int64_t, "sfixed_64", Required, 8U>;
+using Fixed64 = protobuf::Field<uint64_t, "fixed_64", Required, 9U>;
 
-using Flt = protobuf::FieldDef<float, "flt", Required, 10U>;
-using Dbl = protobuf::FieldDef<double, "dbl", Required, 11U>;
+using Flt = protobuf::Field<float, "flt", Required, 10U>;
+using Dbl = protobuf::Field<double, "dbl", Required, 11U>;
 
 using Str = protobuf::StringField<"str", Required, 12U>;
 using BytesStr = protobuf::StringField<"bytes_str", Required, 13U>;
@@ -80,7 +80,7 @@ using BytesStr = protobuf::StringField<"bytes_str", Required, 13U>;
 using Ints = protobuf::ArrayField<int32_t, "ints", Required, 14U>;
 
 #if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-using InnerMsgFld = protobuf::FieldDef<InnerMsgObj, "inner_msg", Required, 15U>;
+using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 15U>;
 #endif
 
 // TODO(bd) handle repeated string fields
@@ -108,20 +108,20 @@ using TestMsgObj = protobuf::Object<TestMsg,
 #endif
                                     >;
 
-using OptBool = protobuf::FieldDef<bool, "opt_bool", Optional, 1>;
+using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1>;
 
-using OptInt32 = protobuf::FieldDef<int32_t, "opt_int_32", Optional, 2>;
-using OptUInt32 = protobuf::FieldDef<uint32_t, "opt_uint_32", Optional, 3>;
-using OptSFixed32 = protobuf::FieldDef<int32_t, "opt_sfixed_32", Optional, 4>;
-using OptFixed32 = protobuf::FieldDef<uint32_t, "opt_fixed_32", Optional, 5>;
+using OptInt32 = protobuf::Field<int32_t, "opt_int_32", Optional, 2>;
+using OptUInt32 = protobuf::Field<uint32_t, "opt_uint_32", Optional, 3>;
+using OptSFixed32 = protobuf::Field<int32_t, "opt_sfixed_32", Optional, 4>;
+using OptFixed32 = protobuf::Field<uint32_t, "opt_fixed_32", Optional, 5>;
 
-using OptInt64 = protobuf::FieldDef<int64_t, "opt_int_64", Optional, 6>;
-using OptUInt64 = protobuf::FieldDef<uint64_t, "opt_uint_64", Optional, 7>;
-using OptSFixed64 = protobuf::FieldDef<int64_t, "opt_sfixed_64", Optional, 8>;
-using OptFixed64 = protobuf::FieldDef<uint64_t, "opt_fixed_64", Optional, 9>;
+using OptInt64 = protobuf::Field<int64_t, "opt_int_64", Optional, 6>;
+using OptUInt64 = protobuf::Field<uint64_t, "opt_uint_64", Optional, 7>;
+using OptSFixed64 = protobuf::Field<int64_t, "opt_sfixed_64", Optional, 8>;
+using OptFixed64 = protobuf::Field<uint64_t, "opt_fixed_64", Optional, 9>;
 
-using OptFlt = protobuf::FieldDef<float, "opt_flt", Optional, 10>;
-using OptDbl = protobuf::FieldDef<double, "opt_dbl", Optional, 11>;
+using OptFlt = protobuf::Field<float, "opt_flt", Optional, 10>;
+using OptDbl = protobuf::Field<double, "opt_dbl", Optional, 11>;
 
 using OptStr = protobuf::StringField<"opt_str", Optional, 12>;
 using OptBytesStr = protobuf::StringField<"opt_bytes_str", Optional, 13>;
@@ -208,11 +208,11 @@ protected:
 };
 
 TEST_F(ProtoTests, TestConcepts) {
-  EXPECT_TRUE(jmg::protobuf::detail::HasProtoFieldId<Int32>);
-  EXPECT_TRUE(jmg::protobuf::ProtoFieldT<Str>);
+  EXPECT_TRUE(protobuf::detail::HasProtoFieldId<Int32>);
+  EXPECT_TRUE(protobuf::FieldT<Str>);
   EXPECT_TRUE(jmg::OptionalFieldT<OptBool>);
-  EXPECT_TRUE(jmg::protobuf::detail::NonSpecializedTypeT<int>);
-  EXPECT_TRUE(jmg::protobuf::detail::NonSpecializedTypeT<InnerMsgObj>);
+  EXPECT_TRUE(protobuf::detail::NonSpecializedTypeT<int>);
+  EXPECT_TRUE(protobuf::detail::NonSpecializedTypeT<InnerMsgObj>);
 }
 
 TEST_F(ProtoTests, TestGet) {
