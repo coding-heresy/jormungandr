@@ -77,7 +77,7 @@ int main(const int argc, const char** argv) {
 
     return EXIT_SUCCESS;
   }
-  catch (const CmdLineError& e) {
+  catch (const cmdline::CmdLineError& e) {
     // NOTE: logging e.what() directly will log the error and usage
     // messages without extra exception-specific verbiage
     cout << e.what() << endl;

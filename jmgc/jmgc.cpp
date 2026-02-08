@@ -57,25 +57,27 @@ constexpr auto kSupportedFlags =
 const auto kSupportedFlagsStr = str_join(kSupportedFlags, ", "sv);
 
 // TODO(bd) cmdline needs the concept of a union
-using JmgYamlFlag = NamedFlag<
+using JmgYamlFlag = cmdline::NamedFlag<
   kJmgYamlFlag,
   "file format is JMG, file type is YAML, generated encoding is YAML">;
-using JmgCbeFlag =
-  NamedFlag<kJmgCbeFlag,
-            "file format is JMG, file type is YAML, generated encoding is CBE">;
-using JmgProtobufFlag = NamedFlag<
+using JmgCbeFlag = cmdline::NamedFlag<
+  kJmgCbeFlag,
+  "file format is JMG, file type is YAML, generated encoding is CBE">;
+using JmgProtobufFlag = cmdline::NamedFlag<
   kJmgProtobufFlag,
   "file format is JMG, file type is YAML, generated encoding is protobuf">;
 using FixFlag =
-  NamedFlag<kFixFlag, "file format is QuickFIX protocol, file type is XML">;
+  cmdline::NamedFlag<kFixFlag,
+                     "file format is QuickFIX protocol, file type is XML">;
 
 using SrcFile =
-  PosnStringParam<"src_file", "the file to read source definitions from">;
+  cmdline::PosnStringParam<"src_file",
+                           "the file to read source definitions from">;
 
 int main(const int argc, const char** argv) {
   try {
-    using CmdLine =
-      CmdLineArgs<JmgYamlFlag, JmgCbeFlag, JmgProtobufFlag, FixFlag, SrcFile>;
+    using CmdLine = cmdline::CmdLineArgs<JmgYamlFlag, JmgCbeFlag,
+                                         JmgProtobufFlag, FixFlag, SrcFile>;
     const auto cmdline = CmdLine(argc, argv);
 
     if (jmg::get<FixFlag>(cmdline)) {
@@ -116,7 +118,7 @@ int main(const int argc, const char** argv) {
     }
     return EXIT_SUCCESS;
   }
-  catch (const CmdLineError& e) {
+  catch (const cmdline::CmdLineError& e) {
     cerr << e.what() << "\n";
   }
   JMG_SINK_ALL_EXCEPTIONS("top level")

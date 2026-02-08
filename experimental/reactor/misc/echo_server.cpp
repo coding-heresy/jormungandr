@@ -47,9 +47,9 @@ namespace jmg
 {
 
 class EchoServer : public ReactorBasedServer {
-  using Port =
+  using Port = cmdline::
     NamedParam<IpPort, "port", "port to listen on (defaults to 8888)", Optional>;
-  using CmdLine = CmdLineArgs<Port>;
+  using CmdLine = cmdline::CmdLineArgs<Port>;
   using AcceptRslt = std::tuple<SocketDescriptor, IpEndpoint>;
 
   static constexpr auto kDfltPort = IpPort(8888);
