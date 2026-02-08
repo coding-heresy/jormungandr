@@ -273,12 +273,11 @@ TEST(CbeTest, TestArray) {
 
 TEST(CbeTest, TestObj) {
   array<uint8_t, 1024> buf = {0};
-  using IntFld = cbe::FieldDef<int, "int", Required, 0U /* kFldId */>;
+  using IntFld = cbe::Field<int, "int", Required, 0U /* kFldId */>;
   using SubObject = cbe::Object<IntFld>;
   // NOTE: IntFld is in a different object than SubObjFld so kFldI can be the
   // same for both
-  using SubObjFld =
-    cbe::FieldDef<SubObject, "sub_obj", Required, 0U /* kFldId */>;
+  using SubObjFld = cbe::Field<SubObject, "sub_obj", Required, 0U /* kFldId */>;
   using TestObject = cbe::Object<SubObjFld>;
   const auto obj = TestObject(SubObject(20010911));
   {
@@ -292,19 +291,18 @@ TEST(CbeTest, TestObj) {
 }
 
 TEST(CbeTest, TestSerializerAndDeserializer) {
-  using IntFld = cbe::FieldDef<int, "int", Required, 0U /* kFldId */>;
-  using DblFld = cbe::FieldDef<double, "dbl", Required, 1U /* kFldId */>;
+  using IntFld = cbe::Field<int, "int", Required, 0U /* kFldId */>;
+  using DblFld = cbe::Field<double, "dbl", Required, 1U /* kFldId */>;
   using StrFld = cbe::StringField<"str", Required, 2U /* kFldId */>;
   // NOTE: intentionally skipping field ID 3
-  using OptFld = cbe::FieldDef<float, "opt", Optional, 4U /* kFldId */>;
+  using OptFld = cbe::Field<float, "opt", Optional, 4U /* kFldId */>;
   using ArrayFld =
     cbe::ArrayField<unsigned, "unsigned_array", Required, 5U /* kFldId */>;
 
   using SubObject = cbe::Object<IntFld, DblFld>;
-  using SubObjFld =
-    cbe::FieldDef<SubObject, "sub_obj", Required, 6U /* kFldId */>;
+  using SubObjFld = cbe::Field<SubObject, "sub_obj", Required, 6U /* kFldId */>;
   using OptSubObjFld =
-    cbe::FieldDef<SubObject, "sub_obj", Optional, 7U /* kFldId */>;
+    cbe::Field<SubObject, "sub_obj", Optional, 7U /* kFldId */>;
 
   using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld, ArrayFld,
                                  SubObjFld, OptSubObjFld>;

@@ -102,8 +102,20 @@ namespace jmg::cbe
 {
 namespace detail
 {
-struct CbeFieldDefTag {};
+JMG_TAG_TYPE(Field);
+JMG_TAG_TYPE(Object);
+
+// TODO(bd) use safe type instead of uint32_t for field ID?
+template<typename T>
+concept HasCbeFieldId =
+  requires { requires std::same_as<Decay<decltype(T::kFldId)>, uint32_t>; };
+
 } // namespace detail
+
+template<typename T>
+concept FieldT = jmg::FieldDefT<T> && std::is_base_of_v<detail::FieldTag, T>
+                 && detail::HasCbeFieldId<T>;
+JMG_OBJECT_CONCEPT();
 
 /**
  * class template for field definitions that are specific to CBE
@@ -112,7 +124,7 @@ struct CbeFieldDefTag {};
  * TODO(bd) use safe type instead of uint32_t for field ID?
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
-struct FieldDef : jmg::FieldDef<T, kName, IsRequired>, detail::CbeFieldDefTag {
+struct Field : FieldDef<T, kName, IsRequired>, public detail::FieldTag {
 public:
   static constexpr auto kFldId = kFieldId;
 };
@@ -125,7 +137,7 @@ public:
  */
 template<StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 struct StringField
-  : public cbe::FieldDef<std::string, kName, IsRequired, kFieldId> {
+  : public cbe::Field<std::string, kName, IsRequired, kFieldId> {
   using view_type = std::string_view;
 };
 
@@ -137,25 +149,9 @@ struct StringField
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 struct ArrayField
-  : public cbe::FieldDef<std::vector<T>, kName, IsRequired, kFieldId> {
+  : public cbe::Field<std::vector<T>, kName, IsRequired, kFieldId> {
   using view_type = std::span<T>;
 };
-
-namespace detail
-{
-// TODO(bd) use safe type instead of uint32_t for field ID?
-template<typename T>
-concept HasCbeFieldId =
-  requires { requires std::same_as<Decay<decltype(T::kFldId)>, uint32_t>; };
-} // namespace detail
-
-/**
- * concept for CBE field definition
- */
-template<typename T>
-concept CbeFieldDefT =
-  jmg::FieldDefT<T> && std::derived_from<T, detail::CbeFieldDefTag>
-  && detail::HasCbeFieldId<T>;
 
 /**
  * class template for object associated with CBE encoded data
@@ -163,8 +159,8 @@ concept CbeFieldDefT =
  * NOTE: these objects are backed by the native (i.e. tuple-based)
  * encoding
  */
-template<CbeFieldDefT... Flds>
-class Object : public native::Object<Flds...> {
+template<cbe::FieldT... Flds>
+class Object : public native::Object<Flds...>, public cbe::detail::ObjectTag {
   using base = native::Object<Flds...>;
 
   /**
@@ -253,17 +249,6 @@ public:
 
 namespace detail
 {
-template<typename T>
-struct IsCbeObjectDef : std::false_type {};
-template<CbeFieldDefT... Flds>
-struct IsCbeObjectDef<cbe::Object<Flds...>> : std::true_type {};
-} // namespace detail
-
-template<typename T>
-concept CbeObjectDefT = ObjectDefT<T> && detail::IsCbeObjectDef<T>{}();
-
-namespace detail
-{
 
 constexpr auto kDecodingFailure =
   std::string_view("decoding failure, remaining buffer is too small");
@@ -278,10 +263,10 @@ std::tuple<T, size_t> decodePrimitive(BufferView src);
 
 } // namespace detail
 
-template<CbeObjectDefT Obj>
+template<cbe::ObjectT Obj>
 class Serializer;
 
-template<CbeObjectDefT Obj>
+template<cbe::ObjectT Obj>
 class Deserializer;
 
 // TODO(bd) see if this can be moved to the detail namespace
@@ -348,7 +333,7 @@ size_t encodeObj(BufferProxy tgt, const T& src) {
   return sz + 4;
 }
 
-template<CbeObjectDefT T>
+template<cbe::ObjectT T>
 std::tuple<T, size_t> decodeObj(BufferView src) {
   JMG_ENFORCE(src.size() > 4, detail::kDecodingFailure);
   const auto sz = [&] {
@@ -378,7 +363,7 @@ size_t encode(BufferProxy tgt, T src) {
     // explicitly specialized
     return encodeVec(tgt, src);
   }
-  else if constexpr (CbeObjectDefT<T>) { return encodeObj(tgt, src); }
+  else if constexpr (cbe::ObjectT<T>) { return encodeObj(tgt, src); }
   else { return detail::encodePrimitive(tgt, src); }
 }
 
@@ -397,7 +382,7 @@ std::tuple<T, size_t> decode(BufferView src) {
     // explicitly specialized
     return decodeVec<T>(src);
   }
-  else if constexpr (CbeObjectDefT<T>) { return decodeObj<T>(src); }
+  else if constexpr (cbe::ObjectT<T>) { return decodeObj<T>(src); }
   else { return detail::decodePrimitive<T>(src); }
 }
 
@@ -409,9 +394,9 @@ std::tuple<T, size_t> decode(BufferView src) {
 /**
  * class that serializes objects to a buffer
  */
-template<CbeObjectDefT Obj>
+template<cbe::ObjectT Obj>
 class Serializer {
-  template<CbeFieldDefT Fld, typename T>
+  template<cbe::FieldT Fld, typename T>
   void encodeValue(const T& val) {
     // encode the field ID
     constexpr auto id = Fld::kFldId;
@@ -422,7 +407,7 @@ class Serializer {
 
   // TODO(bd) ensure that all fields have a cbe field ID and that all
   // IDs are unique
-  template<CbeFieldDefT Fld>
+  template<cbe::FieldT Fld>
   void encodeField(const Obj& object) {
     constexpr bool is_required_field = typename Fld::required{};
     if constexpr (is_required_field) {
@@ -452,7 +437,7 @@ private:
 /**
  * class that deserializes objects from a buffer
  */
-template<CbeObjectDefT Obj>
+template<cbe::ObjectT Obj>
 class Deserializer {
   static constexpr auto kMaxFieldId = Obj::kMaxFieldId;
 
@@ -511,7 +496,7 @@ class Deserializer {
   /**
    * decoding work actually happens here
    */
-  template<CbeFieldDefT... Flds>
+  template<cbe::FieldT... Flds>
   void decodeFields(cbe::Object<Flds...>& object) {
     //////////
     // set up function scope static helper objects
