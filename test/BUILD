@@ -99,7 +99,7 @@ cc_test(
 
 proto_library(
     name = "test_proto",
-    srcs = ["test.proto"],
+    srcs = ["data/test.proto"],
 )
 
 cc_proto_library(

@@ -35,7 +35,7 @@
 
 #include "jmg/protobuf/protobuf.h"
 
-#include "test/test.pb.h"
+#include "test/data/test.pb.h"
 
 using namespace jmg;
 using namespace std;
