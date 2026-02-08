@@ -6,6 +6,12 @@
 * Use `JMG_TAG_TYPE` to declare all tag types
 * Update standard `JMG_OBJECT_CONCEPT` to include a requirement to be
   derived from `jmg::ObjectDefT`?
+* Investigate sketchy results for testing argument type generation for
+  safe type fields in test_field.cpp
+  * Argument type does not match the safe type exactly, although
+    `type_name_for<>()` produces the same string in both cases.
+  * Generated argument type is a non-`const` ref instead of a `const`
+    ref
 * Review the handling of optional fields in _yaml_ encoding and
   consider whether it correctly fits the standard patterns.
   * If not, what modifications should be made to either the _yaml_
