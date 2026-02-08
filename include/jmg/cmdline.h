@@ -52,7 +52,8 @@ namespace jmg::cmdline
 
 namespace detail
 {
-struct CmdLineParamTag {};
+JMG_TAG_TYPE(Field);
+JMG_TAG_TYPE(Object);
 
 // TODO: add support for separating named and positional parameters or
 // remove this constant
@@ -67,7 +68,7 @@ static constexpr auto kPosDelimit = std::string_view("--");
  * class
  */
 template<typename T>
-concept CmdLineParamT = std::is_base_of_v<detail::CmdLineParamTag, T>;
+concept FieldT = std::is_base_of_v<detail::FieldTag, T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // command line parameter field types
@@ -99,7 +100,7 @@ template<detail::NonSpecializedT T,
          StrLiteral kDesc,
          TypeFlagT IsRequired = Required>
 struct PosnParam : public FieldDef<T, kName, IsRequired>,
-                   private detail::CmdLineParamTag {
+                   public detail::FieldTag {
   PARAM_BOILERPLATE;
   using type = T;
 };
@@ -109,7 +110,7 @@ struct PosnParam : public FieldDef<T, kName, IsRequired>,
  */
 template<StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired = Required>
 struct PosnStringParam : public StringField<kName, IsRequired>,
-                         private detail::CmdLineParamTag {
+                         public detail::FieldTag {
   PARAM_BOILERPLATE;
   using type = std::string;
 };
@@ -119,7 +120,7 @@ struct PosnStringParam : public StringField<kName, IsRequired>,
  */
 template<typename T, StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
 struct NamedParam : public FieldDef<T, kName, IsRequired>,
-                    private detail::CmdLineParamTag {
+                    public detail::FieldTag {
   PARAM_BOILERPLATE;
   static_assert(!std::same_as<T, bool> || IsRequired{}(),
                 "named boolean parameters must be required");
@@ -130,7 +131,7 @@ struct NamedParam : public FieldDef<T, kName, IsRequired>,
  */
 template<StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired = Required>
 struct NamedStringParam : public StringField<kName, IsRequired>,
-                          private detail::CmdLineParamTag {
+                          public detail::FieldTag {
   PARAM_BOILERPLATE;
   using type = std::string;
 };
@@ -202,8 +203,8 @@ JMG_DEFINE_RUNTIME_EXCEPTION(CmdLineError);
  * command line argument handling class that is configured at compile
  * time using field definitions
  */
-template<CmdLineParamT... Params>
-class CmdLineArgs : public ObjectDef<Params...> {
+template<FieldT... Params>
+class CmdLineArgs : public ObjectDef<Params...>, public detail::ObjectTag {
 public:
   CmdLineArgs() = delete;
   CmdLineArgs(const int argc, const char* argv[]) {
@@ -443,7 +444,7 @@ private:
    * metafunction that validates a single type parameter given the
    * current state of scanning the list of type parameters
    */
-  template<CmdLineParamT T, bool kValidateNamed>
+  template<FieldT T, bool kValidateNamed>
   static constexpr bool validateParam(ScanState& state) {
     if constexpr (NamedParamT<T>) {
       if (ScanState::Opts != state) { return !kValidateNamed; }
@@ -475,7 +476,7 @@ private:
    * metafunction that validates all type parameters in the pack for
    * correct placement of either named or positional parameters
    */
-  template<bool kValidateNamed, CmdLineParamT... Ts>
+  template<bool kValidateNamed, FieldT... Ts>
   static constexpr bool validate() {
     ScanState state = ScanState::Opts;
     return (validateParam<Ts, kValidateNamed>(state) && ...);
