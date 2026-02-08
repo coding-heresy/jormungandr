@@ -108,7 +108,7 @@ JMG_TAG_TYPE(Object);
 // TODO(bd) use safe type instead of uint32_t for field ID?
 template<typename T>
 concept HasCbeFieldId =
-  requires { requires std::same_as<Decay<decltype(T::kFldId)>, uint32_t>; };
+  requires { requires std::same_as<DecayT<decltype(T::kFldId)>, uint32_t>; };
 
 } // namespace detail
 
@@ -465,7 +465,7 @@ class Deserializer {
     using Fld = meta::at<Fields, meta::size_t<kFldIdx>>;
     constexpr auto id = static_cast<size_t>(Fld::kFldId);
     decoders[id] = [this](Obj& obj) {
-      using Tgt = RemoveOptionalT<Decay<decltype(std::get<kFldIdx>(
+      using Tgt = RemoveOptionalT<DecayT<decltype(std::get<kFldIdx>(
         std::declval<typename Obj::adapted_type>()))>>;
       const auto [decoded, consumed] = impl::decode<Tgt>(buf_.subspan(idx_));
       idx_ += consumed;

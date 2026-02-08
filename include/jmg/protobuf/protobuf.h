@@ -67,8 +67,8 @@ concept ScalarTypeT = isMemberOfList<T, ScalarTypes>();
  */
 template<typename T>
 concept ProtoMsgT =
-  std::derived_from<Decay<T>, google::protobuf::Message>
-  || std::derived_from<Decay<T>, google::protobuf::MessageLite>;
+  std::derived_from<DecayT<T>, google::protobuf::Message>
+  || std::derived_from<DecayT<T>, google::protobuf::MessageLite>;
 
 /**
  * helper function template that throws exception if a protobuf is
@@ -129,7 +129,8 @@ static Msg deserialize(const std::string_view buf) {
  * can thus be used for jmg::protobuf::Object
  */
 template<typename T>
-concept HeavyProtoMsgT = std::derived_from<Decay<T>, google::protobuf::Message>;
+concept HeavyProtoMsgT =
+  std::derived_from<DecayT<T>, google::protobuf::Message>;
 
 /**
  * safe type for field ID
@@ -333,7 +334,7 @@ private:
       return mr_.GetDouble(msg_, &field_des);
     }
 #if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-    else if constexpr (jmg::ObjectT<Decay<Type>>) {
+    else if constexpr (jmg::ObjectT<DecayT<Type>>) {
       const auto& sub_msg = mr_.GetMessage(msg_, &field_des);
       return dynamic_cast<ReturnTypeForFieldT<Fld>>(sub_msg);
     }
@@ -347,7 +348,7 @@ private:
                                                      &scratch));
     }
     else if constexpr (ArrayFieldT<Fld>) {
-      using ValueType = Decay<typename Fld::view_type::value_type>;
+      using ValueType = DecayT<typename Fld::view_type::value_type>;
       if constexpr (ScalarTypeT<ValueType>) {
         const auto& raw_field =
           mr_.GetRepeatedField<ValueType>(msg_, &field_des);

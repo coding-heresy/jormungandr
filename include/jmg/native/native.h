@@ -71,9 +71,9 @@ struct FieldTypesMatch<std::nullopt_t, std::optional<T>> : std::true_type {};
 template<typename T>
 struct FieldTypesMatch<std::optional<T>, std::nullopt_t> : std::true_type {};
 template<typename T>
-struct FieldTypesMatch<T, std::optional<Decay<T>>> : std::true_type {};
+struct FieldTypesMatch<T, std::optional<DecayT<T>>> : std::true_type {};
 template<typename T>
-struct FieldTypesMatch<std::optional<Decay<T>>, T> : std::true_type {};
+struct FieldTypesMatch<std::optional<DecayT<T>>, T> : std::true_type {};
 
 /**
  * the FieldTypeMatches metafunction takes a type list consisting of a
@@ -82,7 +82,7 @@ struct FieldTypesMatch<std::optional<Decay<T>>, T> : std::true_type {};
  */
 template<TypeListT Pair>
 using FieldTypeMatches =
-  meta::_t<FieldTypesMatch<Decay<meta::front<Pair>>, Decay<meta::back<Pair>>>>;
+  meta::_t<FieldTypesMatch<DecayT<meta::front<Pair>>, DecayT<meta::back<Pair>>>>;
 
 /**
  * the MatchesFromFieldTypes converts a list of type pairs (where a
@@ -166,7 +166,7 @@ public:
     using Rslt = ReturnTypeForFieldT<Fld>;
     if constexpr (ViewableFieldT<Fld>) { return Rslt(std::get<kIdx>(obj_)); }
     else if constexpr (std::is_reference_v<Rslt>) {
-      return static_cast<const Decay<Rslt>&>(std::get<kIdx>(obj_));
+      return static_cast<const DecayT<Rslt>&>(std::get<kIdx>(obj_));
     }
     else { return Rslt(std::get<kIdx>(obj_)); }
   }
