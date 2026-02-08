@@ -44,14 +44,15 @@ namespace jmg::yaml
 
 namespace detail
 {
-struct YamlObjectTag {};
-
-template<typename T>
-concept YamlObjectT = std::derived_from<Decay<T>, YamlObjectTag>;
+JMG_TAG_TYPE(Field);
+JMG_TAG_TYPE(Object);
 } // namespace detail
 
+JMG_FIELD_CONCEPT();
+JMG_OBJECT_CONCEPT();
+
 template<typename... Fields>
-class Object : public ObjectDef<Fields...>, public detail::YamlObjectTag {
+class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
 public:
   using adapted_type = YAML::Node;
 
@@ -75,9 +76,7 @@ public:
     else if constexpr (OwningArrayProxyT<typename Fld::type>) {
       return RsltT(YAML::Node(node_[name]));
     }
-    else if constexpr (detail::YamlObjectT<RsltT>) {
-      return RsltT(node_[name]);
-    }
+    else if constexpr (yaml::ObjectT<RsltT>) { return RsltT(node_[name]); }
     else { return node_[name].as<RsltT>(); }
   }
 
@@ -99,7 +98,7 @@ public:
         using RsltT = std::optional<Type>;
         return RsltT(YAML::Node(entry));
       }
-      else if constexpr (detail::YamlObjectT<Type>) {
+      else if constexpr (yaml::ObjectT<Type>) {
         using RsltT = std::optional<Type>;
         return RsltT(node_[name]);
       }
