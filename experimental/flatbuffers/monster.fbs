@@ -1,0 +1,9 @@
+namespace MyGame;
+
+table Monster {
+  name:string;
+  hp:short = 100;
+  inventory:[ubyte];
+}
+
+root_type Monster;

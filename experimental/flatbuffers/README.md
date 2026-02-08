@@ -1,0 +1,3 @@
+Very preliminary work on flatbuffers with a simple demo cribbed from
+the tutorial documentation. Creating a JMG _object_ representation of
+flatbuffers is challenging...
