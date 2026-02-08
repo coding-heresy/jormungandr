@@ -87,16 +87,21 @@ public:
   template<OptionalFieldT Fld>
   std::optional<typename Fld::type> try_get() const {
     const char* name = Fld::name;
+    using Type = typename Fld::type;
     if (const auto entry = node_[name]; entry) {
-      if constexpr (SafeT<typename Fld::type>) {
-        using SafeT = typename Fld::type;
+      if constexpr (SafeT<Type>) {
+        using SafeT = Type;
         using RsltT = std::optional<SafeT>;
         using UnsafeT = UnsafeTypeFromT<SafeT>;
         return RsltT(entry.as<UnsafeT>());
       }
-      else if constexpr (OwningArrayProxyT<typename Fld::type>) {
-        using RsltT = std::optional<typename Fld::type>;
+      else if constexpr (OwningArrayProxyT<Type>) {
+        using RsltT = std::optional<Type>;
         return RsltT(YAML::Node(entry));
+      }
+      else if constexpr (detail::YamlObjectT<Type>) {
+        using RsltT = std::optional<Type>;
+        return RsltT(node_[name]);
       }
       else {
         using EffT = typename Fld::type;
