@@ -1,6 +1,24 @@
 
 # Quick Lists of Short to Medium Term TODO Items
 
+## Naming
+
+* Concepts and type metafunctions shall be named with a trailing `T`.
+  * Should concepts use a different scheme, e.g. trailing `C`?
+* Type aliases and template type parameter names **shall not** be
+  named with a trailing `T`.
+
+List of incorrectly named type aliases, template type parameters,
+concepts and type metafunctions:
+
+* `Decay` (**meta.h**) -> `DecayT`
+
+## Layout
+
+* Move each encoding type to a separate bazel `cc_library` target.
+* Move header files for encodings to the main include directory or put
+  them together in a directory named **encodings**?
+
 ## All Fields
 
 * unify handling of ArrayField and ArrayProxy
@@ -12,6 +30,26 @@
 
 ## All Objects
 
+* Support the declaration of objects using `meta::list` of `FieldDef`
+  in addition to parameter pack of `Field`
+* Standardized naming
+  * All _field_ and _object_ types shall be declared in a namespace
+    specific to the encoding, e.g. `jmg::yaml::Object`
+  * There shall be a `FieldTag` and an `ObjectTag` declared in a
+    `detail` namespace of the main encoding namespace,
+    e.g. `jmg::yaml::ObjectTag`
+  * _field_ type requirements:
+    * Shall be named `Field`, e.g. `jmg::yaml::Field`
+    * Shall be derived from `detail::FieldTag` with `public`
+      visibility
+    * Shall have a related `FieldT` concept in the main encoding
+      namespace that relies of derivation from `FieldTag`.
+  * _object_ type requirements:
+    * Shall be named `Object`, e.g. `jmg::yaml::Object`
+    * Shall be derived from `detail::ObjectTag` with `public`
+      visibility
+    * Shall have a related `ObjectT` concept in the main encoding
+      namespace that relies of derivation from `ObjectTag`.
 * ~~correctly handle get/try_get for const and non-const objects~~
 * proper handling of object mutation
   * stage 1 - all mutation through `jmg::set()`
