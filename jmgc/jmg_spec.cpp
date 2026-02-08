@@ -208,7 +208,7 @@ struct CbeEncodingPolicy {
       str_append(rslt, "jmg::cbe::ArrayField<",
                  correctedTypeName(*(field_def.sub_type_name)), ", ");
     }
-    else { str_append(rslt, "jmg::cbe::FieldDef<", field_def.type_name, ", "); }
+    else { str_append(rslt, "jmg::cbe::Field<", field_def.type_name, ", "); }
     const auto id = field_def.extra_data.id;
     str_append(rslt, "\"", name, "\", ",
                (field_def.required ? "jmg::Required"sv : "jmg::Optional"sv));
