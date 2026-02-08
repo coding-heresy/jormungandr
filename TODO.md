@@ -6,7 +6,6 @@
 * Use `JMG_TAG_TYPE` to declare all tag types
 * Update standard `JMG_OBJECT_CONCEPT` to include a requirement to be
   derived from `jmg::ObjectDefT`?
-
 * Review the handling of optional fields in _yaml_ encoding and
   consider whether it correctly fits the standard patterns.
   * If not, what modifications should be made to either the _yaml_
@@ -22,7 +21,7 @@
 List of incorrectly named type aliases, template type parameters,
 concepts and type metafunctions:
 
-* `Decay` (**meta.h**) -> `DecayT`
+* ~~`Decay` (**meta.h**) -> `DecayT`~~
 
 ## Layout
 
@@ -43,24 +42,24 @@ concepts and type metafunctions:
 
 * Support the declaration of objects using `meta::list` of `FieldDef`
   in addition to parameter pack of `Field`
-* Standardized naming
-  * All _field_ and _object_ types shall be declared in a namespace
-    specific to the encoding, e.g. `jmg::yaml::Object`
-  * There shall be a `FieldTag` and an `ObjectTag` declared in a
+* ~~Standardized naming~~
+  * ~~All _field_ and _object_ types shall be declared in a namespace
+    specific to the encoding, e.g. `jmg::yaml::Object`~~
+  * ~~There shall be a `FieldTag` and an `ObjectTag` declared in a
     `detail` namespace of the main encoding namespace,
-    e.g. `jmg::yaml::ObjectTag`
-  * _field_ type requirements:
-    * Shall be named `Field`, e.g. `jmg::yaml::Field`
-    * Shall be derived from `detail::FieldTag` with `public`
-      visibility
-    * Shall have a related `FieldT` concept in the main encoding
-      namespace that relies of derivation from `FieldTag`.
-  * _object_ type requirements:
-    * Shall be named `Object`, e.g. `jmg::yaml::Object`
-    * Shall be derived from `detail::ObjectTag` with `public`
-      visibility
-    * Shall have a related `ObjectT` concept in the main encoding
-      namespace that relies of derivation from `ObjectTag`.
+    e.g. `jmg::yaml::ObjectTag`~~
+  * ~~_field_ type requirements:~~
+    * ~~Shall be named `Field`, e.g. `jmg::yaml::Field`~~
+    * ~~Shall be derived from `detail::FieldTag` with `public`
+      visibility~~
+    * ~~Shall have a related `FieldT` concept in the main encoding
+      namespace that relies of derivation from `FieldTag`.~~
+  * ~~_object_ type requirements:~~
+    * ~~Shall be named `Object`, e.g. `jmg::yaml::Object`~~
+    * ~~Shall be derived from `detail::ObjectTag` with `public`
+      visibility~~
+    * ~~Shall have a related `ObjectT` concept in the main encoding
+      namespace that relies of derivation from `ObjectTag`.~~
 * ~~correctly handle get/try_get for const and non-const objects~~
 * proper handling of object mutation
   * stage 1 - all mutation through `jmg::set()`
