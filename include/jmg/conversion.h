@@ -133,7 +133,7 @@ struct ConvertImpl {
     if constexpr (DecayedSameAsT<Src, Tgt>) { return src; }
     else if constexpr (jmg::StdChronoDurationT<Src>
                        && jmg::StdChronoDurationT<Tgt>) {
-      return std::chrono::duration_cast<Decay<Tgt>>(src);
+      return std::chrono::duration_cast<DecayT<Tgt>>(src);
     }
     ////////////////////////////////////////////////////////////
     // this section converts from strings to other types

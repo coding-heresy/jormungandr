@@ -63,13 +63,13 @@ concept TypeFlagT =
  * pointers
  */
 template<typename T>
-using Decay = std::remove_cvref_t<T>;
+using DecayT = std::remove_cvref_t<T>;
 
 template<typename T, typename U>
-concept DecayedSameAsT = std::same_as<Decay<T>, Decay<U>>;
+concept DecayedSameAsT = std::same_as<DecayT<T>, DecayT<U>>;
 
 template<typename T, typename U>
-concept SameAsDecayedT = std::same_as<T, Decay<U>>;
+concept SameAsDecayedT = std::same_as<T, DecayT<U>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for types that are specializations of templates
@@ -80,7 +80,7 @@ concept SameAsDecayedT = std::same_as<T, Decay<U>>;
  */
 template<typename T, template<typename...> typename Template>
 concept TemplateSpecializationOfT =
-  requires(Decay<T> t) { []<typename... Ts>(Template<Ts...>&) {}(t); };
+  requires(DecayT<T> t) { []<typename... Ts>(Template<Ts...>&) {}(t); };
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for meta::list
@@ -95,13 +95,13 @@ concept TypeListT = TemplateSpecializationOfT<T, meta::list>;
 
 // NOTE: explicitly excluding bool from the set of integral types
 template<typename T>
-concept IntegralT = std::integral<Decay<T>> && !std::same_as<bool, Decay<T>>;
+concept IntegralT = std::integral<DecayT<T>> && !std::same_as<bool, DecayT<T>>;
 
 template<typename T>
-concept FloatingPointT = std::floating_point<Decay<T>>;
+concept FloatingPointT = std::floating_point<DecayT<T>>;
 
 template<typename T>
-concept ArithmeticT = IntegralT<T> || std::floating_point<Decay<T>>;
+concept ArithmeticT = IntegralT<T> || std::floating_point<DecayT<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for optional types
@@ -128,17 +128,17 @@ struct RemoveOptional<std::optional<T>> {
 }; // namespace detail
 
 template<typename T>
-using RemoveOptionalT = detail::RemoveOptional<Decay<T>>::type;
+using RemoveOptionalT = detail::RemoveOptional<DecayT<T>>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for enums
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept EnumT = std::is_enum_v<Decay<T>> && !std::is_scoped_enum_v<Decay<T>>;
+concept EnumT = std::is_enum_v<DecayT<T>> && !std::is_scoped_enum_v<DecayT<T>>;
 
 template<typename T>
-concept ScopedEnumT = std::is_scoped_enum_v<Decay<T>>;
+concept ScopedEnumT = std::is_scoped_enum_v<DecayT<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for non-bool types
@@ -152,7 +152,7 @@ concept NonBoolT = !SameAsDecayedT<bool, T>;
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept ClassT = std::is_class_v<Decay<T>>;
+concept ClassT = std::is_class_v<DecayT<T>>;
 
 template<typename T>
 concept NonClassT = !ClassT<T>;
@@ -175,7 +175,7 @@ struct IsSpanT<std::span<T, kSz>> : std::true_type {};
  * concept for span
  */
 template<typename T>
-concept SpanT = detail::IsSpanT<Decay<T>>{}();
+concept SpanT = detail::IsSpanT<DecayT<T>>{}();
 
 /**
  * concept for vector
@@ -190,9 +190,9 @@ concept VectorT = TemplateSpecializationOfT<T, std::vector>;
 template<typename T>
 concept StaticStringConstT =
   !SameAsDecayedT<char*, T> && !SameAsDecayedT<const char*, T>
-  && std::is_array_v<Decay<T>>
-  && std::same_as<std::remove_extent_t<Decay<T>>, char>
-  && !std::same_as<std::remove_extent_t<Decay<T>>, const char>;
+  && std::is_array_v<DecayT<T>>
+  && std::same_as<std::remove_extent_t<DecayT<T>>, char>
+  && !std::same_as<std::remove_extent_t<DecayT<T>>, const char>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts for string-like types
@@ -202,8 +202,8 @@ template<typename T>
 concept CStyleStringT =
   !SameAsDecayedT<char, T>
   && (SameAsDecayedT<char*, T> || SameAsDecayedT<const char*, T>
-      || std::same_as<std::remove_extent_t<Decay<T>>, char>
-      || std::same_as<std::remove_extent_t<Decay<T>>, const char>);
+      || std::same_as<std::remove_extent_t<DecayT<T>>, char>
+      || std::same_as<std::remove_extent_t<DecayT<T>>, const char>);
 
 template<typename T>
 concept StdStringLikeT =
@@ -290,11 +290,11 @@ namespace detail
 {
 template<typename T>
 struct ReturnTypeFor {
-  using type = Decay<T>;
+  using type = DecayT<T>;
 };
 template<ClassT T>
 struct ReturnTypeFor<T> {
-  using type = Decay<T>&;
+  using type = DecayT<T>&;
 };
 } // namespace detail
 
@@ -310,7 +310,7 @@ using ReturnTypeForT = detail::ReturnTypeFor<T>::type;
  * decay all types in a type list
  */
 template<TypeListT Lst>
-using DecayAll = meta::transform<Lst, meta::quote<Decay>>;
+using DecayAllT = meta::transform<Lst, meta::quote<DecayT>>;
 
 namespace detail
 {
@@ -326,7 +326,7 @@ using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
  */
 template<typename T, TypeListT Lst>
 inline constexpr bool isMemberOfList() {
-  return detail::IsMemberOf<Decay<T>, DecayAll<Lst>>{}();
+  return detail::IsMemberOf<DecayT<T>, DecayAllT<Lst>>{}();
 }
 
 namespace detail
@@ -352,7 +352,7 @@ using CountMatches =
 template<typename T, TypeListT Lst>
 inline constexpr bool isUniqueMemberOfList() {
   return static_cast<size_t>(1)
-         == detail::CountMatches<Decay<T>, DecayAll<Lst>>{};
+         == detail::CountMatches<DecayT<T>, DecayAllT<Lst>>{};
 }
 
 /**
@@ -360,7 +360,7 @@ inline constexpr bool isUniqueMemberOfList() {
  */
 template<typename T, TypeListT Lst>
 inline constexpr bool isAtMostOnceMemberOfList() {
-  return detail::CountMatches<Decay<T>, DecayAll<Lst>>{} <= 1;
+  return detail::CountMatches<DecayT<T>, DecayAllT<Lst>>{} <= 1;
 }
 
 /**
@@ -390,7 +390,7 @@ struct AspectPolicyTag {};
  * concept for AspectPolicyTag
  */
 template<typename T>
-concept AspectPolicyTagT = std::derived_from<Decay<T>, AspectPolicyTag>;
+concept AspectPolicyTagT = std::derived_from<DecayT<T>, AspectPolicyTag>;
 
 namespace detail
 {
@@ -524,7 +524,7 @@ std::string type_name_for() {
  */
 template<typename T>
 std::string type_name_for(const T& t) {
-  return type_name_for<Decay<T>>();
+  return type_name_for<DecayT<T>>();
 }
 
 /**

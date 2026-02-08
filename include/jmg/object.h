@@ -138,7 +138,7 @@ struct ObjectDef : public detail::ObjectTag {
  * concept for a JMG object
  */
 template<typename T>
-concept ObjectT = std::derived_from<Decay<T>, detail::ObjectTag>;
+concept ObjectT = std::derived_from<DecayT<T>, detail::ObjectTag>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains an object to be valid
