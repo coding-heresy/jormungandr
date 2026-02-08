@@ -57,6 +57,30 @@ JMG_NEW_SAFE_TYPE(NonBaseType1, Duration, st::arithmetic);
 JMG_NEW_SAFE_TYPE(NonBaseType2, Duration, st::arithmetic);
 #endif
 
+TEST(SafeTypeTests, TestConcepts) {
+  EXPECT_TRUE(UnsafeT<int>);
+  EXPECT_FALSE(SafeT<int>);
+
+  EXPECT_TRUE(UnsafeT<string>);
+  EXPECT_FALSE(SafeT<string>);
+
+  EXPECT_TRUE(SafeT<TestId32>);
+  EXPECT_FALSE(UnsafeT<TestId32>);
+
+  EXPECT_TRUE(SafeT<TestIdStr>);
+  EXPECT_FALSE(UnsafeT<TestIdStr>);
+
+  EXPECT_TRUE(SafePrimitiveT<TestId32>);
+  EXPECT_FALSE(SafeClassT<TestId32>);
+
+  EXPECT_TRUE(SafeClassT<TestIdStr>);
+  EXPECT_FALSE(SafePrimitiveT<TestIdStr>);
+
+  EXPECT_FALSE(UnsafeClassT<TestId32>);
+  EXPECT_FALSE(UnsafeClassT<TestIdStr>);
+  EXPECT_TRUE(UnsafeClassT<string>);
+}
+
 #define CONFIRM_STRONG_TYPES(type1, type2)                 \
   do {                                                     \
     EXPECT_FALSE((is_same_v<type1, type2>));               \
@@ -135,24 +159,6 @@ TEST(SafeTypeTests, SafeRefOfTest) {
   auto& unsafe_ref = val;
   auto& safe_ref = SafeRefOf<TestSafeInt>::from(unsafe_ref);
   EXPECT_TRUE((DecayedSameAsT<decltype(safe_ref), TestSafeInt>));
-}
-
-TEST(SafeTypeTests, ReturnTypeForSafeTest) {
-  using ReturnTypeForId32 = ReturnTypeForSafeT<TestId32>;
-  EXPECT_FALSE(is_reference_v<ReturnTypeForId32>);
-  using ReturnTypeForIdStr = ReturnTypeForSafeT<TestIdStr>;
-  EXPECT_TRUE(is_reference_v<ReturnTypeForIdStr>);
-}
-
-TEST(SafeTypeTests, ReturnTypeForAnyTest) {
-  using ReturnTypeForId32 = ReturnTypeForAnyT<TestId32>;
-  EXPECT_FALSE(is_reference_v<ReturnTypeForId32>);
-  using ReturnTypeForIdStr = ReturnTypeForAnyT<TestIdStr>;
-  EXPECT_TRUE(is_reference_v<ReturnTypeForIdStr>);
-  using ReturnTypeForInt64 = ReturnTypeForAnyT<int64_t>;
-  EXPECT_FALSE(is_reference_v<ReturnTypeForInt64>);
-  using ReturnTypeForRawStr = ReturnTypeForAnyT<string>;
-  EXPECT_TRUE(is_reference_v<ReturnTypeForRawStr>);
 }
 
 TEST(SafeTypeTests, StringConversionTest) {
