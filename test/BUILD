@@ -289,6 +289,17 @@ cc_test(
     size = "small",
 )
 
+genrule(
+    name = "jmg_protobuf_example_header",
+    visibility = ["//visibility:public"],
+    srcs = [
+        "//jmgc:jmgc",
+        "data/test_proto.yaml",
+    ],
+    outs = ["test_proto.h"],
+    cmd = "$(location //jmgc:jmgc) -JMG-proto $(location data/test_proto.yaml) > $@",
+)
+
 cc_binary(
     name = "test_server_main",
     visibility = ["//visibility:public"],
