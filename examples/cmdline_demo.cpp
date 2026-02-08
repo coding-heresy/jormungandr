@@ -44,18 +44,22 @@ using namespace std;
 
 namespace
 {
-using Flag = NamedFlag<"flag", "a flag">;
+using Flag = cmdline::NamedFlag<"flag", "a flag">;
 using OptNamedStr =
-  NamedParam<string, "opt_str", "an optional string", Optional>;
+  cmdline::NamedParam<string, "opt_str", "an optional string", Optional>;
 using NamedInt =
-  NamedParam<int, "required_int", "a required integer", Required>;
+  cmdline::NamedParam<int, "required_int", "a required integer", Required>;
 using PosnDbl =
-  PosnParam<double, "posn_double", "the first position param, which is required">;
-using OptPosnFlt = PosnParam<float,
-                             "opt_posn_float",
-                             "the second position param, which is optional",
-                             Optional>;
-using CmdLine = CmdLineArgs<Flag, OptNamedStr, NamedInt, PosnDbl, OptPosnFlt>;
+  cmdline::PosnParam<double,
+                     "posn_double",
+                     "the first position param, which is required">;
+using OptPosnFlt =
+  cmdline::PosnParam<float,
+                     "opt_posn_float",
+                     "the second position param, which is optional",
+                     Optional>;
+using CmdLine =
+  cmdline::CmdLineArgs<Flag, OptNamedStr, NamedInt, PosnDbl, OptPosnFlt>;
 } // namespace
 
 int main(const int argc, const char** argv) {
@@ -90,7 +94,7 @@ int main(const int argc, const char** argv) {
     }
     else { cout << "optional positional float was not provided\n"; }
   }
-  catch (const CmdLineError& e) {
+  catch (const cmdline::CmdLineError& e) {
     cerr << e.what() << "\n";
   }
   JMG_SINK_ALL_EXCEPTIONS("top level")

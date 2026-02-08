@@ -38,6 +38,7 @@
 #include "jmg/safe_types.h"
 
 using namespace jmg;
+using namespace jmg::cmdline;
 using namespace std;
 
 using PosnParam1 = PosnParam<int, "int", "an integer positional param">;

@@ -51,10 +51,10 @@ using namespace std;
 using namespace std::chrono_literals;
 
 using Hostname =
-  PosnStringParam<"hostname", "host name to look up address for">;
+  cmdline::PosnStringParam<"hostname", "host name to look up address for">;
 using SvcName =
-  PosnStringParam<"service", "service name to look up port for", Optional>;
-using CmdLine = CmdLineArgs<Hostname, SvcName>;
+  cmdline::PosnStringParam<"service", "service name to look up port for", Optional>;
+using CmdLine = cmdline::CmdLineArgs<Hostname, SvcName>;
 
 int main(const int argc, const char** argv) {
   try {
@@ -100,7 +100,7 @@ int main(const int argc, const char** argv) {
 
     return EXIT_SUCCESS;
   }
-  catch (const CmdLineError& e) {
+  catch (const cmdline::CmdLineError& e) {
     // NOTE: logging e.what() directly will log the error and usage
     // messages without extra exception-specific verbiage
     cout << e.what() << endl;

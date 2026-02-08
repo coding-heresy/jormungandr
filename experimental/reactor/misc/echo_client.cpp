@@ -55,13 +55,14 @@ namespace jmg
 
 class ReactorBasedEchoClient : public ReactorBasedClient {
   // command line argument
-  using HostName = NamedParam<string,
-                              "host",
-                              "host to connect to (defaults to local host)",
-                              Optional>;
-  using Port =
+  using HostName =
+    cmdline::NamedParam<string,
+                        "host",
+                        "host to connect to (defaults to local host)",
+                        Optional>;
+  using Port = cmdline::
     NamedParam<IpPort, "port", "port to connect to (defaults to 8888)", Optional>;
-  using CmdLine = CmdLineArgs<HostName, Port>;
+  using CmdLine = cmdline::CmdLineArgs<HostName, Port>;
 
   static constexpr auto kDfltPort = IpPort(8888);
 

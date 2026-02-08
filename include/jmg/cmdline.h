@@ -42,7 +42,7 @@
 #include "jmg/safe_types.h"
 #include "jmg/util.h"
 
-namespace jmg
+namespace jmg::cmdline
 {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -187,11 +187,11 @@ JMG_DEFINE_RUNTIME_EXCEPTION(CmdLineError);
  * macro for enforcing some predicate about a command line parse by
  * throwing CmdLineError with embedded usage
  */
-#define JMG_ENFORCE_CMDLINE(predicate, ...)     \
-  do {                                          \
-    if (JMG_UNLIKELY(!(predicate))) {           \
-      throw CmdLineError(str_cat(__VA_ARGS__)); \
-    }                                           \
+#define JMG_ENFORCE_CMDLINE(predicate, ...)                   \
+  do {                                                        \
+    if (JMG_UNLIKELY(!(predicate))) {                         \
+      throw jmg::cmdline::CmdLineError(str_cat(__VA_ARGS__)); \
+    }                                                         \
   } while (0)
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -501,4 +501,4 @@ private:
 template<typename T>
 concept CmdLineArgsT = TemplateSpecializationOfT<T, CmdLineArgs>;
 
-} // namespace jmg
+} // namespace jmg::cmdline
