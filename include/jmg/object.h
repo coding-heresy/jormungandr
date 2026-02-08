@@ -267,3 +267,7 @@ void clear(Obj& obj)
 }
 
 } // namespace jmg
+
+#define JMG_OBJECT_CONCEPT() \
+  template<typename T>       \
+  concept ObjectT = std::is_base_of_v<detail::ObjectTag, T>
