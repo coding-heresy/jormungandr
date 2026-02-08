@@ -114,7 +114,7 @@ public:
   /**
    * delegate for jmg::set()
    */
-  template<FieldDefT Fld, typename T>
+  template<yaml::FieldT Fld, typename T>
   void set(T val) {
     static_assert(false, "set() is not yet supported for YAML");
   }
@@ -133,14 +133,14 @@ private:
 
 namespace detail
 {
-template<ObjectDefT Obj>
+template<yaml::ObjectT Obj>
 struct ArrayTypeFactory {
   using ItrProxy = AdaptingConstItrProxy<YAML::const_iterator, Obj>;
   using ItrPolicy = ProxiedItrPolicy<YAML::Node, ItrProxy>;
   using type = OwningArrayProxy<YAML::Node, ItrPolicy>;
 };
 } // namespace detail
-template<ObjectDefT Obj>
+template<yaml::ObjectT Obj>
 using Array = meta::_t<detail::ArrayTypeFactory<Obj>>;
 
 } // namespace jmg::yaml
