@@ -196,3 +196,9 @@
 #define JMG_NON_MOVEABLE(class) \
   class(class && src) = delete; \
   class& operator=(class&& rhs) = delete
+
+/**
+ * helper macro that simplifies declaration of a tag type
+ */
+#define JMG_TAG_TYPE(name) \
+  struct name##Tag {}
