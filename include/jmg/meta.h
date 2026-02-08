@@ -42,6 +42,8 @@
 #include <cxxabi.h>
 #include <meta/meta.hpp>
 
+#include "jmg/safe_types.h"
+
 namespace jmg
 {
 
@@ -292,7 +294,15 @@ template<typename T>
 struct ReturnTypeFor {
   using type = DecayT<T>;
 };
-template<ClassT T>
+template<SafePrimitiveT T>
+struct ReturnTypeFor<T> {
+  using type = DecayT<T>;
+};
+template<SafeClassT T>
+struct ReturnTypeFor<T> {
+  using type = DecayT<T>&;
+};
+template<UnsafeClassT T>
 struct ReturnTypeFor<T> {
   using type = DecayT<T>&;
 };

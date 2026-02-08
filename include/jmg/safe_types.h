@@ -35,8 +35,6 @@
 #include <absl/strings/str_format.h>
 #include <st/st.hpp>
 
-#include "jmg/meta.h"
-
 #define JMG_NEW_SAFE_PROTOTYPE(name, ...)                    \
   template<::jmg::UnsafeT T, typename Tag = decltype([] {})> \
   using name = ::st::type<T, Tag, __VA_ARGS__>
@@ -53,10 +51,10 @@ namespace jmg
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept SafeT = st::is_strong_type_v<DecayT<T>>;
+concept SafeT = st::is_strong_type_v<std::remove_cvref_t<T>>;
 
 template<typename T>
-concept UnsafeT = (!st::is_strong_type_v<DecayT<T>>);
+concept UnsafeT = (!st::is_strong_type_v<std::remove_cvref_t<T>>);
 
 ////////////////////////////////////////////////////////////////////////////////
 // type aliases
@@ -157,36 +155,24 @@ struct SafeRefOf {
   }
 };
 
-namespace detail
-{
-template<SafeT T, typename U>
-struct ReturnTypeForSafe {
-  using type = std::remove_cvref_t<T>;
-};
-template<SafeT T, ClassT U>
-struct ReturnTypeForSafe<T, U> {
-  using type = std::remove_cvref_t<T>&;
-};
-} // namespace detail
-
-template<SafeT T>
-using ReturnTypeForSafeT =
-  detail::ReturnTypeForSafe<T, typename T::value_type>::type;
-
-namespace detail
-{
-template<typename T>
-struct ReturnTypeForAny {
-  using type = ReturnTypeForT<T>;
-};
-template<SafeT T>
-struct ReturnTypeForAny<T> {
-  using type = ReturnTypeForSafeT<T>;
-};
-} // namespace detail
+////////////////////////////////////////////////////////////////////////////////
+// concepts related to safe types
+////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-using ReturnTypeForAnyT = detail::ReturnTypeForAny<T>::type;
+concept SafePrimitiveT =
+  SafeT<T> && !std::is_class_v<UnsafeTypeFromT<std::remove_cvref_t<T>>>;
+
+template<typename T>
+concept UnsafePrimitiveT =
+  !SafeT<T> && !std::is_class_v<std::remove_cvref_t<T>>;
+
+template<typename T>
+concept SafeClassT =
+  SafeT<T> && std::is_class_v<UnsafeTypeFromT<std::remove_cvref_t<T>>>;
+
+template<typename T>
+concept UnsafeClassT = !SafeT<T> && std::is_class_v<std::remove_cvref_t<T>>;
 
 /**
  * overload of operator<< for safe types
