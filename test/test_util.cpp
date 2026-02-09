@@ -92,6 +92,26 @@ TEST(GeneralUtilitiesTest, TestStreamOctetOut) {
   EXPECT_EQ("00000000 00000001 00000010 00000011 00000100"s, bitwise_octets_str);
 }
 
+TEST(GeneralUtilitiesTest, TestUniqers) {
+  Dict<int, double> stuff;
+  emplace_uniq("stuff"sv, stuff, 1, 42.0);
+  emplace_uniq("stuff"sv, stuff, 2, -1.0);
+  EXPECT_THROW(emplace_uniq("stuff"sv, stuff, 1, 3.14159), runtime_error);
+
+  Set<int> things;
+  insert_uniq("things"sv, things, 1);
+  insert_uniq("things"sv, things, 5);
+  EXPECT_THROW(insert_uniq("things"sv, things, 1), runtime_error);
+
+  auto find_stuff = [&](const int key) {
+    return find_required(stuff, key, "stuff"sv, "stuff key"sv);
+  };
+
+  EXPECT_DOUBLE_EQ(42.0, find_stuff(1));
+  EXPECT_DOUBLE_EQ(-1.0, find_stuff(2));
+  EXPECT_THROW(find_stuff(3), runtime_error);
+}
+
 TEST(GeneralUtilitiesTest, TestInserterator) {
   const auto keys = std::array{1, 2, 3};
 

@@ -732,6 +732,8 @@ functions and classes:
 * `insert_uniq` - calls `insert` on a set and throws an exception if
   the insertion wasn't successful (i.e. the item is a duplicate of one
   that already exists in the set)
+* `find_required` - returns a reference to an item in a dictionary by
+  looking up its key and throws an exception if the key is not present
 * `as_void_ptr` - takes a pointer argument and converts it to a
   non-`const` `void*`, which is useful when dealing with some
   low-level code.
