@@ -60,7 +60,10 @@ int main(const int argc, const char** argv) {
   try {
     // process arguments
     const auto cmdline = CmdLine(argc, argv);
-    const auto hostname = get<Hostname>(cmdline);
+    // NOTE: forcing construction of string here because
+    // fiber::lookupNetworkEndpoints requires a NULL-terminated
+    // string, which isn't guaranteed by string_view
+    const auto hostname = string(get<Hostname>(cmdline));
     const auto svc_name = try_get<SvcName>(cmdline);
 
     // start reactor

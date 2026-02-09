@@ -72,79 +72,105 @@ using OptArrayFld = ArrayField<uint64_t, "array_dbl", Optional>;
 TEST(FieldTests, TestArgTypeForFieldT) {
   // primitive fields take argument by value, regardless of whether or
   // not they are safe types
-  using ArgTypeForIntFld = ArgTypeForFieldT<IntFld>;
-  EXPECT_TRUE((same_as<ArgTypeForIntFld, int>));
-
-  using ArgTypeForOptFld = ArgTypeForFieldT<OptFld>;
-  EXPECT_TRUE((same_as<ArgTypeForOptFld, float>));
-
+  {
+    using ArgTypeForIntFld = ArgTypeForFieldT<IntFld>;
+    EXPECT_TRUE((same_as<ArgTypeForIntFld, int>));
+  }
+  {
+    using ArgTypeForOptFld = ArgTypeForFieldT<OptFld>;
+    EXPECT_TRUE((same_as<ArgTypeForOptFld, float>));
+  }
   // class fields take argument by const ref, regardless of whether or
   // not they are safe types
-  using ArgTypeForTpFld = ArgTypeForFieldT<TimePointFld>;
-  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTpFld>));
-
-  using ArgTypeForOptTpFld = ArgTypeForFieldT<OptTimePointFld>;
-  EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForOptTpFld>));
-
+  {
+    using ArgTypeForTpFld = ArgTypeForFieldT<TimePointFld>;
+    EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTpFld>));
+  }
+  {
+    using ArgTypeForOptTpFld = ArgTypeForFieldT<OptTimePointFld>;
+    EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForOptTpFld>));
+  }
   ////////////////////
   // TODO(bd) investigate these very suspicious results, compiler bug
   // again?
 
-  using ArgTypeForId32Fld = ArgTypeForFieldT<Id32Fld>;
-  EXPECT_TRUE(SafeT<ArgTypeForId32Fld>);
-  EXPECT_TRUE((same_as<UnsafeTypeFromT<ArgTypeForId32Fld>, uint32_t>));
-  // EXPECT_TRUE((same_as<ArgTypeForId32Fld, Id32Fld>));
-
-  using ArgTypeForOptId32Fld = ArgTypeForFieldT<OptId32Fld>;
-  EXPECT_TRUE(SafeT<ArgTypeForOptId32Fld>);
-  EXPECT_TRUE((same_as<UnsafeTypeFromT<ArgTypeForOptId32Fld>, uint32_t>));
-  // EXPECT_TRUE((same_as<ArgTypeForOptId32Fld, Id32Fld>));
-
-  using ArgTypeForTsFld = ArgTypeForFieldT<TsFld>;
-  EXPECT_TRUE(SafeT<ArgTypeForTsFld>);
-  // EXPECT_TRUE(is_const_v<ArgTypeForTsFld>);
-  EXPECT_TRUE(is_reference_v<ArgTypeForTsFld>);
-  EXPECT_TRUE((same_as<UnsafeTypeFromT<DecayT<ArgTypeForTsFld>>, TimePoint>));
-  // EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTsFld>));
-
-  using ArgTypeForOptTsFld = ArgTypeForFieldT<OptTsFld>;
-  EXPECT_TRUE(SafeT<ArgTypeForOptTsFld>);
-  // EXPECT_TRUE(is_const_v<ArgTypeForOptTsFld>);
-  EXPECT_TRUE(is_reference_v<ArgTypeForOptTsFld>);
-  EXPECT_TRUE((same_as<UnsafeTypeFromT<DecayT<ArgTypeForOptTsFld>>, TimePoint>));
-  // EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForOptTsFld>));
+  {
+    using ArgTypeForId32Fld = ArgTypeForFieldT<Id32Fld>;
+    EXPECT_TRUE(SafeT<ArgTypeForId32Fld>);
+    EXPECT_TRUE((same_as<UnsafeTypeFromT<ArgTypeForId32Fld>, uint32_t>));
+    // EXPECT_TRUE((same_as<ArgTypeForId32Fld, Id32Fld>));
+  }
+  {
+    using ArgTypeForOptId32Fld = ArgTypeForFieldT<OptId32Fld>;
+    EXPECT_TRUE(SafeT<ArgTypeForOptId32Fld>);
+    EXPECT_TRUE((same_as<UnsafeTypeFromT<ArgTypeForOptId32Fld>, uint32_t>));
+    // EXPECT_TRUE((same_as<ArgTypeForOptId32Fld, Id32Fld>));
+  }
+  {
+    using ArgTypeForTsFld = ArgTypeForFieldT<TsFld>;
+    EXPECT_TRUE(SafeT<ArgTypeForTsFld>);
+    // EXPECT_TRUE(is_const_v<ArgTypeForTsFld>);
+    EXPECT_TRUE(is_reference_v<ArgTypeForTsFld>);
+    EXPECT_TRUE((same_as<UnsafeTypeFromT<DecayT<ArgTypeForTsFld>>, TimePoint>));
+    // EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForTsFld>));
+  }
+  {
+    using ArgTypeForOptTsFld = ArgTypeForFieldT<OptTsFld>;
+    EXPECT_TRUE(SafeT<ArgTypeForOptTsFld>);
+    // EXPECT_TRUE(is_const_v<ArgTypeForOptTsFld>);
+    EXPECT_TRUE(is_reference_v<ArgTypeForOptTsFld>);
+    EXPECT_TRUE(
+      (same_as<UnsafeTypeFromT<DecayT<ArgTypeForOptTsFld>>, TimePoint>));
+    // EXPECT_TRUE((same_as<const TimePoint&, ArgTypeForOptTsFld>));
+  }
 }
 
 TEST(FieldTests, TestReturnTypeForFieldT) {
-  using ReturnTypeForIntFld = ReturnTypeForFieldT<IntFld>;
-  EXPECT_TRUE((same_as<int, ReturnTypeForIntFld>));
-
-  using ReturnTypeForOptFld = ReturnTypeForFieldT<OptFld>;
-  EXPECT_TRUE((same_as<optional<float>, ReturnTypeForOptFld>));
-
-  using ReturnTypeForTpFld = ReturnTypeForFieldT<TimePointFld>;
-  EXPECT_TRUE((same_as<const TimePoint&, ReturnTypeForTpFld>));
+  {
+    using ReturnTypeForIntFld = ReturnTypeForFieldT<IntFld>;
+    EXPECT_TRUE((same_as<int, ReturnTypeForIntFld>));
+  }
+  {
+    using ReturnTypeForOptFld = ReturnTypeForFieldT<OptFld>;
+    EXPECT_TRUE((same_as<optional<float>, ReturnTypeForOptFld>));
+  }
+  {
+    using ReturnTypeForTpFld = ReturnTypeForFieldT<TimePointFld>;
+    EXPECT_TRUE((same_as<const TimePoint&, ReturnTypeForTpFld>));
+  }
+  {
+    using ReturnTypeForOptTpFld = ReturnTypeForFieldT<OptTimePointFld>;
+    EXPECT_TRUE((same_as<const TimePoint*, ReturnTypeForOptTpFld>));
+  }
 }
 
 TEST(FieldTests, TestStringFieldsWorkCorrectly) {
-  using ArgTypeForStrFld = ArgTypeForFieldT<StrFld>;
-  EXPECT_TRUE((same_as<ArgTypeForStrFld, string_view>));
-
-  using ArgTypeForOptStrFld = ArgTypeForFieldT<OptStrFld>;
-  EXPECT_TRUE((same_as<ArgTypeForOptStrFld, string_view>));
-
-  using ReturnTypeForStrFld = ReturnTypeForFieldT<StrFld>;
-  EXPECT_TRUE((same_as<ReturnTypeForStrFld, string_view>));
-
-  using ReturnTypeForOptStrFld = ReturnTypeForFieldT<OptStrFld>;
-  EXPECT_TRUE((same_as<ReturnTypeForOptStrFld, optional<string_view>>));
+  {
+    using ArgTypeForStrFld = ArgTypeForFieldT<StrFld>;
+    EXPECT_TRUE((same_as<ArgTypeForStrFld, string_view>));
+  }
+  {
+    using ArgTypeForOptStrFld = ArgTypeForFieldT<OptStrFld>;
+    EXPECT_TRUE((same_as<ArgTypeForOptStrFld, string_view>));
+  }
+  {
+    using ReturnTypeForStrFld = ReturnTypeForFieldT<StrFld>;
+    EXPECT_TRUE((same_as<ReturnTypeForStrFld, string_view>));
+  }
+  {
+    using ReturnTypeForOptStrFld = ReturnTypeForFieldT<OptStrFld>;
+    EXPECT_TRUE((same_as<ReturnTypeForOptStrFld, optional<string_view>>));
+  }
 }
 
 TEST(FieldTests, TestArrayFieldsWorkCorrectly) {
-  using ReturnTypeForArrayFld = ReturnTypeForFieldT<ArrayFld>;
-  EXPECT_TRUE(SpanT<ReturnTypeForArrayFld>);
-
-  using ReturnTypeForOptArrayFld = ReturnTypeForFieldT<OptArrayFld>;
-  EXPECT_TRUE(OptionalT<ReturnTypeForOptArrayFld>);
-  EXPECT_TRUE(SpanT<RemoveOptionalT<ReturnTypeForOptArrayFld>>);
+  {
+    using ReturnTypeForArrayFld = ReturnTypeForFieldT<ArrayFld>;
+    EXPECT_TRUE(SpanT<ReturnTypeForArrayFld>);
+  }
+  {
+    using ReturnTypeForOptArrayFld = ReturnTypeForFieldT<OptArrayFld>;
+    EXPECT_TRUE(OptionalT<ReturnTypeForOptArrayFld>);
+    EXPECT_TRUE(SpanT<RemoveOptionalT<ReturnTypeForOptArrayFld>>);
+  }
 }

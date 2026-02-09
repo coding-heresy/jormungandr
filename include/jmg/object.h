@@ -208,6 +208,11 @@ decltype(auto) try_get(const Obj& obj)
 
 ////////////////////////////////////////////////////////////////////////////////
 // definitions of set()
+//
+// NOTE: the various definitions here effectively route the request to
+// the object correctly for all supported argument types, but the
+// argument will likely require further implementation in its set()
+// member function
 ////////////////////////////////////////////////////////////////////////////////
 
 /**

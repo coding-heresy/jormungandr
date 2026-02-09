@@ -327,16 +327,20 @@ public:
    * delegate for jmg::get()
    */
   template<RequiredFieldT Param>
-  typename Param::type get() const {
+  decltype(auto) get() const {
     constexpr auto idx = meta::find_index<ParamList, Param>{}();
-    return std::get<idx>(values_);
+    using Rslt = ReturnTypeForFieldT<Param>;
+    if constexpr (ViewableFieldT<Param>) {
+      return Rslt(std::get<idx>(values_));
+    }
+    else { return static_cast<Rslt>(std::get<idx>(values_)); }
   }
 
   /**
    * delegate for jmg::try_get()
    */
   template<OptionalFieldT Param>
-  typename std::optional<typename Param::type> try_get() const {
+  decltype(auto) try_get() const {
     // NOTE: non-required fields are stored in values_ already wrapped
     // in std::optional so the implementation of try_get() is the same
     // as the implementation of get() in this case

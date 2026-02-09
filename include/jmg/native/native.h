@@ -165,10 +165,7 @@ public:
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
     using Rslt = ReturnTypeForFieldT<Fld>;
     if constexpr (ViewableFieldT<Fld>) { return Rslt(std::get<kIdx>(obj_)); }
-    else if constexpr (std::is_reference_v<Rslt>) {
-      return static_cast<const DecayT<Rslt>&>(std::get<kIdx>(obj_));
-    }
-    else { return Rslt(std::get<kIdx>(obj_)); }
+    else { return static_cast<Rslt>(std::get<kIdx>(obj_)); }
   }
 
   /**
@@ -177,22 +174,28 @@ public:
   template<OptionalFieldT Fld>
   decltype(auto) try_get() const {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    using Rslt = ReturnTypeForFieldT<Fld>;
     if constexpr (ViewableFieldT<Fld>) {
+      // NOTE: special handling is required for view types to convert
+      // the optional of its underlying type to an optional of its
+      // view type
       using ViewType = Fld::const_view_type;
-      using Rslt = ReturnTypeForFieldT<Fld>;
       const auto& val = std::get<kIdx>(obj_);
       if (val) { return Rslt(ViewType(*val)); }
       // NOTE: default constructed Rslt here returns a correctly typed version
       // of std::nullopt
       else { return Rslt(); }
     }
-    else if constexpr (native::ObjectT<typename Fld::type>) {
+    // TODO(bd) is the native::ObjectT constraint necessary?
+    else if constexpr (native::ObjectT<typename Fld::type> || ClassFieldT<Fld>) {
+      // NOTE: special handling is required for non-primitive types to
+      // convert the optional of its type to a pointer to its type
       const auto& val = std::get<kIdx>(obj_);
       // NOTE: optional object returns raw, non-owning pointer
       if (val) { return &(*val); }
       else { return static_cast<const typename Fld::type*>(nullptr); }
     }
-    else { return std::get<kIdx>(obj_); }
+    else { return Rslt(std::get<kIdx>(obj_)); }
   }
 
   /**
