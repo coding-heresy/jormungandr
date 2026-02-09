@@ -49,6 +49,7 @@
 
 using namespace jmg;
 using namespace std;
+using namespace std::string_view_literals;
 
 namespace xml = ptree::xml;
 
@@ -402,20 +403,18 @@ private:
     cout << "struct " << fld.name << " : jmg::FieldDef<";
 
     // look up field spec using name
-    const auto spec_entry = fields_.find(fld.name);
-    JMG_ENFORCE(fields_.end() != spec_entry, "unknown message field name [",
-                fld.name, "]");
-    const auto& spec = value_of(*spec_entry);
+    const auto& spec =
+      find_required(fields_, fld.name, "FIX field names"sv, "field name"sv);
 
     // emit the field type
     const auto enumEntry = enums_.find(fld.name);
     if (enums_.end() == enumEntry) {
       // values for this field come from a standard type and not an
       // enumeration
-      const auto entry = kTypeTranslation_.find(spec.type);
-      JMG_ENFORCE(kTypeTranslation_.end() != entry,
-                  "unknown FIX protocol type [", spec.type, "]");
-      cout << value_of(*entry);
+      const auto& protocol_type =
+        find_required(kTypeTranslation_, spec.type, "FIX protocol types"sv,
+                      "protocol type"sv);
+      cout << protocol_type;
     }
     else { cout << key_of(*enumEntry) << kEnumTypeSuffix; }
 
