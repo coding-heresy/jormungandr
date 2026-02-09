@@ -74,6 +74,18 @@ TEST(TypesTest, TestCStringView) {
   }
 }
 
+TEST(TypesTest, TestNullTerminatedStringConcept) {
+  // string_view doesn't guarantee that the string is NULL terminated
+  EXPECT_FALSE(NullTerminatedStringT<string_view>);
+  // c_string_view has 1 job...
+  EXPECT_TRUE(NullTerminatedStringT<c_string_view>);
+  // string guarantees this via its c_str() member function
+  EXPECT_TRUE(NullTerminatedStringT<string>);
+  // sketchy, but basically required
+  EXPECT_TRUE(NullTerminatedStringT<char*>);
+  EXPECT_TRUE(NullTerminatedStringT<const char*>);
+}
+
 TEST(TypesTest, TestBufferView) {
   const auto uint64 = uint64_t(20010911);
   const auto str = "test string"s;
