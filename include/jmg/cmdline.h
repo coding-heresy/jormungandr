@@ -348,6 +348,18 @@ public:
     return std::get<idx>(values_);
   }
 
+  template<typename IrrelevantFld, typename IrrelevantObj>
+  void set(IrrelevantObj& obj, IrrelevantFld::type&& arg) {
+    static_assert(false, "set() is not supported, an instance of CmdLineArgs "
+                         "is immutable once it has been created");
+  }
+
+  template<typename IrrelevantFld, typename IrrelevantObj>
+  void clear(IrrelevantObj& obj) {
+    static_assert(false, "clear() is not supported, an instance of CmdLineArgs "
+                         "is immutable once it has been created");
+  }
+
   /**
    * usage message to log when invalid command line parameters are
    * received or help is requested
