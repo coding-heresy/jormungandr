@@ -15,6 +15,9 @@
 * Investigate sketchy results for test_native, there are several TODO
   items which indicate that return types are not yet being generated
   correctly.
+* Investigate handling of get() and try_get() in quickfix spec and
+  modify them so that have standard behavior (if appropriate,
+  otherwise document the differences)
 * Review the handling of optional fields in _yaml_ encoding and
   consider whether it correctly fits the standard patterns.
   * If not, what modifications should be made to either the _yaml_
