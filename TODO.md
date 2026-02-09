@@ -12,6 +12,9 @@
     `type_name_for<>()` produces the same string in both cases.
   * Generated argument type is a non-`const` ref instead of a `const`
     ref
+* Investigate sketchy results for test_native, there are several TODO
+  items which indicate that return types are not yet being generated
+  correctly.
 * Review the handling of optional fields in _yaml_ encoding and
   consider whether it correctly fits the standard patterns.
   * If not, what modifications should be made to either the _yaml_
