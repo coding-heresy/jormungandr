@@ -50,21 +50,26 @@ using namespace std;
 using namespace std::chrono_literals;
 using namespace std::string_view_literals;
 
+namespace
+{
+constexpr auto kDfltHostAddr = "127.0.0.1"sv;
+constexpr auto kDfltPort = jmg::IpPort(8888);
+} // namespace
+
 namespace jmg
 {
 
 class ReactorBasedEchoClient : public ReactorBasedClient {
   // command line argument
   using HostName =
-    cmdline::NamedParam<string,
-                        "host",
-                        "host to connect to (defaults to local host)",
-                        Optional>;
+    cmdline::NamedStringParam<"host",
+                              "host to connect to (defaults to local host)",
+                              Optional>;
+  // TODO(bd) find a way to construct the usage string with the
+  // default port number at compile time
   using Port = cmdline::
     NamedParam<IpPort, "port", "port to connect to (defaults to 8888)", Optional>;
   using CmdLine = cmdline::CmdLineArgs<HostName, Port>;
-
-  static constexpr auto kDfltPort = IpPort(8888);
 
 public:
   ReactorBasedEchoClient() = default;
@@ -72,7 +77,7 @@ public:
 
   void processArguments(const int argc, const char** argv) override {
     const auto cmdline = CmdLine(argc, argv);
-    hostname_ = get<HostName>(cmdline, "127.0.0.1"s);
+    hostname_ = get<HostName>(cmdline, kDfltHostAddr);
     port_ = get<Port>(cmdline, kDfltPort);
   }
 

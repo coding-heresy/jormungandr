@@ -94,7 +94,7 @@ TEST(NativeObjectTests, TestReturnTypes) {
 
   // optional non-class types return const optional ref
   // TODO(bd) is this the correct return type?
-  VALIDATE_TRY_GET_RETURN(OptDblFld, const optional<double>&);
+  VALIDATE_TRY_GET_RETURN(OptDblFld, optional<double>);
 
   // string fields return string_view
   VALIDATE_GET_RETURN(StrFld, string_view);
@@ -128,7 +128,7 @@ TEST(NativeObjectTests, TestReturnTypes) {
 
   // optional safe types that wrap ono-class types return by const
   // optional reference
-  VALIDATE_TRY_GET_RETURN(OptSafeIdFld, const optional<Id64>&);
+  VALIDATE_TRY_GET_RETURN(OptSafeIdFld, optional<Id64>);
 
   // array types return span of const
   VALIDATE_GET_RETURN(ArrayFld, span<const int>);

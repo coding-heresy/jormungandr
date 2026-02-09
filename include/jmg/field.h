@@ -247,6 +247,10 @@ concept RequiredSafePrimitive =
   RequiredFieldT<T> && SafePrimitiveT<typename T::type>;
 
 template<typename T>
+concept RequiredUnsafePrimitive =
+  RequiredFieldT<T> && UnsafePrimitiveT<typename T::type>;
+
+template<typename T>
 concept RequiredSafeClass = RequiredFieldT<T> && SafeClassT<typename T::type>;
 
 template<typename T>
@@ -385,20 +389,12 @@ struct ReturnTypeForField<T> {
 
 template<OptionalSafeClass T>
 struct ReturnTypeForField<T> {
-#if defined(JMG_TODO_USE_PTR_FOR_OPT_CLASS_RETURN)
   using type = const typename T::type*;
-#else
-  using type = const std::optional<typename T::type>&;
-#endif
 };
 
 template<OptionalUnsafeClass T>
 struct ReturnTypeForField<T> {
-#if defined(JMG_TODO_USE_PTR_FOR_OPT_CLASS_RETURN)
   using type = const typename T::type*;
-#else
-  using type = const std::optional<typename T::type>&;
-#endif
 };
 
 } // namespace detail
@@ -408,6 +404,18 @@ using ArgTypeForFieldT = detail::ArgTypeForField<T>::type;
 
 template<typename T>
 using ReturnTypeForFieldT = detail::ReturnTypeForField<T>::type;
+
+template<typename T>
+concept PrimitiveFieldT =
+  NonViewableFieldT<T>
+  && (detail::RequiredSafePrimitive<T> || detail::RequiredUnsafePrimitive<T>
+      || detail::OptionalSafePrimitive<T> || detail::OptionalUnsafePrimitive<T>);
+
+template<typename T>
+concept ClassFieldT =
+  NonViewableFieldT<T>
+  && (detail::RequiredSafeClass<T> || detail::RequiredUnsafeClass<T>
+      || detail::OptionalSafeClass<T> || detail::OptionalUnsafeClass<T>);
 
 /**
  * common field name constant for fields that have no string name
