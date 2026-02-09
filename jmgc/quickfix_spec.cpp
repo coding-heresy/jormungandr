@@ -400,13 +400,13 @@ private:
   }
 
   void emitField(const FieldInMsg& fld) {
-    cout << "struct " << fld.name << " : jmg::FieldDef<";
+    cout << "struct " << fld.name << " : ";
 
     // look up field spec using name
     const auto& spec =
       find_required(fields_, fld.name, "FIX field names"sv, "field name"sv);
 
-    // emit the field type
+    // look up the field type using the name
     const auto enumEntry = enums_.find(fld.name);
     if (enums_.end() == enumEntry) {
       // values for this field come from a standard type and not an
@@ -414,12 +414,20 @@ private:
       const auto& protocol_type =
         find_required(kTypeTranslation_, spec.type, "FIX protocol types"sv,
                       "protocol type"sv);
-      cout << protocol_type;
+
+      // emit the field type
+      if ("std::string"s == protocol_type) {
+        // use special StringField type
+        cout << "jmg::StringField<";
+      }
+      else { cout << "jmg::FieldDef<" << protocol_type << ", "; }
     }
-    else { cout << key_of(*enumEntry) << kEnumTypeSuffix; }
+    else {
+      cout << "jmg::FieldDef<" << key_of(*enumEntry) << kEnumTypeSuffix << ", ";
+    }
 
     // emit the field name
-    cout << ", \"" << fld.name << "\", ";
+    cout << "\"" << fld.name << "\", ";
 
     // emit the 'required' attribute
     if (fld.required) { cout << "jmg::Required"; }

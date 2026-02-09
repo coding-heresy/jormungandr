@@ -111,6 +111,9 @@ concept OptionalFixFieldT = OptionalFieldT<T> && FixTagT<T>;
 /**
  * quick and dirty implementation of FIX message object used for
  * testing until the quitckfix library is fully integrated
+ *
+ * TODO(bd) handle FIX tags the same way that CBE and protobuf field
+ * numbers are handled
  */
 template<jmg::FieldOrGroupT... Flds>
 class Object : public ObjectDef<Flds...>, public detail::ObjectTag {
@@ -171,6 +174,9 @@ public:
 
   /**
    * delegate for jmg::get()
+   *
+   * TODO(bd) investigate why the first attempt at standardized
+   * handling failed here
    */
   template<RequiredFixFieldT Fld>
   typename Fld::type get() const {
@@ -187,6 +193,9 @@ public:
 
   /**
    * delegate for jmg::try_get()
+   *
+   * TODO(bd) investigate why the first attempt at standardized
+   * handling failed here
    */
   template<OptionalFixFieldT Fld>
   std::optional<typename Fld::type> try_get() const {
