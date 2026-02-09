@@ -34,93 +34,99 @@
 
 #include <filesystem>
 
-#include "jmg/ptree/ptree.h"
-
-#if defined(TEST_CONSTRUCTING_PTREE_XML_FROM_FILE)
 #include <boost/property_tree/xml_parser.hpp>
 
+#include "jmg/ptree/ptree.h"
+
 #include "jmg/file_util.h"
-#endif
 
 using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
 
-JMG_XML_FIELD_DEF(RecordValue, "value", string, true);
-JMG_XML_FIELD_DEF(OptionalRecordValue, "optional_value", string, false);
-JMG_XML_FIELD_DEF(RecordValueType, "value_type", string, true);
-JMG_XML_FIELD_DEF(TopLevelAttribute, "attribute", string, true);
+namespace vws = std::views;
+namespace pt = boost::property_tree;
 
-#if defined(TEST_CONSTRUCTING_PTREE_XML_FROM_FILE)
+JMG_XML_STR_FIELD_DEF(RecordValue, "value", true);
+JMG_XML_STR_FIELD_DEF(OptionalRecordValue, "optional_value", false);
+JMG_XML_STR_FIELD_DEF(RecordValueType, "value_type", true);
+JMG_XML_STR_FIELD_DEF(TopLevelAttribute, "attribute", true);
+
 constexpr string_view kXmlText = R"(
 <top_level attribute="test">
   <record value="foo" value_type="string"/>
   <record value="bar" value_type="string" optional_value="baz"/>
 </top_level>
 )";
-#endif
 
-TEST(PtreeTests, TestXmlPtreeDataRetrieval) {
-  namespace pt = boost::property_tree;
+using namespace jmg::ptree;
+using Record = xml::Object<RecordValue, RecordValueType, OptionalRecordValue>;
+using Records = xml::Elements<Record, xml::ElementsRequired>;
+using TopLevel = xml::Object<TopLevelAttribute, Records>;
+using AllXmlData = xml::ElementsArrayT<TopLevel>;
 
-  // construct a ptree representation equivalent to kXmlText
-  pt::ptree allXmlData;
-#if !defined(TEST_CONSTRUCTING_PTREE_XML_FROM_FILE)
+/**
+ * macro that defines the verification code which is run once on an
+ * object constructed in code and once on an object read from a file
+ */
+#define VERIFY_LOADED_DATA(all_xml_data)                                      \
+  do {                                                                        \
+    AllXmlData all_jmg_data{all_xml_data};                                    \
+    EXPECT_EQ(1, all_jmg_data.size());                                        \
+    size_t ctr = 0;                                                           \
+    for (const auto& top_lvl : all_jmg_data) {                                \
+      EXPECT_EQ("top_level"s, jmg::get<xml::ElementTag>(top_lvl));            \
+      EXPECT_EQ("test"s, jmg::get<TopLevelAttribute>(top_lvl));               \
+      {                                                                       \
+        const auto& recs = jmg::get<Records>(top_lvl);                        \
+        EXPECT_EQ(2U, recs.size());                                           \
+        for (auto&& [idx, rec] : vws::enumerate(recs)) {                      \
+          EXPECT_EQ("string"sv, jmg::get<RecordValueType>(rec));              \
+          if (!idx) {                                                         \
+            EXPECT_EQ("foo"sv, jmg::get<RecordValue>(rec));                   \
+            EXPECT_FALSE(jmg::try_get<OptionalRecordValue>(rec).has_value()); \
+          }                                                                   \
+          else {                                                              \
+            EXPECT_EQ("bar"s, jmg::get<RecordValue>(rec));                    \
+            EXPECT_EQ("baz"s, *jmg::try_get<OptionalRecordValue>(rec));       \
+          }                                                                   \
+        }                                                                     \
+      }                                                                       \
+      ++ctr;                                                                  \
+    }                                                                         \
+    /* verify that iteration actually occurred */                             \
+    EXPECT_EQ(1, ctr);                                                        \
+  } while (0)
+
+TEST(PtreeTests, TestXmlPtreeDataRetrievalFromConstructedObject) {
+  pt::ptree all_xml_data;
   {
-    pt::ptree xmlTopLevel;
+    // construct a ptree representation equivalent to kXmlText
+    pt::ptree xml_top_level;
     {
       pt::ptree rec1;
       rec1.put("<xmlattr>.value", "foo");
       rec1.put("<xmlattr>.value_type", "string");
-      xmlTopLevel.push_back(pt::ptree::value_type("record", std::move(rec1)));
+      xml_top_level.push_back(pt::ptree::value_type("record", std::move(rec1)));
     }
     {
       pt::ptree rec2;
       rec2.put("<xmlattr>.value", "bar");
       rec2.put("<xmlattr>.value_type", "string");
       rec2.put("<xmlattr>.optional_value", "baz");
-      xmlTopLevel.push_back(pt::ptree::value_type("record", std::move(rec2)));
+      xml_top_level.push_back(pt::ptree::value_type("record", std::move(rec2)));
     }
-    xmlTopLevel.put("<xmlattr>.attribute", "test");
-    allXmlData.push_back(pt::ptree::value_type("top_level",
-                                               std::move(xmlTopLevel)));
+    xml_top_level.put("<xmlattr>.attribute", "test");
+    all_xml_data.push_back(pt::ptree::value_type("top_level",
+                                                 std::move(xml_top_level)));
   }
-#else
-  TmpFile xmlFile{kXmlText};
-  pt::xml_parser::read_xml(string(xmlFile.name()).c_str(), allXmlData);
-#endif
+  VERIFY_LOADED_DATA(all_xml_data);
+}
 
-  using namespace jmg::ptree;
-  using Record = xml::Object<RecordValue, RecordValueType, OptionalRecordValue>;
-  using Records = xml::Elements<Record, xml::ElementsRequired>;
-  using TopLevel = xml::Object<TopLevelAttribute, Records>;
-  using AllXmlData = xml::ElementsArrayT<TopLevel>;
+TEST(PtreeTests, TestXmlPtreeDataRetrievalFromFile) {
+  pt::ptree all_xml_data;
+  TmpFile xml_file{kXmlText};
+  pt::xml_parser::read_xml(string(xml_file.name()).c_str(), all_xml_data);
 
-  AllXmlData allJmgData{allXmlData};
-  EXPECT_EQ(1, allJmgData.size());
-  size_t ctr1 = 0;
-  for (const auto& topLvl : allJmgData) {
-    EXPECT_EQ("top_level"s, jmg::get<xml::ElementTag>(topLvl));
-    EXPECT_EQ("test"s, jmg::get<TopLevelAttribute>(topLvl));
-    {
-      size_t ctr2 = 0;
-      const auto& recs = jmg::get<Records>(topLvl);
-      EXPECT_EQ(2, recs.size());
-      for (const auto& rec : recs) {
-        EXPECT_EQ("string"s, jmg::get<RecordValueType>(rec));
-        if (!ctr2) {
-          EXPECT_EQ("foo"s, jmg::get<RecordValue>(rec));
-          EXPECT_FALSE(jmg::try_get<OptionalRecordValue>(rec).has_value());
-        }
-        else {
-          EXPECT_EQ("bar"s, jmg::get<RecordValue>(rec));
-          EXPECT_EQ("baz"s, *jmg::try_get<OptionalRecordValue>(rec));
-        }
-        ++ctr2;
-      }
-      EXPECT_EQ(2, ctr2);
-    }
-    ++ctr1;
-  }
-  EXPECT_EQ(1, ctr1);
+  VERIFY_LOADED_DATA(all_xml_data);
 }
