@@ -59,7 +59,7 @@ constexpr auto kTimeStampMillisecFmt = TimePointFmt("%E4Y%m%d-%H:%M:%S.#E3f");
 constexpr auto kDateOnlyFmt = TimePointFmt("%E4Y%m%d");
 
 #if defined(USE_NATIVE_QUICKFIX_MSG)
-template<jmg::FieldDefT... Fields>
+template<jmg::FieldOrGroupT... Fields>
 class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
 public:
   using adapted_type = FIX::Message;
@@ -78,7 +78,7 @@ public:
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalField Fld>
+  template<OptionalFieldT Fld>
   std::optional<typename Fld::type> try_get() const {
     if (!adapted_->isSetField(Fld::kFixTag)) { return std::nullopt; }
     return getImpl<Fld>();
@@ -106,21 +106,24 @@ template<typename T>
 concept RequiredFixFieldT = RequiredFieldT<T> && FixTagT<T>;
 
 template<typename T>
-concept OptionalFixFieldT = OptionalField<T> && FixTagT<T>;
+concept OptionalFixFieldT = OptionalFieldT<T> && FixTagT<T>;
 
 /**
  * quick and dirty implementation of FIX message object used for
  * testing until the quitckfix library is fully integrated
  */
-template<jmg::FieldDefT... Fields>
-class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
+template<jmg::FieldOrGroupT... Flds>
+class Object : public ObjectDef<Flds...>, public detail::ObjectTag {
 public:
   Object() = delete;
   Object(const std::string_view msg,
-         const Dict<unsigned, unsigned>& lengthFields) {
+         const Dict<unsigned, unsigned>& length_fields) {
+    using namespace std::string_view_literals;
+
     constexpr std::string_view kFieldDelim = "";
     constexpr std::string_view kFieldSplitter = "=";
 
+    // TODO(bd) replace 'stop' and 'start' with 'end' and 'begin'?
     auto stop = msg.find(kFieldDelim);
     decltype(stop) start = 0;
     while (stop != std::string::npos) {
@@ -129,32 +132,32 @@ public:
       unsigned tag = from(msg.substr(start, pos));
       {
         // check for special LENGTH field
-        const auto entry = lengthFields.find(tag);
-        if (entry != lengthFields.end()) {
-          const auto pairedTag = value_of(*entry);
-          const size_t nextSz = from(msg.substr(pos + 1, stop - pos - 1));
+        const auto entry = length_fields.find(tag);
+        if (entry != length_fields.end()) {
+          const auto paired_tag = value_of(*entry);
+          const size_t next_sz = from(msg.substr(pos + 1, stop - pos - 1));
           // jump to the next field
           start = stop + 1;
           auto pos = msg.find(kFieldSplitter, start);
           JMG_ENFORCE(pos != std::string::npos, "length field with tag [", tag,
                       "] was followed by data with no splitter '='");
           const unsigned checkTag = from(msg.substr(start, pos));
-          JMG_ENFORCE(checkTag == pairedTag, "unpaired tag [", checkTag,
+          JMG_ENFORCE(checkTag == paired_tag, "unpaired tag [", checkTag,
                       "] followed length field with tag [", tag,
-                      "] instead of expected paired tag [", pairedTag, "]");
-          stop = pos + nextSz;
-          JMG_ENFORCE(stop < msg.size(), "raw data field with tag [", pairedTag,
-                      "] had length [", nextSz,
+                      "] instead of expected paired tag [", paired_tag, "]");
+          stop = pos + next_sz;
+          JMG_ENFORCE(stop < msg.size(), "raw data field with tag [",
+                      paired_tag, "] had length [", next_sz,
                       "] that was too long for the message");
           // overwrite the length tag so that only the raw data field
           // is stored in the dictionary
-          tag = pairedTag;
+          tag = paired_tag;
         }
       }
+
       // store the data in the dictionary
-      const auto [entry, inserted] =
-        fields_.try_emplace(tag, msg.substr(pos + 1, stop - pos - 1));
-      JMG_ENFORCE(inserted, "encountered duplicate tag [", tag, "] in message");
+      emplace_uniq("message tag"sv, fields_, tag,
+                   msg.substr(pos + 1, stop - pos - 1));
 
       if (msg.size() == stop) {
         // last character of the message should be a field delimiter
@@ -171,13 +174,10 @@ public:
    */
   template<RequiredFixFieldT Fld>
   typename Fld::type get() const {
+    using namespace std::string_view_literals;
     using Type = typename Fld::type;
-    const auto entry = fields_.find(Fld::kFixTag);
-    JMG_ENFORCE(fields_.end() != entry,
-                "message had no value for required "
-                "FIX field [",
-                Fld::name, "] (", Fld::kFixTag, ")");
-    const auto& str = value_of(*entry);
+    const auto& str =
+      find_required(fields_, Fld::kFixTag, "FIX fields"sv, "FIX tag"sv);
     if constexpr (std::same_as<Type, std::string>) { return std::string(str); }
     else {
       Type val = from(str);
@@ -212,8 +212,8 @@ public:
   /**
    * delegate for jmg::clear()
    */
-  template<OptionalField FldT>
-  void clear(T val) {
+  template<OptionalFieldT FldT, ObjectDefT Obj>
+  void clear(Obj& val) {
     static_assert(false, "clear() is not yet supported for quickfix");
   }
 
