@@ -167,6 +167,9 @@ auto& value_of(auto& rec) { return std::get<1>(rec); }
 /**
  * emplace a new item in a dictionary or throw an exception if the key already
  * exists
+ *
+ * NOTE: Key is left as an explicit type parameter in order to
+ * correctly support transparent hashing of e.g. std::string_view
  */
 template<typename DictContainer, typename Key, typename... Vals>
 void emplace_uniq(std::string_view description,
@@ -180,6 +183,9 @@ void emplace_uniq(std::string_view description,
 
 /**
  * emplace a new item in a set or throw an exception if the item already exists
+ *
+ * NOTE: Key is left as an explicit type parameter in order to
+ * correctly support transparent hashing of e.g. std::string_view
  */
 template<typename SetContainer, typename Value>
 void insert_uniq(std::string_view description,
@@ -188,6 +194,21 @@ void insert_uniq(std::string_view description,
   const auto [_, inserted] = set_container.insert(std::forward<Value>(value));
   JMG_ENFORCE(inserted, "unsupported duplicate value [", value, "] for ",
               description);
+}
+
+/**
+ * return a reference to the dictionary item referenced by the
+ * argument key or throw an exception if no such item is present
+ */
+template<typename DictContainer>
+decltype(auto) find_required(DictContainer& dict,
+                             const typename DictContainer::key_type& key,
+                             std::string_view container_type,
+                             std::string_view key_type) {
+  const auto entry = dict.find(key);
+  JMG_ENFORCE(dict.end() != entry, container_type,
+              " had no value for required ", key_type, "[", key, "]");
+  return value_of(*entry);
 }
 
 template<typename T>
