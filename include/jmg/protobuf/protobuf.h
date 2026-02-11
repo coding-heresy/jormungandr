@@ -170,11 +170,7 @@ concept NonSpecializedTypeT = ScalarTypeT<T> || protobuf::ObjectT<T>;
  * @tparam IsRequired indicates if the field is required or optional
  * @tparam kId Protobuf field ID
  */
-#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
 template<detail::NonSpecializedTypeT T,
-#else
-template<ScalarTypeT T,
-#endif
          StrLiteral kName,
          TypeFlagT IsRequired,
          uint32_t kFieldId>
@@ -242,6 +238,8 @@ class Object : public jmg::ObjectDef<Fields...>, public detail::ObjectTag {
   using FieldDescriptor = google::protobuf::FieldDescriptor;
 
 public:
+  using MsgType = Msg;
+
   Object() = delete;
   explicit Object(const Msg& msg)
     : msg_(msg), pd_(*(msg.GetDescriptor())), mr_(*(msg.GetReflection())) {}
@@ -250,7 +248,7 @@ public:
    * delegate for jmg::get()
    */
   template<RequiredFieldT Fld>
-  ReturnTypeForFieldT<Fld> get() const {
+  decltype(auto) get() const {
     using Type = typename Fld::type;
     static constexpr auto field_name = std::string_view(Fld::name);
     const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
@@ -262,13 +260,20 @@ public:
    * delegate for jmg::try_get()
    */
   template<OptionalFieldT Fld>
-  ReturnTypeForFieldT<Fld> try_get() const {
+  decltype(auto) try_get() const {
     using Type = typename Fld::type;
-    using Rslt = ReturnTypeForFieldT<Fld>;
     static constexpr auto field_name = std::string_view(Fld::name);
     const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
-    if (!isPresent(field_des)) { return std::nullopt; }
-    return Rslt(getByType<Fld>(field_des));
+    if constexpr (ObjectT<Type>) {
+      using Rslt = std::optional<Type>;
+      if (!isPresent(field_des)) { return Rslt(std::nullopt); }
+      return Rslt(getByType<Fld>(field_des));
+    }
+    else {
+      using Rslt = ReturnTypeForFieldT<Fld>;
+      if (!isPresent(field_des)) { return Rslt(std::nullopt); }
+      return Rslt(getByType<Fld>(field_des));
+    }
   }
 
 private:
@@ -304,8 +309,9 @@ private:
     }
   }
 
-  template<FieldDefT Fld>
+  template<protobuf::FieldT Fld>
   auto getByType(const FieldDescriptor& field_des) const {
+    using namespace google::protobuf;
     using Type = typename Fld::type;
 #if !defined(NDEBUG)
     enforcePresence(field_des, Fld::name);
@@ -333,12 +339,18 @@ private:
     else if constexpr (jmg::SameAsDecayedT<double, Type>) {
       return mr_.GetDouble(msg_, &field_des);
     }
-#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
     else if constexpr (jmg::ObjectT<DecayT<Type>>) {
-      const auto& sub_msg = mr_.GetMessage(msg_, &field_des);
-      return dynamic_cast<ReturnTypeForFieldT<Fld>>(sub_msg);
-    }
+#if !defined(NDEBUG)
+      JMG_ENFORCE(field_des.cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE,
+                  "field [", Fld::name, "] value has unexpected type [",
+                  field_des.cpp_type(), "]");
 #endif
+      const auto& generic_sub_msg = mr_.GetMessage(msg_, &field_des);
+      using Wrapper = typename Fld::type;
+      using Wrapped = typename Wrapper::MsgType;
+      const auto& sub_msg = DynamicCastToGenerated<Wrapped>(generic_sub_msg);
+      return Wrapper(sub_msg);
+    }
     else if constexpr (StringFieldT<Fld>) {
       // NOTE: scratch space should never be required because
       // getByType should never be called when the field is not

@@ -79,9 +79,7 @@ using BytesStr = protobuf::StringField<"bytes_str", Required, 13U>;
 
 using Ints = protobuf::ArrayField<int32_t, "ints", Required, 14U>;
 
-#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
 using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 15U>;
-#endif
 
 // TODO(bd) handle repeated string fields
 
@@ -101,12 +99,8 @@ using TestMsgObj = protobuf::Object<TestMsg,
                                     Dbl,
                                     Str,
                                     BytesStr,
-                                    Ints
-#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-                                    ,
-                                    InnerMsgFld
-#endif
-                                    >;
+                                    Ints,
+                                    InnerMsgFld>;
 
 using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1>;
 
@@ -126,10 +120,8 @@ using OptDbl = protobuf::Field<double, "opt_dbl", Optional, 11>;
 using OptStr = protobuf::StringField<"opt_str", Optional, 12>;
 using OptBytesStr = protobuf::StringField<"opt_bytes_str", Optional, 13>;
 
-#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
 using OptInnerMsgFld =
-  protobuf::FieldDef<InnerMsgObj, "opt_inner_msg", Optional, 14>;
-#endif
+  protobuf::Field<InnerMsgObj, "opt_inner_msg", Optional, 14>;
 
 using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptBool,
@@ -144,12 +136,8 @@ using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptFlt,
                                        OptDbl,
                                        OptStr,
-                                       OptBytesStr
-#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-                                       ,
-                                       OptInnerMsgFld
-#endif
-                                       >;
+                                       OptBytesStr,
+                                       OptInnerMsgFld>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // test fixture
@@ -200,6 +188,10 @@ protected:
 
     all_full_.set_opt_str("foo");
     all_full_.set_opt_bytes_str("bar");
+
+    auto& opt_inner_msg = *(all_full_.mutable_opt_inner_msg());
+    opt_inner_msg.set_inner_int_32(2011);
+    opt_inner_msg.set_opt_inner_str("blub");
   }
 
   TestMsg msg_;
@@ -241,12 +233,10 @@ TEST_F(ProtoTests, TestGet) {
   EXPECT_EQ(1, ints.size());
   EXPECT_EQ(msg_.ints(0), ints[0]);
 
-#if defined(JMG_COMPLEX_PROTOBUF_FIELDS_WORK)
-  const auto& inner_msg = jmg::get<InnerMsgFld>(obj);
+  const auto inner_msg = jmg::get<InnerMsgFld>(obj);
   EXPECT_TRUE(ObjectT<decltype(inner_msg)>);
   EXPECT_EQ(msg_.inner_msg().inner_int_32(), jmg::get<InnerInt32>(inner_msg));
   EXPECT_FALSE(jmg::try_get<OptInnerStr>(inner_msg));
-#endif
 }
 
 #define VALIDATE_OPT_FLD(fld, obj, val)          \
@@ -296,4 +286,11 @@ TEST_F(ProtoTests, TestTryGet) {
 
   VALIDATE_OPT_FLD(OptStr, full_obj, all_full_.opt_str());
   VALIDATE_OPT_FLD(OptBytesStr, full_obj, all_full_.opt_bytes_str());
+
+  auto inner_msg_obj = jmg::try_get<OptInnerMsgFld>(full_obj);
+  EXPECT_TRUE(pred(inner_msg_obj));
+  const auto& opt_inner_obj = all_full_.opt_inner_msg();
+
+  EXPECT_EQ(jmg::get<InnerInt32>(*inner_msg_obj), opt_inner_obj.inner_int_32());
+  VALIDATE_OPT_FLD(OptInnerStr, *inner_msg_obj, opt_inner_obj.opt_inner_str());
 }

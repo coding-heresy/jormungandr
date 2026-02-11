@@ -43,6 +43,12 @@ concepts and type metafunctions:
 
 ## All Fields
 
+* Unify handling of JMG objects
+  * JMG objects are proxy objects and thus have different return types
+    than regular non-primitive, non-viewable types
+    * see protobuf implementation
+  * Maybe move the type metafunctions that determine return type from
+    field.h to object.h?
 * unify handling of ArrayField and ArrayProxy
 * strengthen handling of safe types, especially those that wrap
   strings and arrays
@@ -94,7 +100,7 @@ concepts and type metafunctions:
 
 * protobuf 'bytes' type should work with BufferView?
 * Support enums
-* Support single class fields
+* ~~Support single class fields~~
 * Support repeated string fields
 * Support repeated class fields
 * Support `oneof` fields using `jmg::Union`
