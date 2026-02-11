@@ -291,6 +291,14 @@ std::string snakeCaseToCamelCase(std::string_view str,
  */
 std::string camelCaseToSnakeCase(std::string_view str);
 
+/**
+ * compute the string representation of the address associated with a pointer
+ */
+template<typename T>
+std::string strAddrOf(const T* ptr) {
+  return str_cat(static_cast<uintptr_t>(ptr));
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // retrieve a specific type from a parameter pack
 //
