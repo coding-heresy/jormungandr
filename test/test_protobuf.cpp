@@ -78,9 +78,11 @@ using Dbl = protobuf::Field<double, "dbl", Required, 11U>;
 using Str = protobuf::StringField<"str", Required, 12U>;
 using BytesStr = protobuf::StringField<"bytes_str", Required, 13U>;
 
-using Ints = protobuf::ArrayField<int32_t, "ints", Required, 14U>;
+using Ts = protobuf::Field<TimePoint, "ts", Required, 14U>;
 
-using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 15U>;
+using Ints = protobuf::ArrayField<int32_t, "ints", Required, 15U>;
+
+using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 16U>;
 
 // TODO(bd) handle repeated string fields
 
@@ -100,29 +102,32 @@ using TestMsgObj = protobuf::Object<TestMsg,
                                     Dbl,
                                     Str,
                                     BytesStr,
+                                    Ts,
                                     Ints,
                                     InnerMsgFld>;
 
-using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1>;
+using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1U>;
 
-using OptInt32 = protobuf::Field<int32_t, "opt_int_32", Optional, 2>;
-using OptUInt32 = protobuf::Field<uint32_t, "opt_uint_32", Optional, 3>;
-using OptSFixed32 = protobuf::Field<int32_t, "opt_sfixed_32", Optional, 4>;
-using OptFixed32 = protobuf::Field<uint32_t, "opt_fixed_32", Optional, 5>;
+using OptInt32 = protobuf::Field<int32_t, "opt_int_32", Optional, 2U>;
+using OptUInt32 = protobuf::Field<uint32_t, "opt_uint_32", Optional, 3U>;
+using OptSFixed32 = protobuf::Field<int32_t, "opt_sfixed_32", Optional, 4U>;
+using OptFixed32 = protobuf::Field<uint32_t, "opt_fixed_32", Optional, 5U>;
 
-using OptInt64 = protobuf::Field<int64_t, "opt_int_64", Optional, 6>;
-using OptUInt64 = protobuf::Field<uint64_t, "opt_uint_64", Optional, 7>;
-using OptSFixed64 = protobuf::Field<int64_t, "opt_sfixed_64", Optional, 8>;
-using OptFixed64 = protobuf::Field<uint64_t, "opt_fixed_64", Optional, 9>;
+using OptInt64 = protobuf::Field<int64_t, "opt_int_64", Optional, 6U>;
+using OptUInt64 = protobuf::Field<uint64_t, "opt_uint_64", Optional, 7U>;
+using OptSFixed64 = protobuf::Field<int64_t, "opt_sfixed_64", Optional, 8U>;
+using OptFixed64 = protobuf::Field<uint64_t, "opt_fixed_64", Optional, 9U>;
 
-using OptFlt = protobuf::Field<float, "opt_flt", Optional, 10>;
-using OptDbl = protobuf::Field<double, "opt_dbl", Optional, 11>;
+using OptFlt = protobuf::Field<float, "opt_flt", Optional, 10U>;
+using OptDbl = protobuf::Field<double, "opt_dbl", Optional, 11U>;
 
-using OptStr = protobuf::StringField<"opt_str", Optional, 12>;
-using OptBytesStr = protobuf::StringField<"opt_bytes_str", Optional, 13>;
+using OptStr = protobuf::StringField<"opt_str", Optional, 12U>;
+using OptBytesStr = protobuf::StringField<"opt_bytes_str", Optional, 13U>;
+
+using OptTs = protobuf::Field<TimePoint, "opt_ts", Optional, 14U>;
 
 using OptInnerMsgFld =
-  protobuf::Field<InnerMsgObj, "opt_inner_msg", Optional, 14>;
+  protobuf::Field<InnerMsgObj, "opt_inner_msg", Optional, 15U>;
 
 using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptBool,
@@ -138,6 +143,7 @@ using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptDbl,
                                        OptStr,
                                        OptBytesStr,
+                                       OptTs,
                                        OptInnerMsgFld>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -147,6 +153,9 @@ using TestOptMsgObj = protobuf::Object<TestOptMsg,
 class ProtoTests : public ::testing::Test {
 protected:
   void SetUp() override {
+    tp_ = getCurrentTime();
+    const google::protobuf::Timestamp proto_ts = from(tp_);
+
     // initialize msg_
     msg_.set_boolean(false);
 
@@ -165,6 +174,8 @@ protected:
 
     msg_.set_str("foo");
     msg_.set_bytes_str("bar");
+
+    *(msg_.mutable_ts()) = from(tp_);
 
     msg_.add_ints(2011);
 
@@ -190,11 +201,14 @@ protected:
     all_full_.set_opt_str("foo");
     all_full_.set_opt_bytes_str("bar");
 
+    *(all_full_.mutable_opt_ts()) = proto_ts;
+
     auto& opt_inner_msg = *(all_full_.mutable_opt_inner_msg());
     opt_inner_msg.set_inner_int_32(2011);
     opt_inner_msg.set_opt_inner_str("blub");
   }
 
+  TimePoint tp_;
   TestMsg msg_;
   TestOptMsg all_empty_;
   TestOptMsg all_full_;
@@ -206,6 +220,10 @@ TEST_F(ProtoTests, TestConcepts) {
   EXPECT_TRUE(jmg::OptionalFieldT<OptBool>);
   EXPECT_TRUE(protobuf::detail::NonSpecializedTypeT<int>);
   EXPECT_TRUE(protobuf::detail::NonSpecializedTypeT<InnerMsgObj>);
+  EXPECT_TRUE(protobuf::detail::NonSpecializedTypeT<TimePoint>);
+  EXPECT_TRUE((same_as<string_view, ArgTypeForFieldT<Str>>));
+  using OptTsReturn = decltype(jmg::try_get<OptTs>(declval<TestOptMsgObj>()));
+  EXPECT_TRUE((same_as<optional<TimePoint>, OptTsReturn>));
 }
 
 TEST_F(ProtoTests, TestGet) {
@@ -228,6 +246,11 @@ TEST_F(ProtoTests, TestGet) {
 
   EXPECT_EQ(msg_.str(), jmg::get<Str>(obj));
   EXPECT_EQ(msg_.bytes_str(), jmg::get<BytesStr>(obj));
+
+  {
+    const TimePoint tp = from(msg_.ts());
+    EXPECT_EQ(tp, jmg::get<Ts>(obj));
+  }
 
   const auto ints = jmg::get<Ints>(obj);
   EXPECT_TRUE(SpanT<decltype(ints)>);
@@ -265,6 +288,8 @@ TEST_F(ProtoTests, TestTryGet) {
   EXPECT_FALSE(jmg::try_get<OptFlt>(empty_obj));
   EXPECT_FALSE(jmg::try_get<OptDbl>(empty_obj));
 
+  EXPECT_FALSE(jmg::try_get<OptTs>(empty_obj));
+
   EXPECT_FALSE(jmg::try_get<OptStr>(empty_obj));
   EXPECT_FALSE(jmg::try_get<OptBytesStr>(empty_obj));
 
@@ -287,6 +312,9 @@ TEST_F(ProtoTests, TestTryGet) {
 
   VALIDATE_OPT_FLD(OptStr, full_obj, all_full_.opt_str());
   VALIDATE_OPT_FLD(OptBytesStr, full_obj, all_full_.opt_bytes_str());
+
+  VALIDATE_OPT_FLD(OptTs, full_obj,
+                   static_cast<TimePoint>(from(all_full_.opt_ts())));
 
   auto inner_msg_obj = jmg::try_get<OptInnerMsgFld>(full_obj);
   EXPECT_TRUE(pred(inner_msg_obj));
@@ -311,4 +339,6 @@ TEST_F(ProtoTests, TestSet) {
   jmg::set<Flt>(obj, 42.0f);
   jmg::set<Dbl>(obj, 3.14159);
   jmg::set<Str>(obj, "foo"sv);
+  jmg::set<BytesStr>(obj, "bar"sv);
+  jmg::set<Ts>(obj, tp_);
 }

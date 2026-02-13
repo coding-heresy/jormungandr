@@ -38,12 +38,16 @@
 #include <google/protobuf/message.h>
 #include <google/protobuf/repeated_field.h>
 #include <google/protobuf/repeated_ptr_field.h>
+#include <google/protobuf/timestamp.pb.h>
+#include <google/protobuf/util/time_util.h>
 
+#include "jmg/conversion.h"
 #include "jmg/field.h"
 #include "jmg/meta.h"
 #include "jmg/object.h"
 #include "jmg/preprocessor.h"
 #include "jmg/safe_types.h"
+#include "jmg/types.h"
 #include "jmg/util.h"
 
 namespace
@@ -162,9 +166,18 @@ namespace detail
 /**
  * concept for a supported underlying field type that is not either a
  * string or an array
+ *
+ * NOTE: the only non-primitive, non-viewable types allowed are other
+ * protobuf::Object types (i.e. types generated from protobuf
+ * messages) and the JMG standard TimePoint type
  */
 template<typename T>
-concept NonSpecializedTypeT = ScalarTypeT<T> || protobuf::ObjectT<T>;
+concept NonSpecializedTypeT =
+  ScalarTypeT<T>
+  || protobuf::ObjectT<T>
+  // NOTE: TimePoint is a special case because
+  // google::protobuf::Timestamp is the standard representation for it
+  || SameAsDecayedT<TimePoint, T>;
 
 } // namespace detail
 
@@ -286,7 +299,7 @@ public:
     using Type = typename Fld::type;
     static constexpr auto field_name = std::string_view(Fld::name);
     const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
-    if constexpr (ObjectT<Type>) {
+    if constexpr (ObjectT<Type> || SameAsDecayedT<TimePoint, Type>) {
       using Rslt = std::optional<Type>;
       if (!isPresent(field_des)) { return Rslt(std::nullopt); }
       return Rslt(getByType<Fld>(field_des));
@@ -405,6 +418,14 @@ private:
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_DOUBLE);
       return mr_.GetDouble(msg_, &field_des);
     }
+    else if constexpr (jmg::SameAsDecayedT<jmg::TimePoint, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
+      const auto& generic_ts_msg = mr_.GetMessage(msg_, &field_des);
+      const auto& ts_msg =
+        *(DynamicCastToGenerated<Timestamp>(&generic_ts_msg));
+      TimePoint tp = from(ts_msg);
+      return tp;
+    }
     else if constexpr (jmg::ObjectT<DecayT<Type>>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
       const auto& generic_sub_msg = mr_.GetMessage(msg_, &field_des);
@@ -481,6 +502,12 @@ private:
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_DOUBLE);
       mr_.SetDouble(msg_ptr_, &field_des, val);
     }
+    else if constexpr (jmg::SameAsDecayedT<jmg::TimePoint, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
+      Message* generic_ts_msg = mr_.MutableMessage(msg_ptr_, &field_des);
+      auto& ts_msg = *(DynamicCastToGenerated<Timestamp>(generic_ts_msg));
+      ts_msg = from(val);
+    }
     else if constexpr (jmg::SameAsDecayedT<std::string, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_STRING);
       mr_.SetString(msg_ptr_, &field_des, std::move(val));
@@ -489,6 +516,29 @@ private:
     // TODO(bd) handle string types
 
     // TODO(bd) handle repeated and non-primitive types
+
+    else { JMG_NOT_EXHAUSTIVE(Type); }
+  }
+
+  /**
+   * TODO(bd) figure out how to make the other override of setByType
+   * correctly perform perfect forwarding so it works on const ref
+   * value arguments
+   */
+  template<protobuf::FieldT Fld>
+  void setByType(const FieldDescriptor& field_des,
+                 const typename Fld::type& val) {
+    using namespace google::protobuf;
+    using Type = typename Fld::type;
+    if constexpr (jmg::SameAsDecayedT<jmg::TimePoint, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
+      Message* generic_ts_msg = mr_.MutableMessage(msg_ptr_, &field_des);
+      auto& ts_msg = *(DynamicCastToGenerated<Timestamp>(generic_ts_msg));
+      ts_msg = from(val);
+    }
+
+    // TODO(bd) add other cases here if perfect forwarding can't be
+    // fixed for the other override
 
     else { JMG_NOT_EXHAUSTIVE(Type); }
   }

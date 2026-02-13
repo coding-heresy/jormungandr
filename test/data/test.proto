@@ -3,6 +3,8 @@ syntax = "proto2";
 
 package jmg.test;
 
+import "google/protobuf/timestamp.proto";
+
 message InnerMsg {
   required int32 inner_int_32 = 1;
   optional string opt_inner_str = 2;
@@ -27,9 +29,11 @@ message TestMsg {
   required string str = 12;
   required bytes bytes_str = 13;
 
-  repeated int32 ints = 14;
+  required google.protobuf.Timestamp ts = 14;
 
-  required InnerMsg inner_msg = 15;
+  repeated int32 ints = 15;
+
+  required InnerMsg inner_msg = 16;
 }
 
 message TestOptMsg {
@@ -51,5 +55,7 @@ message TestOptMsg {
   optional string opt_str = 12;
   optional bytes opt_bytes_str = 13;
 
-  optional InnerMsg opt_inner_msg = 14;
+  optional google.protobuf.Timestamp opt_ts = 14;
+
+  optional InnerMsg opt_inner_msg = 15;
 }
