@@ -44,6 +44,8 @@
 #include <system_error>
 #include <thread>
 
+#include <google/protobuf/timestamp.pb.h>
+#include <google/protobuf/util/time_util.h>
 #include <liburing.h>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -75,7 +77,8 @@ concept TimePointT =
   SameAsDecayedT<TimePoint, T> || SameAsDecayedT<EpochSeconds, T>
   || SameAsDecayedT<::timeval, T> || SameAsDecayedT<::timespec, T>
   || SameAsDecayedT<boost::posix_time::ptime, T>
-  || TemplateSpecializationOfT<T, std::chrono::time_point>;
+  || SameAsDecayedT<absl::Time, T>
+  || SameAsDecayedT<google::protobuf::Timestamp, T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for types convertible to/from Duration
@@ -254,9 +257,14 @@ struct ConvertImpl {
         static const auto kPtimeEpoch = from_time_t(0);
         return kPtimeEpoch + nanoseconds(src.time_since_epoch().count());
       }
-      // convert absl::TimePoint to TimePoint
+      // convert TimePoint to absl::Time
       else if constexpr (std::same_as<absl::Time, Tgt>) {
         return absl::FromChrono(src);
+      }
+      // convert TimePoint to google::protobuf::Timestamp
+      else if constexpr (std::same_as<google::protobuf::Timestamp, Tgt>) {
+        using google::protobuf::util::TimeUtil;
+        return TimeUtil::NanosecondsToTimestamp(src.time_since_epoch().count());
       }
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
@@ -317,6 +325,14 @@ struct ConvertImpl {
       static_assert(std::same_as<TimePoint, Tgt>,
                     "conversion from absl::Time must target TimePoint");
       return absl::ToChronoTime(src);
+    }
+    else if constexpr (SameAsDecayedT<google::protobuf::Timestamp, Src>) {
+      using google::protobuf::util::TimeUtil;
+      static_assert(
+        std::same_as<TimePoint, Tgt>,
+        "conversion from google::protobuf::Timestamp must target TimePoint");
+      const auto ns = TimeUtil::TimestampToNanoseconds(src);
+      return TimePoint(std::chrono::nanoseconds(ns));
     }
     ////////////////////////////////////////////////////////////
     // this section converts from external types to Duration
