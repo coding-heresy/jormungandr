@@ -100,6 +100,7 @@ cc_test(
 proto_library(
     name = "test_proto",
     srcs = ["data/test.proto"],
+    deps = ["@com_google_protobuf//:timestamp_proto"],
 )
 
 cc_proto_library(
