@@ -51,7 +51,8 @@ TEST(ConversionTests, TestConversionRelatedConcepts) {
   EXPECT_TRUE(TimePointT<::timeval>);
   EXPECT_TRUE(TimePointT<::timespec>);
   EXPECT_TRUE(TimePointT<boost::posix_time::ptime>);
-  EXPECT_TRUE(TimePointT<std::chrono::time_point<std::chrono::system_clock>>);
+  EXPECT_TRUE(TimePointT<absl::Time>);
+  EXPECT_TRUE(TimePointT<google::protobuf::Timestamp>);
   EXPECT_FALSE(TimePointT<int>);
   // DurationT
   EXPECT_TRUE(DurationT<std::chrono::nanoseconds>);
@@ -223,6 +224,13 @@ TEST(ConversionTests, TestAbslTimeFromTimePoint) {
   EXPECT_EQ(absl::ToUnixNanos(absl_tp), kTimePoint.time_since_epoch().count());
 }
 
+TEST(ConversionTests, TestGoogleProtobufTimestampFromTimePoint) {
+  using google::protobuf::util::TimeUtil;
+  google::protobuf::Timestamp proto_ts = from(kTimePoint);
+  EXPECT_EQ(TimeUtil::TimestampToNanoseconds(proto_ts),
+            kTimePoint.time_since_epoch().count());
+}
+
 ////////////////////
 // conversions to TimePoint
 
@@ -258,6 +266,15 @@ TEST(ConversionTests, TestTimePointFromPosixTime) {
 TEST(ConversionTests, TestTimePointFromAbslTime) {
   absl::Time absl_tp = absl::FromUnixSeconds(kTimePointSeconds);
   TimePoint actual = from(absl_tp);
+  const auto expected = kTimePoint;
+  EXPECT_EQ(expected, actual);
+}
+
+TEST(ConversionTests, TestTimePointFromGoogleProtobufTimestamp) {
+  using google::protobuf::util::TimeUtil;
+  google::protobuf::Timestamp proto_ts =
+    TimeUtil::SecondsToTimestamp(kTimePointSeconds);
+  TimePoint actual = from(proto_ts);
   const auto expected = kTimePoint;
   EXPECT_EQ(expected, actual);
 }
