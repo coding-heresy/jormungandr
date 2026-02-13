@@ -46,6 +46,11 @@
 #include "jmg/safe_types.h"
 #include "jmg/util.h"
 
+namespace
+{
+using CppType = google::protobuf::FieldDescriptor::CppType;
+} // namespace
+
 namespace jmg::protobuf
 {
 
@@ -225,6 +230,14 @@ template<typename T>
 concept FieldT = std::derived_from<T, detail::FieldTag> && jmg::FieldDefT<T>
                  && detail::HasProtoFieldId<T>;
 
+#if !defined(NDEBUG)
+#define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)                 \
+  JMG_ENFORCE(expected_type == fld.cpp_type(), "field has type [", \
+              fld.cpp_type(), "] but expected type [", expected_type, "]")
+#else
+#define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)
+#endif
+
 /**
  * wrapper type for protobuf object
  *
@@ -236,13 +249,22 @@ class Object : public jmg::ObjectDef<Fields...>, public detail::ObjectTag {
   using Descriptor = google::protobuf::Descriptor;
   using Reflection = google::protobuf::Reflection;
   using FieldDescriptor = google::protobuf::FieldDescriptor;
+  using Message = google::protobuf::Message;
 
 public:
   using MsgType = Msg;
 
   Object() = delete;
   explicit Object(const Msg& msg)
-    : msg_(msg), pd_(*(msg.GetDescriptor())), mr_(*(msg.GetReflection())) {}
+    : msg_(msg)
+    , pd_(*(msg.GetDescriptor()))
+    , mr_(*(msg.GetReflection()))
+    , msg_ptr_(nullptr) {}
+  explicit Object(Msg& msg)
+    : msg_(msg)
+    , pd_(*(msg.GetDescriptor()))
+    , mr_(*(msg.GetReflection()))
+    , msg_ptr_(&msg) {}
 
   /**
    * delegate for jmg::get()
@@ -274,6 +296,38 @@ public:
       if (!isPresent(field_des)) { return Rslt(std::nullopt); }
       return Rslt(getByType<Fld>(field_des));
     }
+  }
+
+  /**
+   * delegate for jmg::set() for non-viewable fields
+   */
+  template<NonViewableFieldT Fld>
+  void set(ArgTypeForFieldT<Fld> arg) {
+    using ArgType = ArgTypeForFieldT<Fld>;
+    using Type = typename Fld::type;
+    static constexpr auto field_name = std::string_view(Fld::name);
+    const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
+    if constexpr (ObjectT<Type>) {
+      // TODO(bd) handle message types
+      JMG_ENFORCE(false, "not yet supported");
+    }
+    else { setByType<Fld>(field_des, std::forward<ArgType>(arg)); }
+  }
+
+  /**
+   * delegate for jmg::set() for viewable fields
+   */
+  template<ViewableFieldT Fld>
+  void set(ArgTypeForFieldT<Fld> arg) {
+    static constexpr auto field_name = std::string_view(Fld::name);
+    const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
+    if constexpr (StringFieldT<Fld>) {
+      // TODO(bd) current version of reflection interface only
+      // supports arguments of type std::string
+      setByType<Fld>(field_des, std::string(arg));
+    }
+    // TODO(bd) handle array types
+    else { JMG_NOT_EXHAUSTIVE(Fld); }
   }
 
 private:
@@ -309,8 +363,13 @@ private:
     }
   }
 
+  /**
+   * function template that uses metaprogramming analysis of the field
+   * type to call the correct reflection member function for the type
+   * being retrieved
+   */
   template<protobuf::FieldT Fld>
-  auto getByType(const FieldDescriptor& field_des) const {
+  decltype(auto) getByType(const FieldDescriptor& field_des) const {
     using namespace google::protobuf;
     using Type = typename Fld::type;
 #if !defined(NDEBUG)
@@ -319,32 +378,35 @@ private:
     // case analysis of possible field types, embedding type names in
     // function names is very annoying...
     if constexpr (jmg::SameAsDecayedT<bool, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_BOOL);
       return mr_.GetBool(msg_, &field_des);
     }
     else if constexpr (jmg::SameAsDecayedT<int32_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_INT32);
       return mr_.GetInt32(msg_, &field_des);
     }
     else if constexpr (jmg::SameAsDecayedT<uint32_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_UINT32);
       return mr_.GetUInt32(msg_, &field_des);
     }
     else if constexpr (jmg::SameAsDecayedT<int64_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_INT64);
       return mr_.GetInt64(msg_, &field_des);
     }
     else if constexpr (jmg::SameAsDecayedT<uint64_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_UINT64);
       return mr_.GetUInt64(msg_, &field_des);
     }
     else if constexpr (jmg::SameAsDecayedT<float, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_FLOAT);
       return mr_.GetFloat(msg_, &field_des);
     }
     else if constexpr (jmg::SameAsDecayedT<double, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_DOUBLE);
       return mr_.GetDouble(msg_, &field_des);
     }
     else if constexpr (jmg::ObjectT<DecayT<Type>>) {
-#if !defined(NDEBUG)
-      JMG_ENFORCE(field_des.cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE,
-                  "field [", Fld::name, "] value has unexpected type [",
-                  field_des.cpp_type(), "]");
-#endif
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
       const auto& generic_sub_msg = mr_.GetMessage(msg_, &field_des);
       using Wrapper = typename Fld::type;
       using Wrapped = typename Wrapper::MsgType;
@@ -375,14 +437,70 @@ private:
       }
     }
 
-    // TODO(bd) handle repeated and complex types
+    // TODO(bd) handle repeated types
 
-    else { JMG_NOT_EXHAUSTIVE(Fld); }
+    else { JMG_NOT_EXHAUSTIVE(Type); }
+  }
+
+  /**
+   * function template that uses metaprogramming analysis of the field
+   * type to call the correct reflection member function for the type
+   * being set
+   */
+  template<protobuf::FieldT Fld>
+  void setByType(const FieldDescriptor& field_des, typename Fld::type&& val) {
+    using namespace google::protobuf;
+    using Type = typename Fld::type;
+    // case analysis of possible field types, embedding type names in
+    // function names is very annoying...
+    if constexpr (jmg::SameAsDecayedT<bool, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_BOOL);
+      mr_.SetBool(msg_ptr_, &field_des, val);
+    }
+    else if constexpr (jmg::SameAsDecayedT<int32_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_INT32);
+      mr_.SetInt32(msg_ptr_, &field_des, val);
+    }
+    else if constexpr (jmg::SameAsDecayedT<uint32_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_UINT32);
+      mr_.SetUInt32(msg_ptr_, &field_des, val);
+    }
+    else if constexpr (jmg::SameAsDecayedT<int64_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_INT64);
+      mr_.SetInt64(msg_ptr_, &field_des, val);
+    }
+    else if constexpr (jmg::SameAsDecayedT<uint64_t, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_UINT64);
+      mr_.SetUInt64(msg_ptr_, &field_des, val);
+    }
+    else if constexpr (jmg::SameAsDecayedT<float, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_FLOAT);
+      mr_.SetFloat(msg_ptr_, &field_des, val);
+    }
+    else if constexpr (jmg::SameAsDecayedT<double, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_DOUBLE);
+      mr_.SetDouble(msg_ptr_, &field_des, val);
+    }
+    else if constexpr (jmg::SameAsDecayedT<std::string, Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_STRING);
+      mr_.SetString(msg_ptr_, &field_des, std::move(val));
+    }
+
+    // TODO(bd) handle string types
+
+    // TODO(bd) handle repeated and non-primitive types
+
+    else { JMG_NOT_EXHAUSTIVE(Type); }
   }
 
   const Msg& msg_;
   const Descriptor& pd_;
   const Reflection& mr_;
+  // NOTE: non-const pointer is only set if the object was constructed
+  // from a non-const generated protobuf object
+  Message* msg_ptr_;
 };
+
+#undef JMG_ENFORCE_TYPE_MATCH
 
 } // namespace jmg::protobuf

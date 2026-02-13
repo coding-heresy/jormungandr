@@ -40,6 +40,7 @@
 using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 ////////////////////
 // aliases for protobuf types
@@ -293,4 +294,21 @@ TEST_F(ProtoTests, TestTryGet) {
 
   EXPECT_EQ(jmg::get<InnerInt32>(*inner_msg_obj), opt_inner_obj.inner_int_32());
   VALIDATE_OPT_FLD(OptInnerStr, *inner_msg_obj, opt_inner_obj.opt_inner_str());
+}
+
+TEST_F(ProtoTests, TestSet) {
+  TestMsg msg;
+  auto obj = TestMsgObj(msg);
+  jmg::set<Boolean>(obj, false);
+  jmg::set<Int32>(obj, 20010911);
+  jmg::set<UInt32>(obj, 20070625);
+  jmg::set<SFixed32>(obj, -1);
+  jmg::set<Fixed32>(obj, 19701204);
+  jmg::set<Int64>(obj, 10 * 20010911);
+  jmg::set<UInt64>(obj, 10 * 20070625);
+  jmg::set<SFixed64>(obj, 10 * -1);
+  jmg::set<Fixed64>(obj, 10 * 19701204);
+  jmg::set<Flt>(obj, 42.0f);
+  jmg::set<Dbl>(obj, 3.14159);
+  jmg::set<Str>(obj, "foo"sv);
 }
