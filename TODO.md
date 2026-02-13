@@ -96,14 +96,23 @@ concepts and type metafunctions:
     objects/proxies to allow JMG objects to be treated consistently
     with e.g. `std::tuple` and `std::variant`
 
+## Native and CBE objects
+
+* Represent JMG `Union` type using `std::variant`?
+  * Try fleshing out the design in test_native.cpp
+
 ## Protobuf objects
 
-* protobuf 'bytes' type should work with BufferView?
+* ~~Support special handling of time points~~
+* Protobuf 'bytes' type should work with BufferView?
 * Support enums
 * ~~Support single class fields~~
 * Support repeated string fields
 * Support repeated class fields
 * Support `oneof` fields using `jmg::Union`
+  * May not be necessary but could add some checking on the `set()`
+    case?
+  * See design example at the bottom of test_protobuf.cpp
 * Modify jmgc to generate .proto files using JMG YAML spec as the
   source of ground truth
 
