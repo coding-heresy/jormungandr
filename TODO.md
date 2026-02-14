@@ -3,7 +3,7 @@
 
 ## Misc Standardization
 
-* Use `JMG_TAG_TYPE` to declare all tag types
+* ~~Use `JMG_TAG_TYPE` to declare all tag types~~
 * Update standard `JMG_OBJECT_CONCEPT` to include a requirement to be
   derived from `jmg::ObjectDefT`?
 * Investigate sketchy results for testing argument type generation for
@@ -29,6 +29,8 @@
   * Should concepts use a different scheme, e.g. trailing `C`?
 * Type aliases and template type parameter names **shall not** be
   named with a trailing `T`.
+* Should `Field` be collapsed to `Fld` everywhere?
+* Should `Return` be collapsed to `Rslt` everywhere?
 
 List of incorrectly named type aliases, template type parameters,
 concepts and type metafunctions:
@@ -49,6 +51,9 @@ concepts and type metafunctions:
     * see protobuf implementation
   * Maybe move the type metafunctions that determine return type from
     field.h to object.h?
+  * In general, it seems like the only class types other than viewable
+    types, safe types and `jmg:TimePoint` should always satisfy
+    `jmg::ObjectT`; need to look for counter-examples
 * unify handling of ArrayField and ArrayProxy
 * strengthen handling of safe types, especially those that wrap
   strings and arrays
@@ -103,11 +108,10 @@ concepts and type metafunctions:
 
 ## Protobuf objects
 
-* ~~Support special handling of time points~~
-* Protobuf 'bytes' type should work with BufferView?
 * Support enums
-* ~~Support single class fields~~
-* Support repeated string fields
+* Support safe types
+* Protobuf 'bytes' type should work with BufferView?
+  * Maybe just needs general BufferView support?
 * Support repeated class fields
 * Support `oneof` fields using `jmg::Union`
   * May not be necessary but could add some checking on the `set()`
@@ -115,6 +119,9 @@ concepts and type metafunctions:
   * See design example at the bottom of test_protobuf.cpp
 * Modify jmgc to generate .proto files using JMG YAML spec as the
   source of ground truth
+* ~~Support special handling of time points~~
+* ~~Support single class fields~~
+* ~~Support repeated string fields~~
 
 ## YAML objects
 
