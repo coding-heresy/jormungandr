@@ -33,7 +33,9 @@ message TestMsg {
 
   repeated int32 ints = 15;
 
-  required InnerMsg inner_msg = 16;
+  repeated string strs = 16;
+
+  required InnerMsg inner_msg = 17;
 }
 
 message TestOptMsg {
