@@ -35,6 +35,7 @@
 #include <string>
 #include <string_view>
 
+#include <google/protobuf/generated_enum_util.h>
 #include <google/protobuf/message.h>
 #include <google/protobuf/repeated_field.h>
 #include <google/protobuf/repeated_ptr_field.h>
@@ -65,10 +66,16 @@ using ScalarTypes =
   meta::list<bool, uint32_t, int32_t, uint64_t, int64_t, float, double>;
 
 /**
+ * concept for a generated  protobuf enum type
+ */
+template<typename T>
+concept ProtoEnumT = google::protobuf::is_proto_enum<DecayT<T>>::value;
+
+/**
  * concept for a scalar type
  */
 template<typename T>
-concept ScalarTypeT = isMemberOfList<T, ScalarTypes>();
+concept ScalarTypeT = isMemberOfList<T, ScalarTypes>() || ProtoEnumT<T>;
 
 /**
  * concept for protobuf messages (NOT for JMG objects that wrap
@@ -244,9 +251,10 @@ concept FieldT = std::derived_from<T, detail::FieldTag> && jmg::FieldDefT<T>
                  && detail::HasProtoFieldId<T>;
 
 #if !defined(NDEBUG)
-#define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)                 \
-  JMG_ENFORCE(expected_type == fld.cpp_type(), "field has type [", \
-              fld.cpp_type(), "] but expected type [", expected_type, "]")
+#define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)                     \
+  JMG_ENFORCE(expected_type == fld.cpp_type(), "field [", fld.name(),  \
+              "] has type [", fld.cpp_type(), "] but expected type [", \
+              expected_type, "]")
 #else
 #define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)
 #endif
@@ -559,6 +567,11 @@ private:
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_DOUBLE);
       return mr_.GetDouble(msg_, &field_des);
     }
+    else if constexpr (ProtoEnumT<Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_ENUM);
+      const auto& ed = *(mr_.GetEnum(msg_, &field_des));
+      return static_cast<Type>(ed.number());
+    }
     else if constexpr (jmg::SameAsDecayedT<jmg::TimePoint, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
       const auto& generic_ts_msg = mr_.GetMessage(msg_, &field_des);
@@ -602,7 +615,7 @@ private:
       }
     }
 
-    // TODO(bd) handle repeated types
+    // TODO(bd) handle repeated enums and objects
 
     else { JMG_NOT_EXHAUSTIVE(Type); }
   }
@@ -646,6 +659,16 @@ private:
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_DOUBLE);
       mr_.SetDouble(msg_ptr_, &field_des, val);
     }
+    else if constexpr (ProtoEnumT<Type>) {
+      JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_ENUM);
+      // WTAF!? this is a LOT of work just to set the value of an enum
+      const auto& ed = *(GetEnumDescriptor<Type>());
+      const auto* evd = ed.FindValueByNumber(static_cast<int>(val));
+      JMG_ENFORCE(pred(evd),
+                  "no value descriptor available for enumeration value [", val,
+                  "] when setting field [", Fld::name, "]");
+      mr_.SetEnum(msg_ptr_, &field_des, evd);
+    }
     else if constexpr (jmg::SameAsDecayedT<jmg::TimePoint, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
       Message* generic_ts_msg = mr_.MutableMessage(msg_ptr_, &field_des);
@@ -657,15 +680,13 @@ private:
       mr_.SetString(msg_ptr_, &field_des, std::move(val));
     }
 
-    // TODO(bd) handle string types
-
-    // TODO(bd) handle repeated and non-primitive types
+    // TODO(bd) handle objects and repeated fields
 
     else { JMG_NOT_EXHAUSTIVE(Type); }
   }
 
   /**
-   * TODO(bd) figure out how to make the other override of setByType
+   * TODO(bd) figure out how to make the main override of setByType
    * correctly perform perfect forwarding so it works on const ref
    * value arguments
    */

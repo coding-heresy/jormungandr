@@ -54,6 +54,7 @@ namespace vws = std::views;
 using InnerMsg = jmg::test::InnerMsg;
 using TestMsg = jmg::test::TestMsg;
 using TestOptMsg = jmg::test::TestOptMsg;
+using Active = jmg::test::Active;
 
 ////////////////////
 // fields for InnerMsg
@@ -92,6 +93,8 @@ using Strs = protobuf::ArrayField<std::string, "strs", Required, 16U>;
 
 using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 17U>;
 
+using ActiveState = protobuf::Field<Active, "active_state", Required, 18U>;
+
 // TODO(bd) handle repeated string fields
 
 // TODO(bd) handle repeated non-primitive, non-string fields
@@ -113,7 +116,8 @@ using TestMsgObj = protobuf::Object<TestMsg,
                                     Ts,
                                     Ints,
                                     Strs,
-                                    InnerMsgFld>;
+                                    InnerMsgFld,
+                                    ActiveState>;
 
 using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1U>;
 
@@ -138,6 +142,9 @@ using OptTs = protobuf::Field<TimePoint, "opt_ts", Optional, 14U>;
 using OptInnerMsgFld =
   protobuf::Field<InnerMsgObj, "opt_inner_msg", Optional, 15U>;
 
+using OptActiveState =
+  protobuf::Field<Active, "opt_active_state", Optional, 16U>;
+
 using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptBool,
                                        OptInt32,
@@ -153,7 +160,8 @@ using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptStr,
                                        OptBytesStr,
                                        OptTs,
-                                       OptInnerMsgFld>;
+                                       OptInnerMsgFld,
+                                       OptActiveState>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // test fixture
@@ -195,6 +203,8 @@ protected:
     auto& inner_msg = *(msg_.mutable_inner_msg());
     inner_msg.set_inner_int_32(1989);
 
+    msg_.set_active_state(Active::ACTIVATED);
+
     // initialize all_full_
     all_full_.set_opt_bool(false);
 
@@ -219,6 +229,8 @@ protected:
     auto& opt_inner_msg = *(all_full_.mutable_opt_inner_msg());
     opt_inner_msg.set_inner_int_32(2011);
     opt_inner_msg.set_opt_inner_str("blub");
+
+    all_full_.set_opt_active_state(Active::UNKNOWN);
   }
 
   TimePoint tp_;
@@ -283,6 +295,8 @@ TEST_F(ProtoTests, TestGet) {
   EXPECT_TRUE(ObjectT<decltype(inner_msg)>);
   EXPECT_EQ(msg_.inner_msg().inner_int_32(), jmg::get<InnerInt32>(inner_msg));
   EXPECT_FALSE(jmg::try_get<OptInnerStr>(inner_msg));
+
+  EXPECT_EQ(Active::ACTIVATED, jmg::get<ActiveState>(obj));
 }
 
 #define VALIDATE_OPT_FLD(fld, obj, val)          \
@@ -315,6 +329,8 @@ TEST_F(ProtoTests, TestTryGet) {
   EXPECT_FALSE(jmg::try_get<OptStr>(empty_obj));
   EXPECT_FALSE(jmg::try_get<OptBytesStr>(empty_obj));
 
+  EXPECT_FALSE(jmg::try_get<OptActiveState>(empty_obj));
+
   const auto full_obj = TestOptMsgObj(all_full_);
 
   VALIDATE_OPT_FLD(OptBool, full_obj, all_full_.opt_bool());
@@ -344,6 +360,8 @@ TEST_F(ProtoTests, TestTryGet) {
 
   EXPECT_EQ(jmg::get<InnerInt32>(*inner_msg_obj), opt_inner_obj.inner_int_32());
   VALIDATE_OPT_FLD(OptInnerStr, *inner_msg_obj, opt_inner_obj.opt_inner_str());
+
+  VALIDATE_OPT_FLD(OptActiveState, full_obj, all_full_.opt_active_state());
 }
 
 TEST_F(ProtoTests, TestSet) {
@@ -363,4 +381,5 @@ TEST_F(ProtoTests, TestSet) {
   jmg::set<Str>(obj, "foo"sv);
   jmg::set<BytesStr>(obj, "bar"sv);
   jmg::set<Ts>(obj, tp_);
+  jmg::set<ActiveState>(obj, Active::DEACTIVATED);
 }
