@@ -108,11 +108,12 @@ concepts and type metafunctions:
 
 ## Protobuf objects
 
-* Support enums
 * Support safe types
 * Protobuf 'bytes' type should work with BufferView?
   * Maybe just needs general BufferView support?
+* Support repeated enum fields
 * Support repeated class fields
+* Fix perfect forwarding in `setByType`
 * Support `oneof` fields using `jmg::Union`
   * May not be necessary but could add some checking on the `set()`
     case?
@@ -122,6 +123,7 @@ concepts and type metafunctions:
 * ~~Support special handling of time points~~
 * ~~Support single class fields~~
 * ~~Support repeated string fields~~
+* ~~Support enums~~
 
 ## YAML objects
 

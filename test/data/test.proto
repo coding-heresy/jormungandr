@@ -5,6 +5,12 @@ package jmg.test;
 
 import "google/protobuf/timestamp.proto";
 
+enum Active {
+  UNKNOWN = 0;
+  ACTIVATED = 1;
+  DEACTIVATED = 2;
+};
+
 message InnerMsg {
   required int32 inner_int_32 = 1;
   optional string opt_inner_str = 2;
@@ -36,6 +42,8 @@ message TestMsg {
   repeated string strs = 16;
 
   required InnerMsg inner_msg = 17;
+
+  required Active active_state = 18;
 }
 
 message TestOptMsg {
@@ -60,4 +68,6 @@ message TestOptMsg {
   optional google.protobuf.Timestamp opt_ts = 14;
 
   optional InnerMsg opt_inner_msg = 15;
+
+  optional Active opt_active_state = 16;
 }
