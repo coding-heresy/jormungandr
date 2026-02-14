@@ -31,7 +31,7 @@
  */
 #pragma once
 
-#include <concepts>
+#include <iterator>
 #include <string>
 #include <string_view>
 
@@ -345,6 +345,147 @@ public:
 
 private:
   /**
+   * class template for an array proxy associated which wraps a field of
+   * repeated string objects
+   */
+  template<protobuf::HeavyProtoMsgT ProtoMsg, int32_t kFldId>
+  class RptStrArrayProxy {
+    using Descriptor = google::protobuf::Descriptor;
+    using Reflection = google::protobuf::Reflection;
+    using FieldDescriptor = google::protobuf::FieldDescriptor;
+
+  public:
+    RptStrArrayProxy() = delete;
+    ~RptStrArrayProxy() = default;
+    RptStrArrayProxy(const ProtoMsg& msg)
+      : msg_(&msg)
+      , pd_(msg.GetDescriptor())
+      , mr_(msg.GetReflection())
+      , fd_(pd_->FindFieldByNumber(kFldId)) {}
+
+    /**
+     * class template for an iterator proxy that allows a repeated list of
+     * protobuf strings to be viewed as a range of std::string_view
+     */
+    class RptStrItr {
+      using Descriptor = google::protobuf::Descriptor;
+      using Reflection = google::protobuf::Reflection;
+      using FieldDescriptor = google::protobuf::FieldDescriptor;
+
+    public:
+      // aliases required to allow the iterator to be used in
+      // std::ranges algorithms
+      using value_type = std::string_view;
+      using difference_type = int;
+      using iterator_category = std::input_iterator_tag;
+      using iterator_concept = std::forward_iterator_tag;
+      using reference = std::string_view;
+
+      RptStrItr() = default;
+      ~RptStrItr() = default;
+      JMG_DEFAULT_COPYABLE(RptStrItr);
+      JMG_DEFAULT_MOVEABLE(RptStrItr);
+
+      // TODO(bd) remove?
+      explicit RptStrItr(const ProtoMsg& msg)
+        : msg_(&msg)
+        , pd_(msg.GetDescriptor())
+        , mr_(msg.GetReflection())
+        , fd_(pd_->FindFieldByNumber(kFldId))
+        , idx_(0)
+        , sz_(mr_->FieldSize(msg, fd_)) {
+#if !defined(NDEBUG)
+        JMG_ENFORCE(fd_, "unable to get field descriptor for field [", kFldId,
+                    "]");
+        JMG_ENFORCE(fd_->is_repeated(), "field [", kFldId, "] is not repeated");
+        JMG_ENFORCE(fd_->cpp_type() == FieldDescriptor::CPPTYPE_STRING,
+                    "field [", kFldId, "] does not contain strings");
+#endif
+        if (0 == sz_) { clear(); }
+      }
+
+      std::string_view operator*() const {
+        const auto& ref =
+          mr_->GetRepeatedStringReference(*msg_, fd_, idx_, &scratch_);
+        return std::string_view(ref.data(), ref.size());
+      }
+
+      RptStrItr& operator++() {
+        if (-1 == idx_) { return *this; }
+        ++idx_;
+        if (static_cast<size_t>(idx_) == sz_) { clear(); }
+        return *this;
+      }
+
+      RptStrItr operator++(int) {
+        if (-1 == idx_) { return *this; }
+        auto rslt = *this;
+        ++idx_;
+        if (static_cast<size_t>(idx_) == sz_) { clear(); }
+        return rslt;
+      }
+
+      // TODO(bd) use friend operators
+      bool operator==(const RptStrItr& that) const {
+        return (this->msg_ == that.msg_) && (this->pd_ == that.pd_)
+               && (this->mr_ == that.mr_) && (this->fd_ == that.fd_)
+               && (this->idx_ == that.idx_);
+      }
+
+      bool operator!=(const RptStrItr& that) const {
+        return (this->msg_ != that.msg_) || (this->pd_ != that.pd_)
+               || (this->mr_ != that.mr_) || (this->fd_ != that.fd_)
+               || (this->idx_ != that.idx_);
+      }
+
+    private:
+      friend class RptStrArrayProxy<ProtoMsg, kFldId>;
+
+      RptStrItr(const ProtoMsg* msg,
+                const Descriptor* pd,
+                const Reflection* mr,
+                const FieldDescriptor* fd)
+        : msg_(msg)
+        , pd_(pd)
+        , mr_(mr)
+        , fd_(fd)
+        , idx_(0)
+        , sz_(mr->FieldSize(*msg, fd)) {}
+
+      void clear() {
+        msg_ = nullptr;
+        pd_ = nullptr;
+        mr_ = nullptr;
+        fd_ = nullptr;
+        idx_ = -1;
+      }
+
+      const ProtoMsg* msg_ = nullptr;
+      const Descriptor* pd_ = nullptr;
+      const Reflection* mr_ = nullptr;
+      const FieldDescriptor* fd_ = nullptr;
+      int idx_ = -1;
+      size_t sz_;
+      mutable std::string scratch_;
+    };
+
+    auto size() const { return mr_->FieldSize(*msg_, fd_); }
+    auto empty() const { return 0 == size(); }
+
+    auto begin() const { return RptStrItr(msg_, pd_, mr_, fd_); };
+    auto end() const { return RptStrItr(); };
+
+    auto cbegin() const { return RptStrItr(msg_, pd_, mr_, fd_); };
+    auto cend() const { return RptStrItr(); };
+
+  private:
+    const ProtoMsg* msg_ = nullptr;
+    const Descriptor* pd_ = nullptr;
+    const Reflection* mr_ = nullptr;
+    const FieldDescriptor* fd_ = nullptr;
+  };
+
+  /**
    * retrieve the descriptor for a specific field of the protobuf
    */
   template<uint32_t kFldId>
@@ -448,6 +589,9 @@ private:
         const auto& raw_field =
           mr_.GetRepeatedField<ValueType>(msg_, &field_des);
         return std::span<const ValueType>(raw_field.data(), raw_field.size());
+      }
+      else if constexpr (SameAsDecayedT<std::string, ValueType>) {
+        return RptStrArrayProxy<Msg, Fld::kFldId>(msg_);
       }
       else {
         // TODO(bd) use the RepeatedPtrField class and a proxy to get

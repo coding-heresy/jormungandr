@@ -30,10 +30,13 @@
  *
  */
 
+#include "jmg/protobuf/protobuf.h"
+
+#include <concepts>
+#include <ranges>
+
 #include <gmock/gmock.h>
 #include <google/protobuf/message.h>
-
-#include "jmg/protobuf/protobuf.h"
 
 #include "test/data/test.pb.h"
 
@@ -41,6 +44,9 @@ using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
+
+namespace rng = std::ranges;
+namespace vws = std::views;
 
 ////////////////////
 // aliases for protobuf types
@@ -82,7 +88,9 @@ using Ts = protobuf::Field<TimePoint, "ts", Required, 14U>;
 
 using Ints = protobuf::ArrayField<int32_t, "ints", Required, 15U>;
 
-using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 16U>;
+using Strs = protobuf::ArrayField<std::string, "strs", Required, 16U>;
+
+using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 17U>;
 
 // TODO(bd) handle repeated string fields
 
@@ -104,6 +112,7 @@ using TestMsgObj = protobuf::Object<TestMsg,
                                     BytesStr,
                                     Ts,
                                     Ints,
+                                    Strs,
                                     InnerMsgFld>;
 
 using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1U>;
@@ -178,6 +187,10 @@ protected:
     *(msg_.mutable_ts()) = from(tp_);
 
     msg_.add_ints(2011);
+
+    *(msg_.add_strs()) = "foo"s;
+    *(msg_.add_strs()) = "bar"s;
+    *(msg_.add_strs()) = "blub"s;
 
     auto& inner_msg = *(msg_.mutable_inner_msg());
     inner_msg.set_inner_int_32(1989);
@@ -256,6 +269,15 @@ TEST_F(ProtoTests, TestGet) {
   EXPECT_TRUE(SpanT<decltype(ints)>);
   EXPECT_EQ(1, ints.size());
   EXPECT_EQ(msg_.ints(0), ints[0]);
+
+  const auto strs = jmg::get<Strs>(obj);
+  EXPECT_EQ(3, strs.size());
+
+  EXPECT_TRUE(rng::range<decltype(strs)>);
+  for (const auto [expected, actual] : vws::zip(msg_.strs(), strs)) {
+    EXPECT_TRUE((SameAsDecayedT<string_view, decltype(actual)>));
+    EXPECT_EQ(string_view(expected), actual);
+  }
 
   const auto inner_msg = jmg::get<InnerMsgFld>(obj);
   EXPECT_TRUE(ObjectT<decltype(inner_msg)>);
