@@ -103,6 +103,8 @@ concepts and type metafunctions:
 * ~~correctly handle get/try_get for const and non-const objects~~
 * proper handling of object mutation
   * stage 1 - all mutation through `jmg::set()`
+    * stage 1a - ensure that `jmg::set()` mutation supports move
+      semantics where possible/appropriate
   * stage 2 - investigate alternatives for collections
     * alternative 1 - introduce e.g. `jmg::add()` et.al. similar to
       handling of `repeated` fields in protobuf.
@@ -112,7 +114,7 @@ concepts and type metafunctions:
     * alternative 2 - develop proxy objects where necessary to support
       emulation of the style of interaction used in the standard
       library
-  * stage 3 - investigage systematic replacement of `jmg::set()` (and
+  * stage 3 - investigate systematic replacement of `jmg::set()` (and
     any other intermediate constructs) with allowing
     `jmg::get()`/`jmg::try_get()` to return non-`const`
     objects/proxies to allow JMG objects to be treated consistently
@@ -125,7 +127,6 @@ concepts and type metafunctions:
 
 ## Protobuf objects
 
-* Support safe types
 * Protobuf 'bytes' type should work with BufferView?
   * Maybe just needs general BufferView support?
 * Support repeated enum fields
@@ -143,6 +144,7 @@ concepts and type metafunctions:
 * ~~Support single class fields~~
 * ~~Support repeated string fields~~
 * ~~Support enums~~
+* ~~Support safe types~~
 
 ## YAML objects
 
