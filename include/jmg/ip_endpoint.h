@@ -117,7 +117,7 @@ public:
   /**
    * return a view on the string representation of the address
    */
-  std::string_view str() const;
+  operator std::string_view() const;
 
 private:
   sockaddr_in sys_addr_;

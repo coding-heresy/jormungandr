@@ -78,7 +78,7 @@ public:
                                 const IpEndpoint peer) mutable {
           try {
             cout << "fiber [" << fbr.getId() << "] connected to peer at ["
-                 << peer.str() << "]\n";
+                 << static_cast<string_view>(peer) << "]\n";
             const auto msg = cnxn.rcvFrom();
             cout << "fiber [" << fbr.getId() << "] received message to echo: ["
                  << msg << "]\n";

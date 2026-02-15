@@ -84,7 +84,7 @@ IpEndpoint::IpEndpoint(const sockaddr& addr, const optional<size_t> sz) {
   port_ = IpPort(::ntohs(sys_addr_.sin_port));
 }
 
-std::string_view IpEndpoint::str() const {
+IpEndpoint::operator std::string_view() const {
   if (!str_addr_) {
     const auto addr = IpV4Addr(sys_addr_);
     if (port_ != kAnyIpPort) { str_addr_ = str_cat(addr.str(), ":", port_); }
