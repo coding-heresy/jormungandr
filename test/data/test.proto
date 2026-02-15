@@ -44,6 +44,8 @@ message TestMsg {
   required InnerMsg inner_msg = 17;
 
   required Active active_state = 18;
+
+  required uint32 id_32_safe = 19;
 }
 
 message TestOptMsg {
@@ -70,4 +72,6 @@ message TestOptMsg {
   optional InnerMsg opt_inner_msg = 15;
 
   optional Active opt_active_state = 16;
+
+  optional uint32 opt_id_32_safe = 17;
 }
