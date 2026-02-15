@@ -260,6 +260,19 @@ auto inserterator(Container& container) {
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
+ * make any type unsafe, including types that were already unsafe
+ *
+ * NOTE: should generally be used to simplify generic programming
+ * cases such as foreign object/message encodings where safe types
+ * must be stored in their unsafe forms
+ */
+template<typename T>
+UnwrapT<T> unsafe_ify(T maybe_safe) {
+  if constexpr (SafeT<T>) { return unsafe(maybe_safe); }
+  else { return maybe_safe; }
+}
+
+/**
  * predicate
  *
  * wrapper around static_cast<bool> because I'm too lazy to type that much and I

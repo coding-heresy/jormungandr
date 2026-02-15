@@ -38,6 +38,7 @@
 #include <tuple>
 #include <unordered_set>
 
+#include "jmg/safe_types.h"
 #include "jmg/util.h"
 
 using namespace jmg;
@@ -170,4 +171,12 @@ TEST(GeneralUtilitiesTest, TestCamelCaseToSnakeCase) {
   EXPECT_EQ("foo"s, camelCaseToSnakeCase("foo"));
   EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("FooBar"));
   EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("fooBar"));
+}
+
+TEST(GeneralUtilitiesTest, TestUnsafeIfier) {
+  using TestId = SafeId32<>;
+  constexpr auto int32 = 20010911;
+  constexpr auto id32 = TestId(int32);
+  EXPECT_EQ(int32, unsafe_ify(int32));
+  EXPECT_EQ(int32, unsafe_ify(id32));
 }
