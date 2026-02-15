@@ -48,6 +48,10 @@ class RandomInRange {
   using Distribution = absl::uniform_int_distribution<T>;
 
 public:
+  RandomInRange()
+    : distribution_(Distribution(std::numeric_limits<T>::min(),
+                                 std::numeric_limits<T>::max())) {}
+
   RandomInRange(const T rng_begin, const T rng_end)
     : distribution_([&]() -> Distribution {
       JMG_ENFORCE(rng_begin < rng_end, "bad range in constructor, end value [",

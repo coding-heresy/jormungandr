@@ -44,6 +44,8 @@ TEST(RandomNumberGenerationTests, SmokeTest) {
     EXPECT_GE(val, 0);
     EXPECT_LE(val, 10);
   }
+  auto any_random_number = RandomInRange<int64_t>();
+  ignore = any_random_number.get();
 }
 
 TEST(RandomNumberGenerationTests, BadRangeTest) {
