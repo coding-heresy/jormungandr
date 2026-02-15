@@ -81,12 +81,72 @@ documentation whose meaning may not be immediately obvious.
     (again, currently) backed by `absl::btree_map`.
   * As an aside, there are also `Set` and `OrderedSet` aliases with
     characteristics predictable by analogy to `Dict` and `OrderedDict`
-* _RPC_ - AKA _Remote Procedure Call_ this term encompasses any
-  interaction with a remote host in which each outgoing request is
-  expected to receive a finite set of responses. This covers
-  activities defined using a diverse set of protocols including HTTP
-  and ODBC as exemplars of internet protocols and database protocols,
-  respectively.
+* _Encoding_ - Somewhat fuzzy concept that refers to common mechanisms
+  for representing data as C++ objects with specific interfaces while
+  also providing a serialization/deserialization mechanism for
+  converting such objects to/from a representation used for storage or
+  transmission (sometimes AKA _wire format_). Examples of _encodings_
+  are: Google Protocol Buffers, JSON and Cap'n Proto
+* _Transport_ - Also somewhat fuzzy, but basically any structured
+  communication mechanism that may or may not be coupled to a message
+  encoding. Examples of transports are: Google gRPC, Apache Thrift,
+  ODBC and Kafka. All relational and no-sql database communication
+  mechanisms likely fall (with more or less massaging) under this
+  term. See the following section on _Transport Mechanisms_.
+* _Transport Mechanism_ - **Most** communications between clients and
+  servers falls into one of several common patterns, which the
+  Jormungandr library generalizes (or intends to) in a way that makes
+  switching between different implementations of the pattern simple
+  and painless. The hope is that e.g. replacing JSON transmitted by
+  HTTP/1.1 _request/response_ with gRPC will be as easy as changing
+  header files and namespaces, with no further code changes
+  required. The identified patterns (so far) are:
+  * _RPC_ - (AKA _Remote Procedure Call_, _request/response_) this
+    term encompasses any _transport_ mechanism in which a single
+    request from a client is directed at a service (which may consist
+    of one or mere servers) and is expected to generate a finite set
+    of responses delivered to the client. This covers activities
+    defined using a diverse set of protocols including HTTP and ODBC
+    as exemplars of internet protocols and database protocols,
+    respectively. Google gRPC obviously falls partially under this
+    term, with bi-directional streaming modes stretching the
+    definition (at least) to near its breaking point.
+  * _Publish/Subscribe_ - (AKA _pub/sub_) generic term that covers
+    numerous _transport_ mechanisms in which a _publisher_ process
+    _publishes_ a piece of data to a _topic_ and that datum is then
+    _fanned out_ to one or more _subscribers_ to the _topic_. It
+    includes brokered and brokerless technologies that may or may not
+    rely on multicast for _fan-out_. Examples of _pub/sub_ transports
+    include TibRV, AMPS, Redis and Kafka. Specific implementations may
+    or may provide reliability guarantees for message delivery that
+    (where supported) may or may not be configurable on a per-_topic_
+    basis.
+  * _Message Queue_ - one or more servers provide messages to a
+    _queue_, to which one or more clients will be listening. Instead
+    of fanning out as in _pub/sub_, each message is delivered to a
+    single available client (typically chosen in a round-robin
+    fashion) and reliability guarantees are the norm: messages will be
+    retained by the _queue_ if no clients are available to receive
+    them, and a client receiving a message must typically acknowledge
+    successful processing of it before it is deleted from the
+    queue. The canonical use of this pattern is to implement a job
+    queue, and extant implementations of it incude Tibco Enterprise
+    Messaging Service (for the old-timer finance people in the crowd),
+    IBM MQ and RabbitMQ.
+  * _Uni-directional_ - Rare pattern in which the client or server
+    sends data over an established connection without interaction with
+    the peer, which is assumed to have enough context based on the
+    connected endpoint alone in order to process the stream.
+  * _Bi-directional_ - catch-all pattern for communication that
+    doesn't fall under the preceding patterns: the client connects to
+    a server and data is exchanged. Not very common in actual
+    practice, and most behavior seen in the wild can be modeled as a
+    combination of one or more of the preceding patterns, e.g. gRPC
+    bi-directional streams obviously fits this pattern, but it the
+    communication may be more structured than the interface implies,
+    such as the case where it is used to implement _pub/sub_ between a
+    client and a broker. Other than gRPC, the best examples would be
+    websockets and plain, unstructured TCP or UDP.
 
 # _Avant Garde_ Techniques
 
@@ -350,6 +410,46 @@ processing the following formats:
   testbed for extending and reworking the _standard interface_, as
   well as (eventually) for experiments related to performance of
   binary encodings.
+* Google protocol buffers - the first commonly used _encoding_ format
+  to be supported
+
+### (Aspirational) List of Transports and Encoding Formats to Support
+
+In addition to what is already supported/in progress.
+
+#### Encodings
+
+* FIX protocol
+  * In progress
+* Google Protocol Buffers
+  * In progress
+  * **proto2** preferred, although **proto3** might work
+  * `map` type support is not a priority
+* Google flatbuffers
+  * Challenging
+* Apache thrift objects/messages
+  * At least moderately challenging
+  * Support for data structures beyond _array_/_vector_ is not a
+    priority
+* JSON
+* Simple Binary Encoding (SBE)
+* SQLite
+  * Likely to be implemented as some form of _pseudo RPC_
+  * Proof of concept for more advanced intraction with relational DBs
+
+#### Transports
+
+* Google gRPC
+  * Requires solid support for Protocol Buffers
+* Apache Thrift services
+  * Requires solid support for Thrift messages
+* ODBC
+  * Proof of concept for implementation of relational DB queries as
+    _RPCs_
+* Kafka
+  * If the Morgan Stanley client is stable and full-featured at this
+    point
+* Pulsar
 
 ### Interface Definition Language
 

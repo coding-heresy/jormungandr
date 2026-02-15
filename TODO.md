@@ -23,6 +23,23 @@
   * If not, what modifications should be made to either the _yaml_
     encoding or to the standard patterns?
 
+## Misc other/minor
+
+* Should scoped enums be prohibited from being wrapped in safe types?
+
+* Should safe types in general be limited in terms of what types they
+  can wrap?
+  * Consider the following idea: _utility_ types. Many/most _class_
+    types are very specialized and wrapping them in safe types is not
+    valuable, but there are some _class_ types (in addition to
+    _primitive_ types) that are of more general utility, very akin to
+    _primitive_ types. These _utility_ types would include
+    _string_/_string-like_ types, time points and time
+    durations. There is possibly a linkage between _utiity_ types and
+    types handled by `from()` (or maybe just having such a set of
+    types is giving me tunnel vision and preventing me from seeing
+    other types that fit this description).
+
 ## Naming
 
 * Concepts and type metafunctions shall be named with a trailing `T`.
@@ -113,6 +130,8 @@ concepts and type metafunctions:
   * Maybe just needs general BufferView support?
 * Support repeated enum fields
 * Support repeated class fields
+* Prohibit use of non-protobuf enums and scoped enums as fields for
+  protobuf objects
 * Fix perfect forwarding in `setByType`
 * Support `oneof` fields using `jmg::Union`
   * May not be necessary but could add some checking on the `set()`

@@ -226,6 +226,9 @@ Scheduler has 2 states: `polling` and `blocking`
 
 # TODO
 
+* Enable connections to be configured with a jmg::Object defined in
+  fiber.h and which can be easily sourced from e.g. a subtree of a
+  YAML configuration via the expected mechanism.
 * Clean up shutdown of server using a listen socket
   * Investigate creating an exception type specifically to be thrown
     in the case where a listen socket throws an exception because of
