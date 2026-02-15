@@ -270,6 +270,7 @@ TEST_F(ProtoTests, TestConcepts) {
 }
 
 TEST_F(ProtoTests, TestUtilities) {
+  // get string_view value for C++ type descriptor
   {
     ostringstream strm;
     strm << CppType::CPPTYPE_UINT32;
@@ -280,6 +281,15 @@ TEST_F(ProtoTests, TestUtilities) {
   // NOTE: the expected value depends on internal protobuf
   // implementation and may change
   EXPECT_EQ("uint32"sv, to_string_view(CppType::CPPTYPE_UINT32));
+
+  // get string_view name for generated enumeration value
+  {
+    ostringstream strm;
+    strm << Active::UNKNOWN;
+    EXPECT_EQ(Active_Name(Active::UNKNOWN), strm.str());
+  }
+  EXPECT_EQ(string_view(Active_Name(Active::ACTIVATED)),
+            to_string_view(Active::ACTIVATED));
 }
 
 TEST_F(ProtoTests, TestGet) {
