@@ -429,4 +429,5 @@ TEST_F(ProtoTests, TestSet) {
   jmg::set<BytesStr>(obj, "bar"sv);
   jmg::set<Ts>(obj, tp_);
   jmg::set<ActiveState>(obj, Active::DEACTIVATED);
+  jmg::set<Id32SafeFld>(obj, id_1_);
 }

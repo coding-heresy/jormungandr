@@ -696,38 +696,40 @@ private:
   template<protobuf::FieldT Fld>
   void setByType(const FieldDescriptor& field_des, typename Fld::type&& val) {
     using namespace google::protobuf;
-    using Type = typename Fld::type;
+    using Type = UnwrapT<typename Fld::type>;
     // case analysis of possible field types, embedding type names in
     // function names is very annoying...
     if constexpr (jmg::SameAsDecayedT<bool, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_BOOL);
-      mr_.SetBool(msg_ptr_, &field_des, val);
+      mr_.SetBool(msg_ptr_, &field_des, unsafe_ify(val));
     }
     else if constexpr (jmg::SameAsDecayedT<int32_t, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_INT32);
-      mr_.SetInt32(msg_ptr_, &field_des, val);
+      mr_.SetInt32(msg_ptr_, &field_des, unsafe_ify(val));
     }
     else if constexpr (jmg::SameAsDecayedT<uint32_t, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_UINT32);
-      mr_.SetUInt32(msg_ptr_, &field_des, val);
+      mr_.SetUInt32(msg_ptr_, &field_des, unsafe_ify(val));
     }
     else if constexpr (jmg::SameAsDecayedT<int64_t, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_INT64);
-      mr_.SetInt64(msg_ptr_, &field_des, val);
+      mr_.SetInt64(msg_ptr_, &field_des, unsafe_ify(val));
     }
     else if constexpr (jmg::SameAsDecayedT<uint64_t, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_UINT64);
-      mr_.SetUInt64(msg_ptr_, &field_des, val);
+      mr_.SetUInt64(msg_ptr_, &field_des, unsafe_ify(val));
     }
     else if constexpr (jmg::SameAsDecayedT<float, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_FLOAT);
-      mr_.SetFloat(msg_ptr_, &field_des, val);
+      mr_.SetFloat(msg_ptr_, &field_des, unsafe_ify(val));
     }
     else if constexpr (jmg::SameAsDecayedT<double, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_DOUBLE);
-      mr_.SetDouble(msg_ptr_, &field_des, val);
+      mr_.SetDouble(msg_ptr_, &field_des, unsafe_ify(val));
     }
     else if constexpr (ProtoEnumT<Type>) {
+      // NOTE: should be no reason to unsafe_ify here because enums of
+      // any sort should not be converted to safe types
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_ENUM);
       const auto& evd =
         getEnumValueDescriptor(val, "setting field [", Fld::name, "]");
@@ -737,9 +739,11 @@ private:
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
       Message* generic_ts_msg = mr_.MutableMessage(msg_ptr_, &field_des);
       auto& ts_msg = *(DynamicCastToGenerated<Timestamp>(generic_ts_msg));
-      ts_msg = from(val);
+      ts_msg = from(unsafe_ify(val));
     }
     else if constexpr (jmg::SameAsDecayedT<std::string, Type>) {
+      // TODO(bd) will need to unsafe_ify here if/when safe type
+      // strings are supported in JMG objects
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_STRING);
       mr_.SetString(msg_ptr_, &field_des, std::move(val));
     }
