@@ -57,9 +57,11 @@ TEST(TypesTest, TestWrappedConcept) {
 }
 
 TEST(TypesTest, TestUnwrapMetafunction) {
+  using TestId = SafeId32<>;
   EXPECT_TRUE((same_as<int, UnwrapT<optional<int>>>));
   EXPECT_TRUE((same_as<uint8_t, UnwrapT<SomeEnum>>));
   EXPECT_TRUE((same_as<time_t, UnwrapT<EpochSeconds>>));
+  EXPECT_TRUE((same_as<uint32_t, UnwrapT<TestId>>));
   // types that are not wrapped will unwrap to themselves
   EXPECT_TRUE((same_as<string, UnwrapT<string>>));
 }
