@@ -32,6 +32,7 @@
 #pragma once
 
 #include <iterator>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -56,6 +57,22 @@ namespace
 using CppType = google::protobuf::FieldDescriptor::CppType;
 } // namespace
 
+namespace jmg
+{
+
+// fuck your argument-dependent lookup, absl::StrCat
+inline std::string_view to_string_view(const CppType val) {
+  return google::protobuf::FieldDescriptor::CppTypeName(val);
+}
+
+// stream CppType values to output
+inline std::ostream& operator<<(std::ostream& strm, const CppType val) {
+  strm << to_string_view(val);
+  return strm;
+}
+
+} // namespace jmg
+
 namespace jmg::protobuf
 {
 
@@ -75,7 +92,8 @@ concept ProtoEnumT = google::protobuf::is_proto_enum<DecayT<T>>::value;
  * concept for a scalar type
  */
 template<typename T>
-concept ScalarTypeT = isMemberOfList<T, ScalarTypes>() || ProtoEnumT<T>;
+concept ScalarTypeT = (SafeT<T> && isMemberOfList<UnwrapT<T>, ScalarTypes>())
+                      || isMemberOfList<T, ScalarTypes>() || ProtoEnumT<T>;
 
 /**
  * concept for protobuf messages (NOT for JMG objects that wrap
@@ -251,10 +269,10 @@ concept FieldT = std::derived_from<T, detail::FieldTag> && jmg::FieldDefT<T>
                  && detail::HasProtoFieldId<T>;
 
 #if !defined(NDEBUG)
-#define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)                     \
-  JMG_ENFORCE(expected_type == fld.cpp_type(), "field [", fld.name(),  \
-              "] has type [", fld.cpp_type(), "] but expected type [", \
-              expected_type, "]")
+#define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)                    \
+  JMG_ENFORCE(expected_type == fld.cpp_type(), "field [", fld.name(), \
+              "] has type [", to_string_view(fld.cpp_type()),         \
+              "] but expected type [", to_string_view(expected_type), "]")
 #else
 #define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)
 #endif
@@ -296,7 +314,8 @@ public:
     static constexpr auto field_name = std::string_view(Fld::name);
     const auto& field_des = getFieldDescriptor<Fld::kFldId>(field_name);
     enforcePresence(field_des, field_name);
-    return getByType<Fld>(field_des);
+    if constexpr (SafeT<Type>) { return Type(getByType<Fld>(field_des)); }
+    else { return getByType<Fld>(field_des); }
   }
 
   /**
@@ -533,7 +552,7 @@ private:
   template<protobuf::FieldT Fld>
   decltype(auto) getByType(const FieldDescriptor& field_des) const {
     using namespace google::protobuf;
-    using Type = typename Fld::type;
+    using Type = UnwrapT<typename Fld::type>;
 #if !defined(NDEBUG)
     enforcePresence(field_des, Fld::name);
 #endif

@@ -38,6 +38,8 @@
 #include <gmock/gmock.h>
 #include <google/protobuf/message.h>
 
+#include "jmg/random.h"
+#include "jmg/safe_types.h"
 #include "test/data/test.pb.h"
 
 using namespace jmg;
@@ -55,6 +57,8 @@ using InnerMsg = jmg::test::InnerMsg;
 using TestMsg = jmg::test::TestMsg;
 using TestOptMsg = jmg::test::TestOptMsg;
 using Active = jmg::test::Active;
+
+using Id32Safe = SafeId32<>;
 
 ////////////////////
 // fields for InnerMsg
@@ -95,7 +99,7 @@ using InnerMsgFld = protobuf::Field<InnerMsgObj, "inner_msg", Required, 17U>;
 
 using ActiveState = protobuf::Field<Active, "active_state", Required, 18U>;
 
-// TODO(bd) handle repeated string fields
+using Id32SafeFld = protobuf::Field<Id32Safe, "id_32_safe", Required, 19U>;
 
 // TODO(bd) handle repeated non-primitive, non-string fields
 
@@ -117,7 +121,8 @@ using TestMsgObj = protobuf::Object<TestMsg,
                                     Ints,
                                     Strs,
                                     InnerMsgFld,
-                                    ActiveState>;
+                                    ActiveState,
+                                    Id32SafeFld>;
 
 using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1U>;
 
@@ -145,6 +150,9 @@ using OptInnerMsgFld =
 using OptActiveState =
   protobuf::Field<Active, "opt_active_state", Optional, 16U>;
 
+using OptId32SafeFld =
+  protobuf::Field<Id32Safe, "opt_id_32_safe", Optional, 17U>;
+
 using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptBool,
                                        OptInt32,
@@ -161,7 +169,8 @@ using TestOptMsgObj = protobuf::Object<TestOptMsg,
                                        OptBytesStr,
                                        OptTs,
                                        OptInnerMsgFld,
-                                       OptActiveState>;
+                                       OptActiveState,
+                                       OptId32SafeFld>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // test fixture
@@ -205,6 +214,9 @@ protected:
 
     msg_.set_active_state(Active::ACTIVATED);
 
+    id_1_ = Id32Safe(rng_.get());
+    msg_.set_id_32_safe(unsafe(id_1_));
+
     // initialize all_full_
     all_full_.set_opt_bool(false);
 
@@ -231,8 +243,14 @@ protected:
     opt_inner_msg.set_opt_inner_str("blub");
 
     all_full_.set_opt_active_state(Active::UNKNOWN);
+
+    id_2_ = Id32Safe(rng_.get());
+    all_full_.set_opt_id_32_safe(unsafe(id_2_));
   }
 
+  RandomInRange<int32_t> rng_;
+  Id32Safe id_1_;
+  Id32Safe id_2_;
   TimePoint tp_;
   TestMsg msg_;
   TestOptMsg all_empty_;
@@ -249,6 +267,19 @@ TEST_F(ProtoTests, TestConcepts) {
   EXPECT_TRUE((same_as<string_view, ArgTypeForFieldT<Str>>));
   using OptTsReturn = decltype(jmg::try_get<OptTs>(declval<TestOptMsgObj>()));
   EXPECT_TRUE((same_as<optional<TimePoint>, OptTsReturn>));
+}
+
+TEST_F(ProtoTests, TestUtilities) {
+  {
+    ostringstream strm;
+    strm << CppType::CPPTYPE_UINT32;
+    // NOTE: the expected value depends on internal protobuf
+    // implementation and may change
+    EXPECT_EQ("uint32"s, strm.str());
+  }
+  // NOTE: the expected value depends on internal protobuf
+  // implementation and may change
+  EXPECT_EQ("uint32"sv, to_string_view(CppType::CPPTYPE_UINT32));
 }
 
 TEST_F(ProtoTests, TestGet) {
@@ -297,6 +328,8 @@ TEST_F(ProtoTests, TestGet) {
   EXPECT_FALSE(jmg::try_get<OptInnerStr>(inner_msg));
 
   EXPECT_EQ(Active::ACTIVATED, jmg::get<ActiveState>(obj));
+
+  EXPECT_EQ(id_1_, jmg::get<Id32SafeFld>(obj));
 }
 
 #define VALIDATE_OPT_FLD(fld, obj, val)          \
@@ -331,6 +364,8 @@ TEST_F(ProtoTests, TestTryGet) {
 
   EXPECT_FALSE(jmg::try_get<OptActiveState>(empty_obj));
 
+  EXPECT_FALSE(jmg::try_get<OptId32SafeFld>(empty_obj));
+
   const auto full_obj = TestOptMsgObj(all_full_);
 
   VALIDATE_OPT_FLD(OptBool, full_obj, all_full_.opt_bool());
@@ -362,6 +397,8 @@ TEST_F(ProtoTests, TestTryGet) {
   VALIDATE_OPT_FLD(OptInnerStr, *inner_msg_obj, opt_inner_obj.opt_inner_str());
 
   VALIDATE_OPT_FLD(OptActiveState, full_obj, all_full_.opt_active_state());
+
+  VALIDATE_OPT_FLD(OptId32SafeFld, full_obj, id_2_);
 }
 
 TEST_F(ProtoTests, TestSet) {
