@@ -60,6 +60,8 @@ TEST(TypesTest, TestUnwrapMetafunction) {
   EXPECT_TRUE((same_as<int, UnwrapT<optional<int>>>));
   EXPECT_TRUE((same_as<uint8_t, UnwrapT<SomeEnum>>));
   EXPECT_TRUE((same_as<time_t, UnwrapT<EpochSeconds>>));
+  // types that are not wrapped will unwrap to themselves
+  EXPECT_TRUE((same_as<string, UnwrapT<string>>));
 }
 
 TEST(TypesTest, TestCStringView) {
@@ -68,7 +70,7 @@ TEST(TypesTest, TestCStringView) {
     EXPECT_STREQ(kTestStr, str_view.c_str());
   }
   {
-    const auto str = std::string(kTestStr);
+    const auto str = string(kTestStr);
     const auto str_view = c_string_view(str);
     EXPECT_STREQ(kTestStr, str_view.c_str());
   }

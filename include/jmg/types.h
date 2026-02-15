@@ -72,7 +72,9 @@ concept WrapperT = SafeT<T> || ScopedEnumT<T> || OptionalT<T>;
 namespace detail
 {
 template<typename T>
-struct UnwrapT;
+struct UnwrapT {
+  using type = T;
+};
 template<SafeT T>
 struct UnwrapT<T> {
   using type = typename T::value_type;
