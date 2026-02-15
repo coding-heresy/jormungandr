@@ -89,6 +89,55 @@ template<typename T>
 concept ProtoEnumT = google::protobuf::is_proto_enum<DecayT<T>>::value;
 
 /**
+ * helper function template that retrieves the reflection object
+ * associated with a generated protobuf enumeration value
+ */
+template<protobuf::ProtoEnumT T, typename... OpParts>
+decltype(auto) getEnumValueDescriptor(const T val, OpParts&&... op_parts) {
+  // WTAF!? this is a LOT of work just to perform reflection on an
+  // enumeration, too bad that the generated classes are so
+  // brain-damaged...
+  using namespace google::protobuf;
+  const auto& ed = *(GetEnumDescriptor<T>());
+  const auto* evd = ed.FindValueByNumber(static_cast<int>(val));
+  JMG_ENFORCE(pred(evd),
+              "no value descriptor available for enumeration value [", val,
+              "] when ", std::forward<OpParts>(op_parts)...);
+  return *evd;
+}
+
+} // namespace jmg::protobuf
+
+////////////////////////////////////////////////////////////////////////////////
+// temporarily interrupting namespace jmg::protobuf to add utility
+// functions in namespace jmg
+////////////////////////////////////////////////////////////////////////////////
+
+namespace jmg
+{
+
+// fuck your argument-dependent lookup, absl::StrCat
+template<protobuf::ProtoEnumT T>
+std::string_view to_string_view(T val) {
+  const auto& evd =
+    protobuf::getEnumValueDescriptor(val, "converting enumeration [", val,
+                                     "] to string");
+  return evd.name();
+}
+
+// stream protobuf enumerations to output using their name
+template<protobuf::ProtoEnumT T>
+inline std::ostream& operator<<(std::ostream& strm, const T enumeration) {
+  strm << to_string_view(enumeration);
+  return strm;
+}
+
+} // namespace jmg
+
+namespace jmg::protobuf
+{
+
+/**
  * concept for a scalar type
  */
 template<typename T>
@@ -680,13 +729,9 @@ private:
     }
     else if constexpr (ProtoEnumT<Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_ENUM);
-      // WTAF!? this is a LOT of work just to set the value of an enum
-      const auto& ed = *(GetEnumDescriptor<Type>());
-      const auto* evd = ed.FindValueByNumber(static_cast<int>(val));
-      JMG_ENFORCE(pred(evd),
-                  "no value descriptor available for enumeration value [", val,
-                  "] when setting field [", Fld::name, "]");
-      mr_.SetEnum(msg_ptr_, &field_des, evd);
+      const auto& evd =
+        getEnumValueDescriptor(val, "setting field [", Fld::name, "]");
+      mr_.SetEnum(msg_ptr_, &field_des, &evd);
     }
     else if constexpr (jmg::SameAsDecayedT<jmg::TimePoint, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
