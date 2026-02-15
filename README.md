@@ -1110,6 +1110,7 @@ please use these abbreviations where appropriate.
 * rcv   - receive
 * rcvr  - receiver
 * req   - request
+* rng   - random number generator
 * rslt  - result, typically used to name an automatic variable that
           will return a value from a function so as to take advantage
           of named return value optimization
