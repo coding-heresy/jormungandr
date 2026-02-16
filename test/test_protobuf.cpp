@@ -101,7 +101,7 @@ using ActiveState = protobuf::Field<Active, "active_state", Required, 18U>;
 
 using Id32SafeFld = protobuf::Field<Id32Safe, "id_32_safe", Required, 19U>;
 
-// TODO(bd) handle repeated non-primitive, non-string fields
+using RptInnerMsg = protobuf::ArrayField<InnerMsgObj, "msgs", Required, 20U>;
 
 using TestMsgObj = protobuf::Object<TestMsg,
                                     Boolean,
@@ -122,7 +122,8 @@ using TestMsgObj = protobuf::Object<TestMsg,
                                     Strs,
                                     InnerMsgFld,
                                     ActiveState,
-                                    Id32SafeFld>;
+                                    Id32SafeFld,
+                                    RptInnerMsg>;
 
 using OptBool = protobuf::Field<bool, "opt_bool", Optional, 1U>;
 
@@ -182,6 +183,7 @@ protected:
     tp_ = getCurrentTime();
     const google::protobuf::Timestamp proto_ts = from(tp_);
 
+    ////////////////////
     // initialize msg_
     msg_.set_boolean(false);
 
@@ -191,9 +193,9 @@ protected:
     msg_.set_fixed_32(19701204);
 
     msg_.set_int_64(10 * 20010911);
-    msg_.set_uint_64(10 * 20070625);
+    msg_.set_uint_64(10 * 19440606);
     msg_.set_sfixed_64(10 * -1);
-    msg_.set_fixed_64(10 * 19701204);
+    msg_.set_fixed_64(10 * 19700101);
 
     msg_.set_flt(42.0f);
     msg_.set_dbl(3.14159);
@@ -217,6 +219,17 @@ protected:
     id_1_ = Id32Safe(rng_.get());
     msg_.set_id_32_safe(unsafe(id_1_));
 
+    {
+      auto& inner = *(msg_.add_msgs());
+      inner.set_inner_int_32(20010911);
+    }
+    {
+      auto& inner = *(msg_.add_msgs());
+      inner.set_inner_int_32(19440606);
+      inner.set_opt_inner_str("foo"s);
+    }
+
+    ////////////////////
     // initialize all_full_
     all_full_.set_opt_bool(false);
 
@@ -340,6 +353,28 @@ TEST_F(ProtoTests, TestGet) {
   EXPECT_EQ(Active::ACTIVATED, jmg::get<ActiveState>(obj));
 
   EXPECT_EQ(id_1_, jmg::get<Id32SafeFld>(obj));
+
+  {
+    const auto msgs = jmg::get<RptInnerMsg>(obj);
+    EXPECT_EQ(2U, msgs.size());
+
+    for (auto [idx, sub_obj] : vws::enumerate(msgs)) {
+      switch (idx) {
+        case 0: {
+          EXPECT_EQ(20010911, jmg::get<InnerInt32>(sub_obj));
+          EXPECT_FALSE(jmg::try_get<OptInnerStr>(sub_obj));
+        } break;
+        case 1: {
+          EXPECT_EQ(19440606, jmg::get<InnerInt32>(sub_obj));
+          const auto opt_str = jmg::try_get<OptInnerStr>(sub_obj);
+          EXPECT_TRUE(opt_str);
+          EXPECT_EQ("foo"sv, *opt_str);
+        } break;
+        default:
+          FAIL() << "unexpected index value [" << idx << "]";
+      }
+    }
+  }
 }
 
 #define VALIDATE_OPT_FLD(fld, obj, val)          \

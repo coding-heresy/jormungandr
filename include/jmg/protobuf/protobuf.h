@@ -291,8 +291,8 @@ struct StringField : public jmg::StringField<kName, IsRequired>,
  * @tparam kId Protobuf field ID
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
-// TODO(bd) add support for arrays of sub-objects
-  requires(isMemberOfList<T, ScalarTypes>() || SameAsDecayedT<std::string, T>)
+  requires(isMemberOfList<T, ScalarTypes>()
+           || SameAsDecayedT<std::string, T> || ObjectT<T>)
 struct ArrayField : public jmg::ArrayField<T, kName, IsRequired>,
                     detail::FieldTag {
   static constexpr auto kFldId = kFieldId;
@@ -308,6 +308,14 @@ namespace detail
 template<typename T>
 concept HasProtoFieldId = requires { std::same_as<decltype(T::kFldId), int>; };
 
+/**
+ * array proxy only allowed for repeated string and sub-message types
+ */
+template<typename T>
+concept ArrayProxyableT =
+  VectorT<T> && SameAsDecayedT<std::string, typename T::value_type>
+  || ObjectT<typename T::value_type>;
+
 } // namespace detail
 
 /**
@@ -316,6 +324,53 @@ concept HasProtoFieldId = requires { std::same_as<decltype(T::kFldId), int>; };
 template<typename T>
 concept FieldT = std::derived_from<T, detail::FieldTag> && jmg::FieldDefT<T>
                  && detail::HasProtoFieldId<T>;
+
+namespace detail
+{
+
+/**
+ * iterator proxy policies for array fields containing object types
+ */
+template<typename T>
+struct ItrPolicies {
+  // aliases
+  using value_type = T;
+  using reference = T;
+  // constants
+  static constexpr auto kCppType =
+    google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE;
+  static constexpr auto kDescription = std::string_view("sub-messages");
+};
+
+/**
+ * iterator proxy policies for array fields containing strings
+ */
+template<>
+struct ItrPolicies<std::string> {
+  // aliases
+  using value_type = std::string;
+  using reference = std::string;
+  // constants
+  static constexpr auto kCppType =
+    google::protobuf::FieldDescriptor::CPPTYPE_STRING;
+  static constexpr auto kDescription = std::string_view("strings");
+};
+
+/**
+ * utility function template that converts a generic protobuf message into a
+ * generated protobuf class
+ */
+template<HeavyProtoMsgT T>
+decltype(auto) getGeneratedMsg(const google::protobuf::Message& generic_msg) {
+  using namespace google::protobuf;
+  const auto* sub_msg = DynamicCastToGenerated<T>(&generic_msg);
+  JMG_ENFORCE_USING(
+    std::logic_error, sub_msg,
+    "unable to cast generic protobuf message to generated protobuf type");
+  return *sub_msg;
+}
+
+} // namespace detail
 
 #if !defined(NDEBUG)
 #define JMG_ENFORCE_TYPE_MATCH(fld, expected_type)                    \
@@ -424,16 +479,20 @@ private:
    * class template for an array proxy associated which wraps a field of
    * repeated string objects
    */
-  template<protobuf::HeavyProtoMsgT ProtoMsg, int32_t kFldId>
-  class RptStrArrayProxy {
+  template<FieldT Fld, protobuf::HeavyProtoMsgT ProtoMsg>
+    requires(detail::ArrayProxyableT<typename Fld::type>)
+  class ArrayProxy {
     using Descriptor = google::protobuf::Descriptor;
     using Reflection = google::protobuf::Reflection;
     using FieldDescriptor = google::protobuf::FieldDescriptor;
 
+    using RepeatedType = typename Fld::type::value_type;
+    static constexpr auto kFldId = Fld::kFldId;
+
   public:
-    RptStrArrayProxy() = delete;
-    ~RptStrArrayProxy() = default;
-    RptStrArrayProxy(const ProtoMsg& msg)
+    ArrayProxy() = delete;
+    ~ArrayProxy() = default;
+    ArrayProxy(const ProtoMsg& msg)
       : msg_(&msg)
       , pd_(msg.GetDescriptor())
       , mr_(msg.GetReflection())
@@ -443,27 +502,29 @@ private:
      * class template for an iterator proxy that allows a repeated list of
      * protobuf strings to be viewed as a range of std::string_view
      */
-    class RptStrItr {
+    class Itr {
       using Descriptor = google::protobuf::Descriptor;
       using Reflection = google::protobuf::Reflection;
       using FieldDescriptor = google::protobuf::FieldDescriptor;
 
     public:
+      using Policies = detail::ItrPolicies<RepeatedType>;
+
       // aliases required to allow the iterator to be used in
       // std::ranges algorithms
-      using value_type = std::string_view;
+      using value_type = Policies::value_type;
       using difference_type = int;
       using iterator_category = std::input_iterator_tag;
       using iterator_concept = std::forward_iterator_tag;
-      using reference = std::string_view;
+      using reference = Policies::reference;
 
-      RptStrItr() = default;
-      ~RptStrItr() = default;
-      JMG_DEFAULT_COPYABLE(RptStrItr);
-      JMG_DEFAULT_MOVEABLE(RptStrItr);
+      Itr() = default;
+      ~Itr() = default;
+      JMG_DEFAULT_COPYABLE(Itr);
+      JMG_DEFAULT_MOVEABLE(Itr);
 
       // TODO(bd) remove?
-      explicit RptStrItr(const ProtoMsg& msg)
+      explicit Itr(const ProtoMsg& msg)
         : msg_(&msg)
         , pd_(msg.GetDescriptor())
         , mr_(msg.GetReflection())
@@ -474,26 +535,36 @@ private:
         JMG_ENFORCE(fd_, "unable to get field descriptor for field [", kFldId,
                     "]");
         JMG_ENFORCE(fd_->is_repeated(), "field [", kFldId, "] is not repeated");
-        JMG_ENFORCE(fd_->cpp_type() == FieldDescriptor::CPPTYPE_STRING,
-                    "field [", kFldId, "] does not contain strings");
+        JMG_ENFORCE(fd_->cpp_type() == Policies::kCppType, "field [", kFldId,
+                    "] does not contain ", Policies::kDescription);
 #endif
         if (0 == sz_) { clear(); }
       }
 
-      std::string_view operator*() const {
-        const auto& ref =
-          mr_->GetRepeatedStringReference(*msg_, fd_, idx_, &scratch_);
-        return std::string_view(ref.data(), ref.size());
+      decltype(auto) operator*() const {
+        if constexpr (SameAsDecayedT<std::string, RepeatedType>) {
+          const auto& ref =
+            mr_->GetRepeatedStringReference(*msg_, fd_, idx_, &scratch_);
+          return std::string_view(ref.data(), ref.size());
+        }
+        // TODO(bd) explicitly require ObjectT here with 'if constexpr' and then
+        // use a final  JMG_NOT_EXHAUSTIVE?
+        else {
+          const auto& generic_msg = mr_->GetRepeatedMessage(*msg_, fd_, idx_);
+          const auto& sub_msg =
+            detail::getGeneratedMsg<typename RepeatedType::MsgType>(generic_msg);
+          return RepeatedType(sub_msg);
+        }
       }
 
-      RptStrItr& operator++() {
+      Itr& operator++() {
         if (-1 == idx_) { return *this; }
         ++idx_;
         if (static_cast<size_t>(idx_) == sz_) { clear(); }
         return *this;
       }
 
-      RptStrItr operator++(int) {
+      Itr operator++(int) {
         if (-1 == idx_) { return *this; }
         auto rslt = *this;
         ++idx_;
@@ -502,25 +573,25 @@ private:
       }
 
       // TODO(bd) use friend operators
-      bool operator==(const RptStrItr& that) const {
+      bool operator==(const Itr& that) const {
         return (this->msg_ == that.msg_) && (this->pd_ == that.pd_)
                && (this->mr_ == that.mr_) && (this->fd_ == that.fd_)
                && (this->idx_ == that.idx_);
       }
 
-      bool operator!=(const RptStrItr& that) const {
+      bool operator!=(const Itr& that) const {
         return (this->msg_ != that.msg_) || (this->pd_ != that.pd_)
                || (this->mr_ != that.mr_) || (this->fd_ != that.fd_)
                || (this->idx_ != that.idx_);
       }
 
     private:
-      friend class RptStrArrayProxy<ProtoMsg, kFldId>;
+      friend class ArrayProxy<Fld, ProtoMsg>;
 
-      RptStrItr(const ProtoMsg* msg,
-                const Descriptor* pd,
-                const Reflection* mr,
-                const FieldDescriptor* fd)
+      Itr(const ProtoMsg* msg,
+          const Descriptor* pd,
+          const Reflection* mr,
+          const FieldDescriptor* fd)
         : msg_(msg)
         , pd_(pd)
         , mr_(mr)
@@ -548,11 +619,11 @@ private:
     auto size() const { return mr_->FieldSize(*msg_, fd_); }
     auto empty() const { return 0 == size(); }
 
-    auto begin() const { return RptStrItr(msg_, pd_, mr_, fd_); };
-    auto end() const { return RptStrItr(); };
+    auto begin() const { return Itr(msg_, pd_, mr_, fd_); };
+    auto end() const { return Itr(); };
 
-    auto cbegin() const { return RptStrItr(msg_, pd_, mr_, fd_); };
-    auto cend() const { return RptStrItr(); };
+    auto cbegin() const { return Itr(msg_, pd_, mr_, fd_); };
+    auto cend() const { return Itr(); };
 
   private:
     const ProtoMsg* msg_ = nullptr;
@@ -643,9 +714,8 @@ private:
     else if constexpr (jmg::SameAsDecayedT<jmg::TimePoint, Type>) {
       JMG_ENFORCE_TYPE_MATCH(field_des, CppType::CPPTYPE_MESSAGE);
       const auto& generic_ts_msg = mr_.GetMessage(msg_, &field_des);
-      const auto& ts_msg =
-        *(DynamicCastToGenerated<Timestamp>(&generic_ts_msg));
-      TimePoint tp = from(ts_msg);
+      const auto& ts = detail::getGeneratedMsg<Timestamp>(generic_ts_msg);
+      TimePoint tp = from(ts);
       return tp;
     }
     else if constexpr (jmg::ObjectT<DecayT<Type>>) {
@@ -653,7 +723,7 @@ private:
       const auto& generic_sub_msg = mr_.GetMessage(msg_, &field_des);
       using Wrapper = typename Fld::type;
       using Wrapped = typename Wrapper::MsgType;
-      const auto& sub_msg = DynamicCastToGenerated<Wrapped>(generic_sub_msg);
+      const auto& sub_msg = detail::getGeneratedMsg<Wrapped>(generic_sub_msg);
       return Wrapper(sub_msg);
     }
     else if constexpr (StringFieldT<Fld>) {
@@ -666,20 +736,27 @@ private:
     }
     else if constexpr (ArrayFieldT<Fld>) {
       using ValueType = DecayT<typename Fld::view_type::value_type>;
+      // repeated scalars
       if constexpr (ScalarTypeT<ValueType>) {
         const auto& raw_field =
           mr_.GetRepeatedField<ValueType>(msg_, &field_des);
         return std::span<const ValueType>(raw_field.data(), raw_field.size());
       }
+      // repeated strings
       else if constexpr (SameAsDecayedT<std::string, ValueType>) {
-        return RptStrArrayProxy<Msg, Fld::kFldId>(msg_);
+        return ArrayProxy<Fld, Msg>(msg_);
       }
+      // repeated objects/sub-messages
+      else if constexpr (ObjectT<ValueType>) {
+        return ArrayProxy<Fld, Msg>(msg_);
+      }
+      // TODO(bd) support time points
+      // TODO(bd) support generated enum types
+      // TODO(bd) support safe types
       else {
-        // TODO(bd) use the RepeatedPtrField class and a proxy to get
-        // data for a repeated non-primitive field
         static_assert(
           false,
-          "retrieving data for repeated non-primitive fields is not supported");
+          "attempted to retrieve data for unsupported repeated field type");
       }
     }
 
