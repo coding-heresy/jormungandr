@@ -49,6 +49,8 @@ using NamedParam1 = NamedParam<double, "dbl", "a double named param", Required>;
 using NamedParam2 = NamedFlag<"flag", "a flag">;
 using NamedParam3 =
   NamedParam<unsigned, "opt_int", "an optional integer named parameter", Optional>;
+using NamedParam4 =
+  NamedStringParam<"opt_named_str", "an optional string named param", Optional>;
 
 TEST(CmdLineParamTests, TestConcepts) {
   EXPECT_FALSE(cmdline::FieldT<int>);
@@ -56,6 +58,8 @@ TEST(CmdLineParamTests, TestConcepts) {
   EXPECT_TRUE(cmdline::FieldT<PosnParam2>);
   EXPECT_TRUE(cmdline::FieldT<NamedParam1>);
   EXPECT_TRUE(cmdline::FieldT<NamedParam2>);
+  EXPECT_TRUE(cmdline::FieldT<NamedParam3>);
+  EXPECT_TRUE(cmdline::FieldT<NamedParam4>);
 
   // PosnParamT
   EXPECT_FALSE(PosnParamT<string>);
@@ -63,6 +67,8 @@ TEST(CmdLineParamTests, TestConcepts) {
   EXPECT_TRUE(PosnParamT<PosnParam2>);
   EXPECT_FALSE(PosnParamT<NamedParam1>);
   EXPECT_FALSE(PosnParamT<NamedParam2>);
+  EXPECT_FALSE(PosnParamT<NamedParam3>);
+  EXPECT_FALSE(PosnParamT<NamedParam4>);
 
   // NamedParamT
   EXPECT_FALSE(NamedParamT<double>);
@@ -70,9 +76,12 @@ TEST(CmdLineParamTests, TestConcepts) {
   EXPECT_FALSE(NamedParamT<PosnParam2>);
   EXPECT_TRUE(NamedParamT<NamedParam1>);
   EXPECT_TRUE(NamedParamT<NamedParam2>);
+  EXPECT_TRUE(NamedParamT<NamedParam3>);
+  EXPECT_TRUE(NamedParamT<NamedParam4>);
 
   // command line params can be used to build an object
-  using TmpObj = ObjectDef<PosnParam1, PosnParam2, NamedParam1, NamedParam2>;
+  using TmpObj = ObjectDef<NamedParam1, NamedParam2, NamedParam3, NamedParam4,
+                           PosnParam1, PosnParam2, OptPosnParam>;
   EXPECT_TRUE(ObjectDefT<TmpObj>);
 
   using CmdLine = CmdLineArgs<PosnParam1>;
@@ -85,16 +94,22 @@ TEST(CmdLineParamTests, TestUsage) {
   // NOTE: the declaration of CmdLine is very tightly coupled with the
   // string used for comparison inside the catch statement
   using CmdLine =
-    CmdLineArgs<NamedParam1, NamedParam2, PosnParam1, PosnParam2, OptPosnParam>;
+    CmdLineArgs<NamedParam1, NamedParam2, NamedParam3, NamedParam4, PosnParam1,
+                PosnParam2, OptPosnParam>;
   try {
     const auto cmdline = CmdLine(argv.size(), argv.data());
     JMG_TEST_UNREACHED;
   }
   catch (const exception& exc) {
     const auto posn = std::string_view(exc.what())
-                        .find("usage: test_program -dbl <double> "
-                              "-flag <int (int)> <str (std::string)> "
-                              "[opt_str (std::string)]");
+                        .find("usage: test_program"
+                              " -dbl <double>"
+                              " -flag"
+                              " [-opt_int <unsigned int>]"
+                              " [-opt_named_str <std::string>]"
+                              " <int (int)>"
+                              " <str (std::string)>"
+                              " [opt_str (std::string)]");
     EXPECT_NE(string::npos, posn);
     return;
   }

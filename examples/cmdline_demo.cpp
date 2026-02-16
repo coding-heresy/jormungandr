@@ -46,7 +46,7 @@ namespace
 {
 using Flag = cmdline::NamedFlag<"flag", "a flag">;
 using OptNamedStr =
-  cmdline::NamedParam<string, "opt_str", "an optional string", Optional>;
+  cmdline::NamedStringParam<"opt_str", "an optional string", Optional>;
 using NamedInt =
   cmdline::NamedParam<int, "required_int", "a required integer", Required>;
 using PosnDbl =
