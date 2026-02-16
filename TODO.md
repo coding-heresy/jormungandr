@@ -1,12 +1,6 @@
 
 # Quick Lists of Short to Medium Term TODO Items
 
-## Misc major
-
-* See if `cc_build_error` is working.
-  * Got a message from the maintainer indicating that there were bug
-    fixes.
-
 ## Misc other/minor
 
 * Should scoped enums be prohibited from being wrapped in safe types?
@@ -22,6 +16,7 @@
     types handled by `from()` (or maybe just having such a set of
     types is giving me tunnel vision and preventing me from seeing
     other types that fit this description).
+* Add more `cc_build_error_test` cases
 
 ## Naming
 
