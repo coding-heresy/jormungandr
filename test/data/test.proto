@@ -46,6 +46,8 @@ message TestMsg {
   required Active active_state = 18;
 
   required uint32 id_32_safe = 19;
+
+  repeated InnerMsg msgs = 20;
 }
 
 message TestOptMsg {
