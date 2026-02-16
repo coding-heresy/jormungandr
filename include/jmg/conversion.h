@@ -382,12 +382,16 @@ private:
       std::optional<TimeZone> opt_zone;
       auto processArg = [&]<typename T>(const T& arg) {
         if constexpr (SameAsDecayedT<TimePointFmt, T>) {
+          // TODO(bd) this appears to be redundant to earlier static_assert,
+          // remove it?
           JMG_ENFORCE(!opt_fmt.has_value(),
                       "more than one format specified "
                       "when converting between string and time point");
           opt_fmt = unsafe(arg);
         }
         else if constexpr (SameAsDecayedT<TimeZone, T>) {
+          // TODO(bd) this appears to be redundant to earlier static_assert,
+          // remove it?
           JMG_ENFORCE(!opt_zone.has_value(),
                       "more than one time zone specified when converting "
                       "between string and time point");

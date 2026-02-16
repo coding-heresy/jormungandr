@@ -63,7 +63,8 @@ const auto kUsEasternZone = getTimeZone(TimeZoneName("America/New_York"));
 const auto kUsCentralZone = getTimeZone(TimeZoneName("America/Chicago"));
 
 TimePoint multipleTimeZonesInTimePointConversionShouldFail() {
-  TimePoint rslt = from("2007-06-25T09:00:00", kIso8601Fmt, kUsFmt);
+  TimePoint rslt =
+    from("2007-06-25T09:00:00", kIso8601Fmt, kUsEasternZone, kUsCentralZone);
   return rslt;
 }
 #endif

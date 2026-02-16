@@ -14,6 +14,13 @@ bazel_dep(
     version = "0.2.16",
 )
 
+# support ensuring that certain constructs fail to compile/build:
+# sometimes what doesn't compile is more important than what does
+bazel_dep(
+    name = "rules_build_error",
+    version = "0.11.0",
+)
+
 ########################################
 # google abseil
 ########################################
@@ -261,14 +268,3 @@ module_versions = use_extension(
 )
 
 use_repo(module_versions, "module_versions")
-
-# TODO(bd) restore this when rules_build_error works correctly
-
-# ########################################
-# # rules to enforce build failures
-# ########################################
-
-# bazel_dep(
-#     name = "rules_build_error",
-#     version = "0.8.4",
-# )
