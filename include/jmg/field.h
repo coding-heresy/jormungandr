@@ -100,6 +100,7 @@ struct StringField : public FieldDef<std::string, kName, IsRequired>,
  *
  * TODO(bd) needs more constraints on T?
  * TODO(bd) should IsRequired default to Optional?
+ * TODO(bd) should the container type be left unspecified?
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired>
 struct ArrayField : public FieldDef<std::vector<T>, kName, IsRequired>,
