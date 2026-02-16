@@ -55,7 +55,7 @@ useful.
 ## Important design milestone
 
 I've always wanted a way to confine the operations performed within a
-fiber to those which are appropriate to the cooperative multitasking
+fiber to those that are appropriate to the cooperative multitasking
 environment without being too intrusive about it. While it is
 basically impossible to absolutely forbid blocking operations
 (including logging via the standard streaming I/O operators), I have
@@ -91,6 +91,18 @@ reactor.start(listener_cfg, [](Fiber& fbr, Socket socket) {
 
 This feels like a good starting point, and could be used to construct
 higher-level abstractions.
+
+### Follow-up
+
+This approach of exposing the non-blocking operations as member
+functions associated with the `Fiber` class has been working well so
+far. Getting clean abstractions is still a work in progress and I
+expect substantial rework in the `jmg::uring` layer because there is
+too much copy/paste at this point, but I will first spend some time
+sculpting the higher-level _transport_ abstractions, since I expect
+that this would be the main point of contact where users can be
+supported in writing clients and services that will port easily across
+underlying _transport_ and _encoding_ implementations.
 
 # Abstractions for distributed interactions
 
