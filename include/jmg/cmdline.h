@@ -158,6 +158,9 @@ struct IsNamedParam : std::false_type {};
 template<typename T, StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
 struct IsNamedParam<NamedParam<T, kName, kDesc, IsRequired>> : std::true_type {
 };
+template<StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
+struct IsNamedParam<NamedStringParam<kName, kDesc, IsRequired>>
+  : std::true_type {};
 // NOTE: a NamedFlag is a type of NamedParam
 template<StrLiteral kName, StrLiteral kDesc>
 struct IsNamedParam<NamedFlag<kName, kDesc>> : std::true_type {};
