@@ -1,32 +1,15 @@
 
 # Quick Lists of Short to Medium Term TODO Items
 
-## Misc Standardization
+## Misc major
 
-* ~~Use `JMG_TAG_TYPE` to declare all tag types~~
-* Update standard `JMG_OBJECT_CONCEPT` to include a requirement to be
-  derived from `jmg::ObjectDefT`?
-* Investigate sketchy results for testing argument type generation for
-  safe type fields in test_field.cpp
-  * Argument type does not match the safe type exactly, although
-    `type_name_for<>()` produces the same string in both cases.
-  * Generated argument type is a non-`const` ref instead of a `const`
-    ref
-* Investigate sketchy results for test_native, there are several TODO
-  items which indicate that return types are not yet being generated
-  correctly.
-* Investigate handling of get() and try_get() in quickfix spec and
-  modify them so that have standard behavior (if appropriate,
-  otherwise document the differences)
-* Review the handling of optional fields in _yaml_ encoding and
-  consider whether it correctly fits the standard patterns.
-  * If not, what modifications should be made to either the _yaml_
-    encoding or to the standard patterns?
+* See if `cc_build_error` is working.
+  * Got a message from the maintainer indicating that there were bug
+    fixes.
 
 ## Misc other/minor
 
 * Should scoped enums be prohibited from being wrapped in safe types?
-
 * Should safe types in general be limited in terms of what types they
   can wrap?
   * Consider the following idea: _utility_ types. Many/most _class_
@@ -62,6 +45,10 @@ concepts and type metafunctions:
 
 ## All Fields
 
+* Decide whether `ArrayField` should explicitly specify `std::vector`
+  as the container type
+  * This is actually depends on the implementation of
+    _vector_/_array_/_repeated_ fields in the underlying encoding.
 * Unify handling of JMG objects
   * JMG objects are proxy objects and thus have different return types
     than regular non-primitive, non-viewable types
@@ -130,7 +117,8 @@ concepts and type metafunctions:
 * Protobuf 'bytes' type should work with BufferView?
   * Maybe just needs general BufferView support?
 * Support repeated enum fields
-* Support repeated class fields
+* Support repeated `TimePoint` fields
+* Support repeated safe type fields
 * Prohibit use of non-protobuf enums and scoped enums as fields for
   protobuf objects
 * Fix perfect forwarding in `setByType`
@@ -145,18 +133,13 @@ concepts and type metafunctions:
 * ~~Support repeated string fields~~
 * ~~Support enums~~
 * ~~Support safe types~~
+* ~~Support repeated class fields~~
 
 ## YAML objects
 
 * Correctly support StringField instead of allowing FieldDef<string...>
 
 # Ongoing/interrupted project notes
-
-## jmgc support for protobuf
-
-Currently on branch `features/more-encodings`, evolution of the code
-indicates a need for substantial rework of metaprogramming mechanisms
-for determining the return types of `jmg::get()` and `jmg::try_get()`.
 
 ## support for flatbuffers
 
@@ -168,3 +151,25 @@ coupling between the _field_ and _object_ definitions.
 
 Another alternative would be to break open the serialization encoding
 and tie the _object_ implementation to it, but this seems excessive...
+
+## Misc Standardization
+
+* ~~Use `JMG_TAG_TYPE` to declare all tag types~~
+* Update standard `JMG_OBJECT_CONCEPT` to include a requirement to be
+  derived from `jmg::ObjectDefT`?
+* Investigate sketchy results for testing argument type generation for
+  safe type fields in test_field.cpp
+  * Argument type does not match the safe type exactly, although
+    `type_name_for<>()` produces the same string in both cases.
+  * Generated argument type is a non-`const` ref instead of a `const`
+    ref
+* Investigate sketchy results for test_native, there are several TODO
+  items which indicate that return types are not yet being generated
+  correctly.
+* Investigate handling of get() and try_get() in quickfix spec and
+  modify them so that have standard behavior (if appropriate,
+  otherwise document the differences)
+* Review the handling of optional fields in _yaml_ encoding and
+  consider whether it correctly fits the standard patterns.
+  * If not, what modifications should be made to either the _yaml_
+    encoding or to the standard patterns?
