@@ -29,49 +29,23 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
+#pragma once
 
-#include <algorithm>
-#include <cctype>
-#include <ranges>
+#include "jmgc_spec.h"
 
-#include "jmg/conversion.h"
-#include "jmg/util.h"
-
-using namespace std;
-namespace rng = std::ranges;
-namespace vws = std::views;
-
-namespace jmg
+namespace jmgc
 {
 
-string snakeCaseToCamelCase(const string_view str, bool capitalize_leading) {
-  return str | vws::enumerate | vws::transform([&](auto&& item) {
-           auto [idx, chr] = item;
-           const auto capitalize =
-             ((idx < 1) && capitalize_leading) || ('_' == str[idx - 1]);
-           return capitalize ? to_upper(chr) : to_lower(chr);
-         })
-         | vws::filter([](const char chr) { return chr != '_'; })
-         | rng::to<string>();
-}
+class YamlYamlSpec : public JmgYamlSpec {
+  using JmgObjGrpFlds = JmgYamlSpec::JmgObjGrpFlds;
 
-string camelCaseToSnakeCase(const string_view str, const bool all_caps) {
-  string rslt;
-  rslt.reserve(2 * str.size());
-  bool is_first = true;
-  rng::copy(str | vws::transform([&](const char chr) -> string {
-              if (is_first) {
-                is_first = false;
-                string rslt = from(all_caps ? to_upper(chr) : to_lower(chr));
-                return rslt;
-              }
-              return isupper(chr)
-                       ? str_cat("_", string(1, all_caps ? to_upper(chr)
-                                                         : to_lower(chr)))
-                       : from(all_caps ? to_upper(chr) : chr);
-            }) | vws::join,
-            inserterator(rslt));
-  return rslt;
-}
+public:
+  std::string tgtFileName() const override;
 
-} // namespace jmg
+  std::string_view encodingHeaderFileName() const override;
+
+private:
+  std::string encodingObjDef() const override;
+};
+
+} // namespace jmgc

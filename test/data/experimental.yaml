@@ -1,0 +1,137 @@
+package:
+  name: "test_proto"
+  protobuf_package: "jmg.test"
+types:
+  - ZipCode:
+      type: "string"
+      concept: key
+  - Age:
+      type: "uint8_t"
+      concept: arithmetic
+#groups:
+objects:
+  - InnerMsg:
+      - inner_int_32:
+          type: "int32_t"
+          protobuf_id: 1
+      - opt_inner_str:
+          type: "string"
+          required: false
+          protobuf_id: 2
+  - TestMsg:
+      - boolean:
+          type: "bool"
+          protobuf_id: 1
+      - int_32:
+          type: "int32_t"
+          protobuf_id: 2
+      - uint_32:
+          type: "uint32_t"
+          protobuf_id: 3
+      - sfixed_32:
+          # actual protobuf type: sfixed32
+          type: "int32_t"
+          protobuf_id: 4
+      - fixed_32:
+          # actual protobuf type: fixed_32
+          type: "uint32_t"
+          protobuf_id: 5
+      - int_64:
+          type: "int64_t"
+          protobuf_id: 6
+      - uint_64:
+          type: "uint64_t"
+          protobuf_id: 7
+      - sfixed_64:
+          # actual protobuf type: sfixed64
+          type: "int64_t"
+          protobuf_id: 8
+      - fixed64:
+          # actual protobuf type: fixed64
+          type: "uint64_t"
+          protobuf_id: 9
+      - flt:
+          type: "float"
+          protobuf_id: 10
+      - dbl:
+          type: "double"
+          protobuf_id: 11
+      - str:
+          type: "string"
+          protobuf_id: 12
+      - bytes_str:
+          # actual protobuf type: bytes
+          type: "string"
+          protobuf_id: 13
+      - ints:
+          type: "array"
+          subtype: "int32_t"
+          protobuf_id: 14
+      # TODO(bd) fix jmgc to handle dependencies in declarations
+      #- inner_msg:
+      #    type: "array"
+      #    subtype: "InnerMsg"
+      #    protobuf_id: 15
+  - TestOptMsg:
+      - opt_bool:
+          type: "bool"
+          required: false
+          protobuf_id: 1
+      - opt_int_32:
+          type: "int32_t"
+          required: false
+          protobuf_id: 2
+      - opt_uint_32:
+          type: "uint32_t"
+          required: false
+          protobuf_id: 3
+      - opt_sfixed_32:
+          # actual protobuf type: sfixed32
+          type: "int32_t"
+          required: false
+          protobuf_id: 4
+      - opt_fixed_32:
+          # actual protobuf type: fixed_32
+          type: "uint32_t"
+          required: false
+          protobuf_id: 5
+      - opt_int_64:
+          type: "int64_t"
+          required: false
+          protobuf_id: 6
+      - opt_uint_64:
+          type: "uint64_t"
+          required: false
+          protobuf_id: 7
+      - opt_sfixed_64:
+          # actual protobuf type: sfixed64
+          type: "int64_t"
+          required: false
+          protobuf_id: 8
+      - opt_fixed64:
+          # actual protobuf type: fixed64
+          type: "uint64_t"
+          required: false
+          protobuf_id: 9
+      - opt_flt:
+          type: "float"
+          required: false
+          protobuf_id: 10
+      - opt_dbl:
+          type: "double"
+          required: false
+          protobuf_id: 11
+      - opt_str:
+          type: "string"
+          required: false
+          protobuf_id: 12
+      - opt_bytes_str:
+          # actual protobuf type: bytes
+          type: "string"
+          required: false
+          protobuf_id: 13
+      # TODO(bd) fix jmgc to handle dependencies in declarations
+      #- opt_inner_msg:
+      #    type: "InnerMsg"
+      #    required: false
+      #    protobuf_id: 15

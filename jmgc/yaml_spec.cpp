@@ -1,6 +1,6 @@
 /** -*- mode: c++ -*-
  *
- * Copyright (C) 2026 Brian Davis
+ * Copyright (C) 2024 Brian Davis
  * All Rights Reserved
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,48 +30,28 @@
  *
  */
 
-#include <algorithm>
-#include <cctype>
-#include <ranges>
+#include "yaml_spec.h"
 
-#include "jmg/conversion.h"
-#include "jmg/util.h"
-
+using namespace jmg;
 using namespace std;
-namespace rng = std::ranges;
-namespace vws = std::views;
+using namespace std::string_view_literals;
 
-namespace jmg
+namespace jmgc
 {
 
-string snakeCaseToCamelCase(const string_view str, bool capitalize_leading) {
-  return str | vws::enumerate | vws::transform([&](auto&& item) {
-           auto [idx, chr] = item;
-           const auto capitalize =
-             ((idx < 1) && capitalize_leading) || ('_' == str[idx - 1]);
-           return capitalize ? to_upper(chr) : to_lower(chr);
-         })
-         | vws::filter([](const char chr) { return chr != '_'; })
-         | rng::to<string>();
+string YamlYamlSpec::tgtFileName() const {
+  JMG_ENFORCE_USING(
+    logic_error, pred(pkg_),
+    "requested target file name before input file was processed");
+  return str_cat(snakeCaseToCamelCase(jmg::get<Name>(*pkg_)), ".yaml.h");
 }
 
-string camelCaseToSnakeCase(const string_view str, const bool all_caps) {
-  string rslt;
-  rslt.reserve(2 * str.size());
-  bool is_first = true;
-  rng::copy(str | vws::transform([&](const char chr) -> string {
-              if (is_first) {
-                is_first = false;
-                string rslt = from(all_caps ? to_upper(chr) : to_lower(chr));
-                return rslt;
-              }
-              return isupper(chr)
-                       ? str_cat("_", string(1, all_caps ? to_upper(chr)
-                                                         : to_lower(chr)))
-                       : from(all_caps ? to_upper(chr) : chr);
-            }) | vws::join,
-            inserterator(rslt));
-  return rslt;
+string_view YamlYamlSpec::encodingHeaderFileName() const {
+  return "jmg/yaml/yaml.h"sv;
 }
 
-} // namespace jmg
+std::string YamlYamlSpec::encodingObjDef() const {
+  return "jmg::yaml::Object"s;
+}
+
+} // namespace jmgc

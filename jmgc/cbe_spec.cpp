@@ -1,6 +1,6 @@
 /** -*- mode: c++ -*-
  *
- * Copyright (C) 2026 Brian Davis
+ * Copyright (C) 2024 Brian Davis
  * All Rights Reserved
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,48 +30,35 @@
  *
  */
 
-#include <algorithm>
-#include <cctype>
-#include <ranges>
+#include "cbe_spec.h"
 
-#include "jmg/conversion.h"
-#include "jmg/util.h"
-
+using namespace jmg;
 using namespace std;
-namespace rng = std::ranges;
-namespace vws = std::views;
+using namespace std::string_view_literals;
 
-namespace jmg
+namespace jmgc
 {
 
-string snakeCaseToCamelCase(const string_view str, bool capitalize_leading) {
-  return str | vws::enumerate | vws::transform([&](auto&& item) {
-           auto [idx, chr] = item;
-           const auto capitalize =
-             ((idx < 1) && capitalize_leading) || ('_' == str[idx - 1]);
-           return capitalize ? to_upper(chr) : to_lower(chr);
-         })
-         | vws::filter([](const char chr) { return chr != '_'; })
-         | rng::to<string>();
+string CbeYamlSpec::tgtFileName() const {
+  JMG_ENFORCE_USING(
+    logic_error, pred(pkg_),
+    "requested target file name before input file was processed");
+  return str_cat(snakeCaseToCamelCase(jmg::get<Name>(*pkg_)), ".cbe.h");
 }
 
-string camelCaseToSnakeCase(const string_view str, const bool all_caps) {
-  string rslt;
-  rslt.reserve(2 * str.size());
-  bool is_first = true;
-  rng::copy(str | vws::transform([&](const char chr) -> string {
-              if (is_first) {
-                is_first = false;
-                string rslt = from(all_caps ? to_upper(chr) : to_lower(chr));
-                return rslt;
-              }
-              return isupper(chr)
-                       ? str_cat("_", string(1, all_caps ? to_upper(chr)
-                                                         : to_lower(chr)))
-                       : from(all_caps ? to_upper(chr) : chr);
-            }) | vws::join,
-            inserterator(rslt));
-  return rslt;
+string_view CbeYamlSpec::encodingHeaderFileName() const {
+  return "jmg/cbe/cbe.h"sv;
 }
 
-} // namespace jmg
+string_view CbeYamlSpec::encodingNamespace() const { return "jmg::cbe"sv; }
+
+string_view CbeYamlSpec::encodingFieldDef() const { return "Field"sv; }
+
+void CbeYamlSpec::enrichFld(ostream& strm, const ObjGrpFld& fld_def) const {
+  const auto id = jmg::try_get<CbeId>(fld_def);
+  JMG_ENFORCE(pred(id), "no CBE field ID was provided for field [",
+              jmg::get<Name>(fld_def), "]");
+  strm << ", " << *id << "U";
+}
+
+} // namespace jmgc

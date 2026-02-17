@@ -51,6 +51,7 @@ JMG_TAG_TYPE(Object);
 JMG_FIELD_CONCEPT();
 JMG_OBJECT_CONCEPT();
 
+// TODO(bd) constrain the types of fields with the correct concept
 template<typename... Fields>
 class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
 public:
@@ -67,17 +68,20 @@ public:
    */
   template<RequiredFieldT Fld>
   typename Fld::type get() const {
-    using RsltT = typename Fld::type;
+    using Rslt = typename Fld::type;
     const char* name = Fld::name;
     if constexpr (SafeT<typename Fld::type>) {
-      using UnsafeT = UnsafeTypeFromT<RsltT>;
-      return RsltT(node_[name].as<UnsafeT>());
+      using UnsafeT = UnsafeTypeFromT<Rslt>;
+      return Rslt(node_[name].as<UnsafeT>());
     }
-    else if constexpr (OwningArrayProxyT<typename Fld::type>) {
-      return RsltT(YAML::Node(node_[name]));
+    else if constexpr (OwningArrayProxyT<Rslt>) {
+      return Rslt(YAML::Node(node_[name]));
     }
-    else if constexpr (yaml::ObjectT<RsltT>) { return RsltT(node_[name]); }
-    else { return node_[name].as<RsltT>(); }
+    else if constexpr (AnyEnumT<Rslt>) {
+      return Rslt(node_[name].as<std::underlying_type_t<DecayT<Rslt>>>());
+    }
+    else if constexpr (yaml::ObjectT<Rslt>) { return Rslt(node_[name]); }
+    else { return node_[name].as<Rslt>(); }
   }
 
   /**
@@ -90,22 +94,26 @@ public:
     if (const auto entry = node_[name]; entry) {
       if constexpr (SafeT<Type>) {
         using SafeT = Type;
-        using RsltT = std::optional<SafeT>;
+        using Rslt = std::optional<SafeT>;
         using UnsafeT = UnsafeTypeFromT<SafeT>;
-        return RsltT(entry.as<UnsafeT>());
+        return Rslt(entry.as<UnsafeT>());
+      }
+      else if constexpr (AnyEnumT<Type>) {
+        using Rslt = std::optional<Type>;
+        return Rslt(Type(node_[name].as<std::underlying_type_t<DecayT<Type>>>()));
       }
       else if constexpr (OwningArrayProxyT<Type>) {
-        using RsltT = std::optional<Type>;
-        return RsltT(YAML::Node(entry));
+        using Rslt = std::optional<Type>;
+        return Rslt(YAML::Node(entry));
       }
       else if constexpr (yaml::ObjectT<Type>) {
-        using RsltT = std::optional<Type>;
-        return RsltT(node_[name]);
+        using Rslt = std::optional<Type>;
+        return Rslt(node_[name]);
       }
       else {
         using EffT = typename Fld::type;
-        using RsltT = std::optional<EffT>;
-        return RsltT(entry.as<EffT>());
+        using Rslt = std::optional<EffT>;
+        return Rslt(entry.as<EffT>());
       }
     }
     else { return std::nullopt; }

@@ -34,7 +34,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <absl/strings/str_cat.h>
+#include "absl/strings/str_cat.h"
 
 /**
  * macro double expansion trick to produce a string from a non-string

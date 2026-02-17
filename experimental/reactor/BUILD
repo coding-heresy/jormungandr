@@ -1,6 +1,9 @@
-
 ####################
 # control blocks
+
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 cc_library(
     name = "control_blocks",
@@ -11,12 +14,12 @@ cc_library(
 
 cc_test(
     name = "test_control_blocks",
+    size = "small",
     srcs = ["test_control_blocks.cpp"],
     deps = [
-        "@com_google_googletest//:gtest_main",
         ":control_blocks",
+        "@com_google_googletest//:gtest_main",
     ],
-    size = "small",
 )
 
 ####################
@@ -24,10 +27,10 @@ cc_test(
 
 cc_library(
     name = "uring",
-    hdrs = ["uring.h"],
-    include_prefix = "jmg/reactor",
     srcs = ["uring.cpp"],
+    hdrs = ["uring.h"],
     defines = ["_GNU_SOURCE"],
+    include_prefix = "jmg/reactor",
     deps = [
         "//:jmg",
         "@liburing",
@@ -36,22 +39,22 @@ cc_library(
 
 cc_test(
     name = "test_uring",
+    size = "small",
     srcs = ["test_uring.cpp"],
     deps = [
-        "@com_google_googletest//:gtest_main",
         ":uring",
+        "@com_google_googletest//:gtest_main",
     ],
-    size = "small",
 )
 
 cc_test(
     name = "test_ucontext",
+    size = "small",
     srcs = ["test_ucontext.cpp"],
     deps = [
-        "@com_google_googletest//:gtest_main",
         "//:jmg",
+        "@com_google_googletest//:gtest_main",
     ],
-    size = "small",
 )
 
 ####################
@@ -59,16 +62,16 @@ cc_test(
 
 cc_library(
     name = "reactor",
-    visibility = ["//visibility:public"],
     srcs = [
         "fiber.cpp",
         "reactor.cpp",
     ],
     hdrs = [
         "fiber.h",
-        "reactor.h"
+        "reactor.h",
     ],
     include_prefix = "jmg/reactor",
+    visibility = ["//visibility:public"],
     deps = [
         ":control_blocks",
         ":uring",
@@ -82,13 +85,13 @@ cc_library(
 
 cc_test(
     name = "test_reactor",
-    visibility = ["//visibility:public"],
-    srcs = ["test_reactor.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        ":reactor",
-    ],
     size = "small",
+    srcs = ["test_reactor.cpp"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":reactor",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 ####################
@@ -96,26 +99,26 @@ cc_test(
 
 cc_library(
     name = "reactor_based_client",
-    visibility = ["//visibility:public"],
-    hdrs = ["reactor_based_client.h"],
     srcs = ["reactor_based_client.cpp"],
+    hdrs = ["reactor_based_client.h"],
     include_prefix = "jmg/reactor",
+    visibility = ["//visibility:public"],
     deps = [":reactor"],
 )
 
 cc_library(
     name = "reactor_based_server",
-    visibility = ["//visibility:public"],
-    hdrs = ["reactor_based_server.h"],
     srcs = ["reactor_based_server.cpp"],
+    hdrs = ["reactor_based_server.h"],
     include_prefix = "jmg/reactor",
+    visibility = ["//visibility:public"],
     deps = [":reactor"],
 )
 
 cc_library(
     name = "simple_tcp_service",
-    hdrs = ["simple_tcp_service.h"],
     srcs = ["simple_tcp_service.cpp"],
+    hdrs = ["simple_tcp_service.h"],
     include_prefix = "jmg/reactor",
     deps = [":reactor"],
 )
@@ -125,15 +128,15 @@ cc_library(
 
 cc_binary(
     name = "lookup_address",
-    visibility = ["//visibility:public"],
     srcs = ["misc/lookup_address.cpp"],
+    visibility = ["//visibility:public"],
     deps = [":reactor"],
 )
 
 cc_binary(
     name = "echo_client",
-    visibility = ["//visibility:public"],
     srcs = ["misc/echo_client.cpp"],
+    visibility = ["//visibility:public"],
     deps = [
         ":reactor_based_client",
         ":simple_tcp_service",
@@ -142,12 +145,12 @@ cc_binary(
 
 cc_binary(
     name = "echo_server",
-    visibility = ["//visibility:public"],
     srcs = ["misc/echo_server.cpp"],
+    visibility = ["//visibility:public"],
     deps = [
         ":reactor",
-        "//:jmg_server_main",
         ":reactor_based_server",
         ":simple_tcp_service",
+        "//:jmg_server_main",
     ],
 )

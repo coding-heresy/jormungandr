@@ -39,10 +39,10 @@
 #include <ranges>
 #include <tuple>
 
-#include <absl/strings/str_cat.h>
-#include <absl/strings/str_format.h>
-#include <absl/strings/str_join.h>
 #include <more_concepts/associative_containers.hpp>
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 
 #include "meta.h"
 #include "preprocessor.h"
@@ -172,13 +172,14 @@ auto& value_of(auto& rec) { return std::get<1>(rec); }
  * correctly support transparent hashing of e.g. std::string_view
  */
 template<typename DictContainer, typename Key, typename... Vals>
-void emplace_uniq(std::string_view description,
-                  DictContainer& dict,
-                  const Key& key,
-                  Vals&&... vals) {
-  const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
+decltype(auto) emplace_uniq(std::string_view description,
+                            DictContainer& dict,
+                            const Key& key,
+                            Vals&&... vals) {
+  auto [entry, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
   JMG_ENFORCE(inserted, "unsupported duplicate key [", key, "] for ",
               description);
+  return entry;
 }
 
 /**
@@ -188,12 +189,14 @@ void emplace_uniq(std::string_view description,
  * correctly support transparent hashing of e.g. std::string_view
  */
 template<typename SetContainer, typename Value>
-void insert_uniq(std::string_view description,
-                 SetContainer& set_container,
-                 Value&& value) {
-  const auto [_, inserted] = set_container.insert(std::forward<Value>(value));
+decltype(auto) insert_uniq(std::string_view description,
+                           SetContainer& set_container,
+                           Value&& value) {
+  const auto [entry, inserted] =
+    set_container.insert(std::forward<Value>(value));
   JMG_ENFORCE(inserted, "unsupported duplicate value [", value, "] for ",
               description);
+  return *entry;
 }
 
 /**
@@ -202,6 +205,7 @@ void insert_uniq(std::string_view description,
  */
 template<typename DictContainer>
 decltype(auto) find_required(DictContainer& dict,
+                             // TODO(bd) also allow string_view if key is string
                              const typename DictContainer::key_type& key,
                              std::string_view container_type,
                              std::string_view key_type) {
@@ -302,7 +306,7 @@ std::string snakeCaseToCamelCase(std::string_view str,
 /**
  * convert a string from CamelCase or camelCase to snake_case
  */
-std::string camelCaseToSnakeCase(std::string_view str);
+std::string camelCaseToSnakeCase(std::string_view str, bool all_caps = false);
 
 /**
  * compute the string representation of the address associated with a pointer
