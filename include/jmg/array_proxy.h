@@ -54,8 +54,8 @@ public:
   using value_type = ValueProxyT;
   using pointer = ValueProxyT*;
   using reference = ValueProxyT&;
-  using iterator_concept = std::input_iterator_tag;
   using iterator_category = std::input_iterator_tag;
+  using iterator_concept = std::forward_iterator_tag;
 
   explicit StashingConstItrProxy() = default;
   JMG_DEFAULT_MOVEABLE(StashingConstItrProxy);
@@ -106,6 +106,7 @@ public:
   using value_type = ValueProxyT;
   using reference = ValueProxyT;
   using iterator_category = std::input_iterator_tag;
+  using iterator_concept = std::forward_iterator_tag;
 
   AdaptingConstItrProxy() = default;
   JMG_DEFAULT_MOVEABLE(AdaptingConstItrProxy);

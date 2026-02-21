@@ -30,6 +30,8 @@
  *
  */
 
+#include <ranges>
+
 #include <gmock/gmock.h>
 
 #include "jmg/field.h"
@@ -39,6 +41,9 @@
 using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
+
+namespace vws = std::views;
+
 using ::testing::ElementsAre;
 
 using Id32 = SafeId32<>;
@@ -128,12 +133,11 @@ TEST(YamlTests, TestFieldRetrieval) {
   {
     const auto complex = jmg::get<ComplexArray>(obj);
     EXPECT_EQ(2, complex.size());
-    auto itr = complex.begin();
-    EXPECT_EQ(20010911, jmg::get<InnerField>(*itr));
-    ++itr;
-    EXPECT_EQ(42, jmg::get<InnerField>(*itr));
-    ++itr;
-    EXPECT_EQ(itr, complex.end());
+
+    constexpr auto expected = array{20010911, 42};
+    for (const auto [idx, entry] : vws::enumerate(complex)) {
+      EXPECT_EQ(expected[idx], jmg::get<InnerField>(entry));
+    }
   }
 
   // test optional fields
