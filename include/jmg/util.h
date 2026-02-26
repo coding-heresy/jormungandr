@@ -172,13 +172,14 @@ auto& value_of(auto& rec) { return std::get<1>(rec); }
  * correctly support transparent hashing of e.g. std::string_view
  */
 template<typename DictContainer, typename Key, typename... Vals>
-void emplace_uniq(std::string_view description,
-                  DictContainer& dict,
-                  const Key& key,
-                  Vals&&... vals) {
-  const auto [_, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
+decltype(auto) emplace_uniq(std::string_view description,
+                            DictContainer& dict,
+                            const Key& key,
+                            Vals&&... vals) {
+  auto [entry, inserted] = dict.try_emplace(key, std::forward<Vals>(vals)...);
   JMG_ENFORCE(inserted, "unsupported duplicate key [", key, "] for ",
               description);
+  return entry;
 }
 
 /**
@@ -188,12 +189,14 @@ void emplace_uniq(std::string_view description,
  * correctly support transparent hashing of e.g. std::string_view
  */
 template<typename SetContainer, typename Value>
-void insert_uniq(std::string_view description,
-                 SetContainer& set_container,
-                 Value&& value) {
-  const auto [_, inserted] = set_container.insert(std::forward<Value>(value));
+decltype(auto) insert_uniq(std::string_view description,
+                           SetContainer& set_container,
+                           Value&& value) {
+  const auto [entry, inserted] =
+    set_container.insert(std::forward<Value>(value));
   JMG_ENFORCE(inserted, "unsupported duplicate value [", value, "] for ",
               description);
+  return *entry;
 }
 
 /**
