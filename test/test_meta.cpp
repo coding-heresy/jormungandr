@@ -328,8 +328,20 @@ TEST(MetaprogrammingTests, TestRemoveOptional) {
 }
 
 TEST(MetaprogrammingTests, TestEnumConcepts) {
+  EXPECT_FALSE(EnumT<int>);
+  EXPECT_FALSE(ScopedEnumT<int>);
+  EXPECT_FALSE(AnyEnumT<int>);
+
   enum Enum { kFoo, kBar };
   enum class ScopedEnum { kFoo, kBar };
+
+  EXPECT_TRUE(EnumT<Enum>);
+  EXPECT_FALSE(EnumT<ScopedEnum>);
+  EXPECT_FALSE(ScopedEnumT<Enum>);
+  EXPECT_TRUE(ScopedEnumT<ScopedEnum>);
+
+  EXPECT_TRUE(AnyEnumT<Enum>);
+  EXPECT_TRUE(AnyEnumT<ScopedEnum>);
 
   const auto enumFoo = Enum::kFoo;
   const auto scopedEnumFoo = ScopedEnum::kFoo;
