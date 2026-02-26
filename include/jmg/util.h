@@ -305,7 +305,7 @@ std::string snakeCaseToCamelCase(std::string_view str,
 /**
  * convert a string from CamelCase or camelCase to snake_case
  */
-std::string camelCaseToSnakeCase(std::string_view str);
+std::string camelCaseToSnakeCase(std::string_view str, bool all_caps = false);
 
 /**
  * compute the string representation of the address associated with a pointer
