@@ -67,17 +67,17 @@ public:
    */
   template<RequiredFieldT Fld>
   typename Fld::type get() const {
-    using RsltT = typename Fld::type;
+    using Rslt = typename Fld::type;
     const char* name = Fld::name;
     if constexpr (SafeT<typename Fld::type>) {
-      using UnsafeT = UnsafeTypeFromT<RsltT>;
-      return RsltT(node_[name].as<UnsafeT>());
+      using UnsafeType = UnsafeTypeFromT<Rslt>;
+      return Rslt(node_[name].as<UnsafeType>());
     }
-    else if constexpr (OwningArrayProxyT<typename Fld::type>) {
-      return RsltT(YAML::Node(node_[name]));
+    else if constexpr (OwningArrayProxyT<Rslt>) {
+      return Rslt(YAML::Node(node_[name]));
     }
-    else if constexpr (yaml::ObjectT<RsltT>) { return RsltT(node_[name]); }
-    else { return node_[name].as<RsltT>(); }
+    else if constexpr (yaml::ObjectT<Rslt>) { return Rslt(node_[name]); }
+    else { return node_[name].as<Rslt>(); }
   }
 
   /**
@@ -90,22 +90,22 @@ public:
     if (const auto entry = node_[name]; entry) {
       if constexpr (SafeT<Type>) {
         using SafeT = Type;
-        using RsltT = std::optional<SafeT>;
-        using UnsafeT = UnsafeTypeFromT<SafeT>;
-        return RsltT(entry.as<UnsafeT>());
+        using Rslt = std::optional<SafeT>;
+        using UnsafeType = UnsafeTypeFromT<SafeT>;
+        return Rslt(entry.as<UnsafeType>());
       }
       else if constexpr (OwningArrayProxyT<Type>) {
-        using RsltT = std::optional<Type>;
-        return RsltT(YAML::Node(entry));
+        using Rslt = std::optional<Type>;
+        return Rslt(YAML::Node(entry));
       }
       else if constexpr (yaml::ObjectT<Type>) {
-        using RsltT = std::optional<Type>;
-        return RsltT(node_[name]);
+        using Rslt = std::optional<Type>;
+        return Rslt(node_[name]);
       }
       else {
         using EffT = typename Fld::type;
-        using RsltT = std::optional<EffT>;
-        return RsltT(entry.as<EffT>());
+        using Rslt = std::optional<EffT>;
+        return Rslt(entry.as<EffT>());
       }
     }
     else { return std::nullopt; }
