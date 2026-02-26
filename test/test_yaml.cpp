@@ -46,6 +46,12 @@ namespace vws = std::views;
 
 using ::testing::ElementsAre;
 
+enum class Active : uint8_t {
+  kUnknown = 0,
+  kActivated = 1,
+  kDeactivated = 2,
+};
+
 using Id32 = SafeId32<>;
 
 using InnerField = FieldDef<int, "inner", Required>;
@@ -77,6 +83,11 @@ using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field, InnerObj,
                              PrimitiveArray, ComplexArray, OptComplexArray,
                              TestFieldGroup>;
 // clang-format on
+
+using ActiveField = FieldDef<Active, "active", Required>;
+using MaybeActiveField = FieldDef<Active, "maybe_active", Optional>;
+using ActiveObj = yaml::Object<ActiveField>;
+using MaybeActiveObj = yaml::Object<MaybeActiveField>;
 
 TEST(YamlTests, TestConcepts) {
   using ReturnTypeForStrFld = ReturnTypeForFieldT<StrField>;
@@ -187,5 +198,26 @@ TEST(YamlTests, TestFieldRetrieval) {
     EXPECT_EQ(42, jmg::get<InnerField>(*itr));
     ++itr;
     EXPECT_EQ(20010911, jmg::get<InnerField>(*itr));
+  }
+
+  // populate and test ActiveField
+  {
+    YAML::Node node;
+    node["active"] = 2;
+    const auto active_obj = ActiveObj(node);
+    EXPECT_EQ(Active::kDeactivated, jmg::get<ActiveField>(active_obj));
+  }
+  // populate and test MaybeActiveField
+  {
+    YAML::Node empty;
+    const auto not_engaged_obj = MaybeActiveObj(empty);
+    EXPECT_FALSE(jmg::try_get<MaybeActiveField>(not_engaged_obj));
+
+    YAML::Node node;
+    node["maybe_active"] = 2;
+    const auto engaged_obj = MaybeActiveObj(node);
+    const auto val = jmg::try_get<MaybeActiveField>(engaged_obj);
+    EXPECT_TRUE(pred(val));
+    EXPECT_EQ(Active::kDeactivated, *val);
   }
 }
