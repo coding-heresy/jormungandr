@@ -1,7 +1,14 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 cc_library(
     name = "jmg",
-    visibility = ["//visibility:public"],
+    srcs = [
+        "src/cbe.cpp",
+        "src/ip_endpoint.cpp",
+        "src/server.cpp",
+        "src/system.cpp",
+        "src/util.cpp",
+    ],
     hdrs = [
         "include/jmg/array_proxy.h",
         "include/jmg/bitwise_scoped_enums.h",
@@ -30,15 +37,9 @@ cc_library(
         "include/jmg/native/native.h",
         "include/jmg/yaml/yaml.h",
     ],
-    srcs = [
-        "src/cbe.cpp",
-        "src/ip_endpoint.cpp",
-        "src/util.cpp",
-        "src/server.cpp",
-        "src/system.cpp",
-    ],
     includes = ["include"],
     linkstatic = True,
+    visibility = ["//visibility:public"],
     deps = [
         "@boost.date_time",
         "@boost.property_tree",
@@ -46,21 +47,22 @@ cc_library(
         "@com_google_abseil//absl/container:flat_hash_map",
         "@com_google_abseil//absl/container:flat_hash_set",
         "@com_google_abseil//absl/random",
+        "@com_google_abseil//absl/strings",
         "@com_google_abseil//absl/time",
         "@ctre",
-        "@ericniebler_meta//:meta",
         "@doom_strong_type//:strong_type",
+        "@ericniebler_meta//:meta",
         "@liburing",
         "@more_concepts",
-        "@protobuf//:protobuf",
+        "@protobuf",
         "@yaml-cpp//:yaml-cpp",
     ],
 )
 
 cc_library(
     name = "jmg_server_main",
-    visibility = ["//visibility:public"],
     srcs = ["src/server_main.cpp"],
     linkstatic = True,
+    visibility = ["//visibility:public"],
     deps = [":jmg"],
 )

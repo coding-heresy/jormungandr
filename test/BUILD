@@ -1,104 +1,106 @@
-
+load("@protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_build_error//lang/cc:defs.bzl", "cc_build_error_test")
 load("@rules_build_error//matcher:defs.bzl", "matcher")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 cc_test(
     name = "test_array_proxy",
-    srcs = ["test_array_proxy.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_array_proxy.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_cbe",
+    size = "small",
     srcs = ["test_cbe.cpp"],
     deps = [
-        "@com_google_googletest//:gtest_main",
         "//:jmg",
+        "@com_google_googletest//:gtest_main",
     ],
-    size = "small",
 )
 
 cc_test(
     name = "test_cmdline",
-    srcs = ["test_cmdline.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_cmdline.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_conversion",
-    srcs = ["test_conversion.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_conversion.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_field",
-    srcs = ["test_field.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_field.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_file_util",
-    srcs = ["test_file_util.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_file_util.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_future",
-    srcs = ["test_future.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_future.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_ip_endpoint",
+    size = "small",
     srcs = ["test_ip_endpoint.cpp"],
     deps = [
-        "@com_google_googletest//:gtest_main",
         "//:jmg",
+        "@com_google_googletest//:gtest_main",
     ],
-    size = "small",
 )
 
 cc_test(
     name = "test_meta",
-    srcs = ["test_meta.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_meta.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
-
 
 proto_library(
     name = "test_proto",
@@ -113,111 +115,112 @@ cc_proto_library(
 
 cc_test(
     name = "test_protobuf",
-    srcs = ["test_protobuf.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-        "@protobuf//:protobuf",
-        ":test_proto_cc",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_protobuf.cpp"],
+    linkstatic = True,
+    deps = [
+        ":test_proto_cc",
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+        "@protobuf",
+    ],
 )
 
 cc_test(
     name = "test_object",
-    srcs = ["test_object.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_object.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_ptree",
+    size = "small",
     srcs = ["test_ptree.cpp"],
+    linkstatic = True,
     deps = [
+        "//:jmg",
         "@boost.property_tree",
         "@com_google_googletest//:gtest_main",
-        "//:jmg",
     ],
-    linkstatic = True,
-    size = "small",
 )
 
 cc_test(
     name = "test_random",
-    srcs = ["test_random.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_random.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_safe_types",
-    srcs = ["test_safe_types.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_safe_types.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_types",
-    srcs = ["test_types.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_types.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_native",
-    srcs = ["test_native.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_native.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_util",
-    srcs = ["test_util.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_util.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_test(
     name = "test_yaml",
-    srcs = ["test_yaml.cpp"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
-    linkstatic = True,
     size = "small",
+    srcs = ["test_yaml.cpp"],
+    data = ["data/experimental.yaml"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@bazel_tools//tools/cpp/runfiles",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 genrule(
     name = "fix_42_header",
-    visibility = ["//visibility:public"],
     srcs = [
-        "//jmgc:jmgc",
+        "//jmgc",
         "@quickfix//:fix_42_spec",
     ],
     outs = ["quickfix_42.h"],
@@ -225,72 +228,73 @@ genrule(
     # for thread sanitizer builds?
     cmd = "$(location //jmgc:jmgc) -FIX $(location @quickfix//:fix_42_spec) > $@",
     tags = ["manual"],
+    visibility = ["//visibility:public"],
 )
 
 cc_test(
     name = "test_quickfix",
+    size = "small",
     srcs = [
+        "test_quickfix.cpp",
         ":fix_42_header",
-        "test_quickfix.cpp"
-    ],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
     ],
     tags = ["manual"],
-    size = "small",
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 genrule(
     name = "jmg_yaml_example_header",
-    visibility = ["//visibility:public"],
     srcs = [
-        "//jmgc:jmgc",
+        "//jmgc:jmgc_old",
         "data/example.yaml",
     ],
     outs = ["jmg_yaml_example.h"],
-    cmd = "$(location //jmgc:jmgc) -JMG-YAML $(location data/example.yaml) > $@",
+    cmd = "$(location //jmgc:jmgc_old) -JMG-YAML $(location data/example.yaml) > $@",
+    visibility = ["//visibility:public"],
 )
 
 cc_test(
     name = "test_jmg_yaml_example",
+    size = "small",
     srcs = [
+        "test_jmg_example.cpp",
         ":jmg_yaml_example_header",
-        "test_jmg_example.cpp"
     ],
     defines = ["YAML_ENCODING_TEST"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
     linkstatic = True,
-    size = "small",
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 genrule(
     name = "jmg_cbe_example_header",
-    visibility = ["//visibility:public"],
     srcs = [
-        "//jmgc:jmgc",
+        "//jmgc:jmgc_old",
         "data/example.yaml",
     ],
     outs = ["jmg_cbe_example.h"],
-    cmd = "$(location //jmgc:jmgc) -JMG-CBE $(location data/example.yaml) > $@",
+    cmd = "$(location //jmgc:jmgc_old) -JMG-CBE $(location data/example.yaml) > $@",
+    visibility = ["//visibility:public"],
 )
 
 cc_test(
     name = "test_jmg_cbe_example",
+    size = "small",
     srcs = [
+        "test_jmg_example.cpp",
         ":jmg_cbe_example_header",
-        "test_jmg_example.cpp"
     ],
     defines = ["CBE_ENCODING_TEST"],
-    deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
-    ],
     linkstatic = True,
-    size = "small",
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 ################################################################################
@@ -299,22 +303,22 @@ cc_test(
 
 genrule(
     name = "jmg_protobuf_example_header",
-    visibility = ["//visibility:public"],
     srcs = [
-        "//jmgc:jmgc",
+        "//jmgc:jmgc_old",
         "data/test_proto.yaml",
     ],
     outs = ["test_proto.h"],
-    cmd = "$(location //jmgc:jmgc) -JMG-proto $(location data/test_proto.yaml) > $@",
+    cmd = "$(location //jmgc:jmgc_old) -JMG-proto $(location data/test_proto.yaml) > $@",
+    visibility = ["//visibility:public"],
 )
 
 cc_binary(
     name = "test_server_main",
-    visibility = ["//visibility:public"],
     srcs = [
         "test_server_main.cpp",
     ],
     linkstatic = True,
+    visibility = ["//visibility:public"],
     deps = [
         "//:jmg_server_main",
     ],
@@ -327,23 +331,23 @@ cc_binary(
 cc_build_error_test(
     name = "missing_time_format_in_conversion_fails_to_compile",
     src = "test_conversion_compile_fails.cpp",
+    compile_stderr = matcher.has_substr("static assertion failed: conversion between string and time point must have at least one extra argument for the format"),
     local_defines = ["VERIFY_MISSING_TIME_FORMAT_FAILS"],
     deps = ["//:jmg"],
-    compile_stderr = matcher.has_substr("static assertion failed: conversion between string and time point must have at least one extra argument for the format"),
 )
 
 cc_build_error_test(
     name = "multiple_time_formats_in_conversion_fails_to_compile",
     src = "test_conversion_compile_fails.cpp",
+    compile_stderr = matcher.has_substr("static assertion failed: more or less than one format string was specified when converting between string and time point"),
     local_defines = ["VERIFY_MULTIPLE_TIME_FORMATS_FAIL"],
     deps = ["//:jmg"],
-    compile_stderr = matcher.has_substr("static assertion failed: more or less than one format string was specified when converting between string and time point"),
 )
 
 cc_build_error_test(
     name = "multiple_time_zones_in_conversion_fails_to_compile",
     src = "test_conversion_compile_fails.cpp",
+    compile_stderr = matcher.has_substr("static assertion failed: more than one time zone was specified when converting between string and time point"),
     local_defines = ["VERIFY_MULTIPLE_TIME_ZONES_FAIL"],
     deps = ["//:jmg"],
-    compile_stderr = matcher.has_substr("static assertion failed: more than one time zone was specified when converting between string and time point"),
 )

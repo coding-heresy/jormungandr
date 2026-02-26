@@ -1,8 +1,7 @@
-
 module(
     name = "jormungandr",
-    repo_name = "coding_heresy_jormungandr",
     version = "0.1.0",
+    repo_name = "coding_heresy_jormungandr",
 )
 
 ########################################
@@ -46,7 +45,6 @@ bazel_dep(
     name = "boost.date_time",
     version = "1.87.0",
 )
-
 bazel_dep(
     name = "boost.property_tree",
     version = "1.87.0",
@@ -67,10 +65,10 @@ bazel_dep(
 archive_override(
     module_name = "ctre",
     integrity = "sha256-sX5smmzAzqZRMvYqbGmc7+2VJyEGNWnWM56zykcQReY=",
+    patch_strip = 1,
+    patches = ["//patches:ctre_bazel.patch"],
     strip_prefix = "compile-time-regular-expressions-3.10.0",
     urls = ["https://github.com/hanickadot/compile-time-regular-expressions/archive/refs/tags/v3.10.0.tar.gz"],
-    patches = ["//patches:ctre_bazel.patch"],
-    patch_strip = 1,
 )
 
 ########################################
@@ -80,8 +78,8 @@ archive_override(
 bazel_dep(
     name = "googletest",
     version = "1.17.0",
-    repo_name = "com_google_googletest",
     dev_dependency = True,
+    repo_name = "com_google_googletest",
 )
 
 ########################################
@@ -119,16 +117,15 @@ bazel_dep(
     name = "more_concepts",
     version = "0.0.0",
 )
-
 archive_override(
     module_name = "more_concepts",
     integrity = "sha256-Opzeu3mNTbwuR22F9O7s4CeVgEx0jrEyR4Ff8V6/6TM=",
-    strip_prefix = "more_concepts-ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb",
-    urls = ["https://github.com/MiSo1289/more_concepts/archive/ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb.tar.gz"],
+    patch_strip = 1,
     patches = [
         "//patches:more_concepts.patch",
     ],
-    patch_strip = 1,
+    strip_prefix = "more_concepts-ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb",
+    urls = ["https://github.com/MiSo1289/more_concepts/archive/ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb.tar.gz"],
 )
 
 ########################################
@@ -136,17 +133,16 @@ archive_override(
 ########################################
 
 bazel_dep(name = "quickfix")
-
 archive_override(
     module_name = "quickfix",
     integrity = "sha256-HEMipocEUmyj0fIT57Dc0w4GeogVvip5sqsRl+9w3Pc=",
-    strip_prefix = "quickfix-1.15.1",
-    urls = ["https://github.com/quickfix/quickfix/archive/refs/tags/v1.15.1.tar.gz"],
+    patch_strip = 0,
     patches = [
         "//patches:quickfix.module.bazel.patch",
         "//patches:quickfix.add_build_file.patch",
     ],
-    patch_strip = 0,
+    strip_prefix = "quickfix-1.15.1",
+    urls = ["https://github.com/quickfix/quickfix/archive/refs/tags/v1.15.1.tar.gz"],
 )
 
 ########################################
@@ -157,7 +153,6 @@ bazel_dep(
     name = "protobuf",
     version = "33.4",
 )
-
 bazel_dep(
     name = "toolchains_protoc",
     version = "0.6.1",
@@ -167,13 +162,11 @@ protoc = use_extension(
     "@toolchains_protoc//protoc:extensions.bzl",
     "protoc",
 )
-
 protoc.toolchain(
     google_protobuf = "com_google_protobuf",
     # NOTE: this version is specific to protobuf 33.4
     version = "v29.4",
 )
-
 use_repo(
     protoc,
     "com_google_protobuf",
@@ -216,10 +209,10 @@ bazel_dep(
 archive_override(
     module_name = "bs_thread-pool",
     integrity = "sha256-VDePucvq7nKZbT+HYUacQ7t90tSwf67G0ppoJ3vZGlE=",
+    patch_strip = 1,
+    patches = ["//patches:bshoshany_thread_pool_bazel.patch"],
     strip_prefix = "thread-pool-5.1.0",
     urls = ["https://github.com/bshoshany/thread-pool/archive/refs/tags/v5.1.0.tar.gz"],
-    patches = ["//patches:bshoshany_thread_pool_bazel.patch"],
-    patch_strip = 1,
 )
 
 bazel_dep(
@@ -229,11 +222,11 @@ bazel_dep(
 )
 archive_override(
     module_name = "dp_thread-pool",
-    #integrity = "sha256-VDePucvq7nKZbT+HYUacQ7t90tSwf67G0ppoJ3vZGlE=",
+    integrity = "sha256-eWt+HqmYfUS1BvfeUuTutB2U4L1leuXL5LwU4qZqJj4=",
+    patch_strip = 1,
+    patches = ["//patches:developerpaul123_thread_pool_bazel.patch"],
     strip_prefix = "thread-pool-0.7.0",
     urls = ["https://github.com/DeveloperPaul123/thread-pool/archive/refs/tags/0.7.0.tar.gz"],
-    patches = ["//patches:developerpaul123_thread_pool_bazel.patch"],
-    patch_strip = 1,
 )
 
 ########################################
@@ -245,7 +238,6 @@ bazel_dep(
     version = "0.8.0",
 )
 
-
 ########################################
 # bazel_module_versions below here
 ########################################
@@ -254,7 +246,6 @@ bazel_dep(
     name = "bazel_module_versions",
     version = "0.0.0",
 )
-
 archive_override(
     module_name = "bazel_module_versions",
     integrity = "sha256-t0dFYSC417MvkHbDdhk8GePkp9r4nnVP0VnqGXSsHf8=",
@@ -266,5 +257,4 @@ module_versions = use_extension(
     "@bazel_module_versions//:extensions.bzl",
     "dependent_module_versions",
 )
-
 use_repo(module_versions, "module_versions")
