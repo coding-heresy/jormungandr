@@ -1,0 +1,195 @@
+
+# JMG IDL spec for testing all encodings
+
+package:
+  name: "test_jmgc"
+  protobuf_package: "jmgc.test"
+  protobuf_imports:
+    - file: "google/protobuf/timestamp.proto"
+types:
+  - Active:
+      type: "enum"
+      underlying_type: u8
+      values:
+        - name: "unknown"
+          value: 0
+        - name: "activated"
+          value: 1
+        - name: "deactivated"
+          value: 2
+  - StrId:
+      type: "str"
+      concept: key
+  - IntId:
+      type: u32
+      concept: key
+  - ImportantValue:
+      type: u64
+      concept: arithmetic
+# TODO(bd) support groups?
+#groups:
+objects:
+  - InnerMsg:
+      - inner_int_32:
+          type: "i32"
+          protobuf_id: 1
+          cbe_id: 1
+      - opt_inner_str:
+          type: "str"
+          required: false
+          protobuf_id: 2
+          cbe_id: 2
+  - TestMsg:
+      - boolean:
+          type: "bool"
+          protobuf_id: 1
+          cbe_id: 1
+      - int_32:
+          type: "i32"
+          protobuf_id: 2
+          cbe_id: 2
+      - uint_32:
+          type: "u32"
+          protobuf_id: 3
+          cbe_id: 3
+      - sfixed_32:
+          # actual protobuf type: sfixed32
+          type: "i32"
+          protobuf_id: 4
+          cbe_id: 4
+      - fixed_32:
+          # actual protobuf type: fixed_32
+          type: "u32"
+          protobuf_id: 5
+          cbe_id: 5
+      - int_64:
+          type: "i64"
+          protobuf_id: 6
+          cbe_id: 6
+      - uint_64:
+          type: "u64"
+          protobuf_id: 7
+          cbe_id: 7
+      - sfixed_64:
+          # actual protobuf type: sfixed64
+          type: "i64"
+          protobuf_id: 8
+          cbe_id: 8
+      - fixed64:
+          # actual protobuf type: fixed64
+          type: "u64"
+          protobuf_id: 9
+          cbe_id: 9
+      - flt:
+          type: "flt"
+          protobuf_id: 10
+          cbe_id: 10
+      - dbl:
+          type: "dbl"
+          protobuf_id: 11
+          cbe_id: 11
+      - str:
+          type: "str"
+          protobuf_id: 12
+          cbe_id: 12
+      - bytes_str:
+          # actual protobuf type: bytes
+          type: "str"
+          protobuf_id: 13
+          cbe_id: 13
+      - ints:
+          type: "array"
+          subtype: "i32"
+          protobuf_id: 14
+          cbe_id: 14
+      - inner_msgs:
+          type: "array"
+          subtype: "InnerMsg"
+          protobuf_id: 15
+          cbe_id: 15
+  - TestOptMsg:
+      - opt_bool:
+          type: "bool"
+          required: false
+          protobuf_id: 1
+          cbe_id: 1
+      - opt_int_32:
+          type: "i32"
+          required: false
+          protobuf_id: 2
+          cbe_id: 2
+      - opt_uint_32:
+          type: "u32"
+          required: false
+          protobuf_id: 3
+          cbe_id: 3
+      - opt_sfixed_32:
+          # actual protobuf type: sfixed32
+          type: "i32"
+          required: false
+          protobuf_id: 4
+          cbe_id: 4
+      - opt_fixed_32:
+          # actual protobuf type: fixed_32
+          type: "u32"
+          required: false
+          protobuf_id: 5
+          cbe_id: 5
+      - opt_int_64:
+          type: "i64"
+          required: false
+          protobuf_id: 6
+          cbe_id: 6
+      - opt_uint_64:
+          type: "u64"
+          required: false
+          protobuf_id: 7
+          cbe_id: 7
+      - opt_sfixed_64:
+          # actual protobuf type: sfixed64
+          type: "i64"
+          required: false
+          protobuf_id: 8
+          cbe_id: 8
+      - opt_fixed64:
+          # actual protobuf type: fixed64
+          type: "u64"
+          required: false
+          protobuf_id: 9
+          cbe_id: 9
+      - opt_flt:
+          type: "flt"
+          required: false
+          protobuf_id: 10
+          cbe_id: 10
+      - opt_dbl:
+          type: "dbl"
+          required: false
+          protobuf_id: 11
+          cbe_id: 11
+      - opt_str:
+          type: "str"
+          required: false
+          protobuf_id: 12
+          cbe_id: 12
+      - opt_bytes_str:
+          # actual protobuf type: bytes
+          type: "str"
+          required: false
+          protobuf_id: 13
+          cbe_id: 13
+      - opt_inner_msg:
+          type: "InnerMsg"
+          required: false
+          protobuf_id: 15
+          cbe_id: 15
+  - ActiveMsg:
+      - active_state:
+          type: "Active"
+          protobuf_id: 1
+          cbe_id: 1
+  - MaybeActiveMsg:
+      - active_state:
+          type: "Active"
+          protobuf_id: 1
+          cbe_id: 1

@@ -35,92 +35,132 @@
  */
 
 #include <array>
+#include <filesystem>
 #include <iostream>
+
+#include <ctre.hpp>
 
 #include "jmg/cmdline.h"
 #include "jmg/meta.h"
 #include "jmg/util.h"
 
-#include "jmg_spec.h"
-#include "quickfix_spec.h"
+#include "jmgc_parser.h"
+#include "jmgc_spec.h"
+
+#include "cbe_spec.h"
+#include "proto_spec.h"
+#include "protoc_spec.h"
+#include "yaml_spec.h"
 
 using namespace jmg;
+using namespace jmg::cmdline;
+using namespace jmgc;
 using namespace std;
+using namespace std::string_literals;
+using namespace std::string_view_literals;
 
-constexpr char kJmgCbeFlag[] = "JMG-CBE";
-constexpr char kJmgYamlFlag[] = "JMG-YAML";
-constexpr char kJmgProtobufFlag[] = "JMG-proto";
-constexpr char kFixFlag[] = "FIX";
-constexpr auto kSupportedFlags =
-  array{kJmgCbeFlag, kJmgYamlFlag, kJmgProtobufFlag, kFixFlag};
+namespace fs = std::filesystem;
 
-const auto kSupportedFlagsStr = str_join(kSupportedFlags, ", "sv);
+namespace
+{
+// interface definition language formats understood by jmgc
+constexpr string_view kIdlJmg = "jmg"sv;
+constexpr string_view kIdlQuickfix = "quickfix"sv;
+constexpr auto kIdlTypes = array{kIdlJmg, kIdlQuickfix};
+const auto kSupportIdlTypes = str_join(kIdlTypes, ", "sv);
 
-// TODO(bd) cmdline needs the concept of a union
-using JmgYamlFlag = cmdline::NamedFlag<
-  kJmgYamlFlag,
-  "file format is JMG, file type is YAML, generated encoding is YAML">;
-using JmgCbeFlag = cmdline::NamedFlag<
-  kJmgCbeFlag,
-  "file format is JMG, file type is YAML, generated encoding is CBE">;
-using JmgProtobufFlag = cmdline::NamedFlag<
-  kJmgProtobufFlag,
-  "file format is JMG, file type is YAML, generated encoding is protobuf">;
-using FixFlag =
-  cmdline::NamedFlag<kFixFlag,
-                     "file format is QuickFIX protocol, file type is XML">;
+// encodings that jmgc can generate wrappers for
+constexpr char kWrapCbe[] = "cbe";
+constexpr char kWrapYaml[] = "yaml";
+constexpr char kWrapProto[] = "proto";
+constexpr char kWrapFix[] = "fix";
+constexpr auto kWrapperTypes = array{kWrapCbe, kWrapYaml, kWrapProto, kWrapFix};
 
-using SrcFile =
-  cmdline::PosnStringParam<"src_file",
-                           "the file to read source definitions from">;
+// external IDL formats that jmgc can generate from JMG IDL
+constexpr char kTgtProto[] = "protoc";
+constexpr auto kTgtTypes = array{kTgtProto};
+
+using OutputDir = NamedStringParam<"o", "output directory", Optional>;
+using SrcIdl = NamedStringParam<"idl", "source IDL type to parse", Required>;
+using WrapCbeFlag = NamedFlag<kWrapCbe, "generate CBE wrapper(s)">;
+using WrapYamlFlag = NamedFlag<kWrapYaml, "generate YAML wrapper(s)">;
+using WrapProtoFlag = NamedFlag<kWrapProto, "generate protobuf wrapper(s)">;
+using WrapFixFlag = NamedFlag<kWrapFix, "generate FIX wrapper(s)">;
+using TgtProto = NamedFlag<kTgtProto, "generate .proto for protoc">;
+using SrcFile = PosnStringParam<"src_file", "path to IDL file">;
+
+using CmdLine = CmdLineArgs<OutputDir,
+                            SrcIdl,
+                            WrapCbeFlag,
+                            WrapYamlFlag,
+                            WrapProtoFlag,
+                            WrapFixFlag,
+                            TgtProto,
+                            SrcFile>;
+
+} // namespace
 
 int main(const int argc, const char** argv) {
   try {
-    using CmdLine = cmdline::CmdLineArgs<JmgYamlFlag, JmgCbeFlag,
-                                         JmgProtobufFlag, FixFlag, SrcFile>;
     const auto cmdline = CmdLine(argc, argv);
 
-    if (jmg::get<FixFlag>(cmdline)) {
-      JMG_ENFORCE_CMDLINE(!jmg::get<JmgYamlFlag>(cmdline)
-                            && !jmg::get<JmgCbeFlag>(cmdline)
-                            && !jmg::get<JmgProtobufFlag>(cmdline),
-                          cmdline.usage(str_cat("at most one of [",
-                                                kSupportedFlagsStr,
-                                                "] may be specified")));
-      // generate header file for FIX specification
-      quickfix_spec::process(jmg::get<SrcFile>(cmdline));
-    }
-    else if (jmg::get<JmgCbeFlag>(cmdline)) {
-      JMG_ENFORCE_CMDLINE(!jmg::get<JmgYamlFlag>(cmdline)
-                            && !jmg::get<JmgProtobufFlag>(cmdline),
-                          cmdline.usage(str_cat("at most one of [",
-                                                kSupportedFlagsStr,
-                                                "] may be specified")));
-      // generate header file for CBE specification
-      jmg_cbe_spec::process(jmg::get<SrcFile>(cmdline));
-    }
-    else if (jmg::get<JmgProtobufFlag>(cmdline)) {
-      JMG_ENFORCE_CMDLINE(!jmg::get<JmgYamlFlag>(cmdline),
-                          cmdline.usage(str_cat("at most one of [",
-                                                kSupportedFlagsStr,
-                                                "] may be specified")));
-      // generate header file for protobuf specification
-      jmg_protobuf_spec::process(jmg::get<SrcFile>(cmdline));
+    // sanity check source file
+    const auto src_file = fs::path(jmg::get<SrcFile>(cmdline));
+    JMG_ENFORCE(fs::exists(src_file), "argument source file [",
+                src_file.native(), "] does not exist");
+    const auto idl = jmg::get<SrcIdl>(cmdline);
+    if (kIdlJmg == idl) {
+      JMG_ENFORCE((".yaml" == src_file.extension())
+                    || (".yml" == src_file.extension()),
+                  "invalid source file path [", src_file.native(),
+                  "] JMG IDL must be written in YAML");
     }
     else {
-      // must be -JMG-YAML
-      JMG_ENFORCE_CMDLINE(jmg::get<JmgYamlFlag>(cmdline),
-                          cmdline.usage(str_cat("at least one of [",
-                                                kSupportedFlagsStr,
-                                                "] must be specified")));
-      // generate header file for YAML specification
-      jmg_yml_spec::process(jmg::get<SrcFile>(cmdline));
+      JMG_ENFORCE(kIdlQuickfix == idl, "invalid unknown IDL type [", idl,
+                  "] must be one of [", kSupportIdlTypes, "]");
+      JMG_ENFORCE(".xml" == src_file.extension(), "invalid source file path [",
+                  src_file.native(), "] QuickFIX IDL must be written in XML");
     }
+
+    jmgc::JmgcYamlSpecMgr specMgr;
+
+    size_t tgtCount = 0;
+    if (kIdlJmg == idl) {
+      if (jmg::get<WrapYamlFlag>(cmdline)) {
+        cerr << "emitting YAML wrapper output\n";
+        specMgr.add(make_unique<jmgc::YamlYamlSpec>());
+        ++tgtCount;
+      }
+      if (jmg::get<WrapCbeFlag>(cmdline)) {
+        cerr << "emitting CBE wrapper output\n";
+        specMgr.add(make_unique<jmgc::CbeYamlSpec>());
+        ++tgtCount;
+      }
+      if (jmg::get<WrapProtoFlag>(cmdline)) {
+        cerr << "emitting protobuf wrapper output\n";
+        specMgr.add(make_unique<jmgc::ProtoYamlSpec>());
+        ++tgtCount;
+      }
+      if (jmg::get<TgtProto>(cmdline)) {
+        cerr << "emitting protoc output\n";
+        specMgr.add(make_unique<jmgc::ProtocYamlSpec>());
+        ++tgtCount;
+      }
+      JMG_ENFORCE(tgtCount > 0, "no output encodings specified");
+      jmgc::yaml::processYamlFile(src_file.native(), specMgr);
+    }
+    else { throw logic_error("non-YAML IDL file currently not supported"); }
+
+    const auto output_dir = jmg::try_get<OutputDir>(cmdline);
+    if (output_dir) { specMgr.emit(*output_dir); }
+    else {
+      JMG_ENFORCE(1 == tgtCount, "no more than 1 encoding may be generated "
+                                 "when sending output to STDOUT");
+      specMgr.emit(cout);
+    }
+
     return EXIT_SUCCESS;
   }
-  catch (const cmdline::CmdLineError& e) {
-    cerr << e.what() << "\n";
-  }
-  JMG_SINK_ALL_EXCEPTIONS("top level")
+  JMG_SINK_ALL_EXCEPTIONS_TO_STDERR("top level")
   return EXIT_FAILURE;
 }
