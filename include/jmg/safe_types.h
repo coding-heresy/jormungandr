@@ -31,9 +31,9 @@
  */
 #pragma once
 
-#include <absl/strings/str_cat.h>
-#include <absl/strings/str_format.h>
 #include <st/st.hpp>
+#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 
 #define JMG_NEW_SAFE_PROTOTYPE(name, ...)                    \
   template<::jmg::UnsafeT T, typename Tag = decltype([] {})> \
