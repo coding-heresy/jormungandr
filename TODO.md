@@ -3,7 +3,21 @@
 
 ## Misc other/minor
 
+* Modify `find_required` to support `string_view` object for key if the
+  dictionary key type is `string`
+* Create `identifier` and `arithmetic` traits for safe types that
+  derive from or are aliased to the appropriate traits in the `st::`
+  namespace, if possible
+* Check if array proxy currently includes an iterator type that wraps
+  an index into an array-like structure that the iterator can hold a
+  reference to
+  * Also check if it makes sense to create a mixin type that enables
+    custom iterators to support `std::views` automatically
+* Constrain the type parameters allowable in `yaml::Object`
+  declarations (see TODO comment in situ)
+* `value_of` and `key_of` should automatically look through iterators
 * Should scoped enums be prohibited from being wrapped in safe types?
+* Add standardized logging?
 * Should safe types in general be limited in terms of what types they
   can wrap?
   * Consider the following idea: _utility_ types. Many/most _class_
@@ -17,6 +31,53 @@
     types is giving me tunnel vision and preventing me from seeing
     other types that fit this description).
 * Add more `cc_build_error_test` cases
+  * Test cases from the bottom of test_cmdline.cpp
+
+## jmgc
+
+* The internals are currently a hot mess with a bunch of hacks for
+  corner cases and it needs another round of rewriting.
+  * The basic approach of using dynamic polymorphism appears to be
+    sound but the results would probably be improved if subclasses of
+    the main `JmgYamlSpec` were overriding `processing` member
+    functions as well as `emit` member functions, and carrying more
+    internal data.
+    * As usual, the presence of `mutable` data members is a smell.
+  * Be particularly careful and intentional with handling of
+    namespaces in protobuf encoding wrapper.
+  * Consider using `std::unique_ptr` for various field types along
+    with some mechanism for subclasses to specify which type is
+    actually created (i.e. the protobuf encoding wrapper generator
+    would specify a subclass that provides access to protobuf-specific
+    fields in the encoding and would then `dynamic_cast` the field
+    types internally to get access to such fields
+* The approach of having a single test file with support for different
+  encoding wrappers (e.g. to construct objects using the encoding's
+  API that will then be wrapped in JMG objects) controlled by
+  conditional compilation but otherwise having the actual test cases
+  always be the same is very encouraging.
+  * Fold in the YAML test case file that is currently separate.
+* JMG IDL implementations in jmgc should temporarily explicitly not
+  allow `union` types at this point
+* Support `import` section for JMG IDL
+  * Field definitions exist but `processYamlFile()` will probably need
+    to be modified to allow it to be recursively called in a mode that
+    should mostly populate the symbol table (such as it is)
+* Fix parsing of `values` field for `enum` types so that the name of
+  the enumeration doesn't require a separate `name` field, similar to
+  how lists are handled in `types` and `objects`
+* ~~Presence of `protobuf_imports` should trigger an appropriate
+  `#include` in proto encoding headers~~
+* ~~Generation of encoding wrappers is broken because all fields are
+  generated before any objects~~
+  * ~~The correct approach is to explicitly determine dependencies
+    between objects using a DAG and then walk the DAG as appropriate,
+    with each object emitting any required fields that have not yet
+    been emitted.~~
+
+* Test cases
+  * `enum` type whose `values` field is empty
+  * `protobuf_imports` field of `package` that contains no files
 
 ## Naming
 
@@ -40,6 +101,7 @@ concepts and type metafunctions:
 
 ## All Fields
 
+* Make all field definitions consistent
 * Decide whether `ArrayField` should explicitly specify `std::vector`
   as the container type
   * This is actually depends on the implementation of
@@ -62,6 +124,8 @@ concepts and type metafunctions:
 
 ## All Objects
 
+* Make all object definitions consistent
+* Review handling of `enum` fields in JMG for consistency
 * Support the declaration of objects using `meta::list` of `FieldDef`
   in addition to parameter pack of `Field`
 * ~~Standardized naming~~
@@ -109,8 +173,14 @@ concepts and type metafunctions:
 
 ## Protobuf objects
 
+* Rename protobuf header file as **jmg/proto/proto.h** instead of
+  **jmg/protobuf/protobuf.h**?
+  * Same for the `protobuf` namespace?
+  * This will allow the jmgc encoding name to match the directory and
+    file name, instead of having protobuf as a one-off difference
+    compared to the other encodings.
 * Protobuf 'bytes' type should work with BufferView?
-  * Maybe just needs general BufferView support?
+  * Maybe all objects need general BufferView support?
 * Support repeated enum fields
 * Support repeated `TimePoint` fields
 * Support repeated safe type fields
@@ -120,6 +190,7 @@ concepts and type metafunctions:
 * Support `oneof` fields using `jmg::Union`
   * May not be necessary but could add some checking on the `set()`
     case?
+  * Does seem necessary to generate a `oneof` in a .proto
   * See design example at the bottom of test_protobuf.cpp
 * Modify jmgc to generate .proto files using JMG YAML spec as the
   source of ground truth
