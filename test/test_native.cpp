@@ -45,6 +45,8 @@ using namespace std::string_literals;
 using namespace std::string_view_literals;
 using ::testing::ElementsAreArray;
 
+namespace rng = std::ranges;
+
 // numeric/arithmetic fields
 using IntFld = FieldDef<int, "int", Required>;
 using DblFld = FieldDef<double, "dbl", Required>;
@@ -63,13 +65,22 @@ using SubObject = native::Object<IntFld, DblFld>;
 using SubObjFld = FieldDef<SubObject, "sub_obj", Required>;
 using OptSubObjFld = FieldDef<SubObject, "opt_sub_obj", Optional>;
 
-// safe types
+// safe type fields
 using Id32 = SafeId32<>;
 using Id64 = SafeId64<>;
 using SafeIdFld = FieldDef<Id32, "id", Required>;
 using OptSafeIdFld = FieldDef<Id64, "opt_id", Optional>;
 
-namespace rng = std::ranges;
+// enum type fields
+enum class Active : uint8_t {
+  kUnknown = 0,
+  kActivated = 1,
+  kDeactivated = 2,
+};
+using ActiveField = FieldDef<Active, "active", Required>;
+using MaybeActiveField = FieldDef<Active, "maybe_active", Optional>;
+using ActiveObj = native::Object<ActiveField>;
+using MaybeActiveObj = native::Object<MaybeActiveField>;
 
 TEST(NativeObjectTests, TestReturnTypes) {
   using TestObject =
@@ -143,22 +154,41 @@ TEST(NativeObjectTests, TestReturnTypes) {
 TEST(NativeObjectTests, TestGet) {
   using TestObject =
     native::Object<IntFld, DblFld, StrFld, SubObjFld, SafeIdFld, ArrayFld>;
-  const auto vec = vector{2, 4, 6, 8};
-  auto obj =
-    TestObject(make_tuple(20010911, 42.0, "foo"s,
-                          SubObject(make_tuple(20070625, -1.0)), Id32(0), vec));
-  EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
-  EXPECT_DOUBLE_EQ(jmg::get<DblFld>(obj), 42.0);
-  EXPECT_EQ(jmg::get<StrFld>(obj), "foo"sv);
   {
-    const auto& sub_obj = jmg::get<SubObjFld>(obj);
-    EXPECT_EQ(jmg::get<IntFld>(sub_obj), 20070625);
-    EXPECT_EQ(jmg::get<DblFld>(sub_obj), -1.0);
+    const auto vec = vector{2, 4, 6, 8};
+    auto obj = TestObject(make_tuple(20010911, 42.0, "foo"s,
+                                     SubObject(make_tuple(20070625, -1.0)),
+                                     Id32(0), vec));
+    EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
+    EXPECT_DOUBLE_EQ(jmg::get<DblFld>(obj), 42.0);
+    EXPECT_EQ(jmg::get<StrFld>(obj), "foo"sv);
+    {
+      const auto& sub_obj = jmg::get<SubObjFld>(obj);
+      EXPECT_EQ(jmg::get<IntFld>(sub_obj), 20070625);
+      EXPECT_EQ(jmg::get<DblFld>(sub_obj), -1.0);
+    }
+    EXPECT_EQ(jmg::get<SafeIdFld>(obj), Id32(0));
+    {
+      const auto view = jmg::get<ArrayFld>(obj);
+      EXPECT_THAT(view, ElementsAreArray(vec));
+    }
   }
-  EXPECT_EQ(jmg::get<SafeIdFld>(obj), Id32(0));
+
   {
-    const auto view = jmg::get<ArrayFld>(obj);
-    EXPECT_THAT(view, ElementsAreArray(vec));
+    auto obj = ActiveObj(make_tuple(Active::kActivated));
+    EXPECT_EQ(Active::kActivated, jmg::get<ActiveField>(obj));
+  }
+
+  {
+    optional<Active> disengaged = nullopt;
+    auto disengaged_obj = MaybeActiveObj(make_tuple(disengaged));
+    EXPECT_FALSE(jmg::try_get<MaybeActiveField>(disengaged_obj));
+
+    optional<Active> engaged = Active::kUnknown;
+    auto engaged_obj = MaybeActiveObj(make_tuple(engaged));
+    const auto val = jmg::try_get<MaybeActiveField>(engaged_obj);
+    EXPECT_TRUE(pred(val));
+    EXPECT_EQ(Active::kUnknown, *val);
   }
 }
 
