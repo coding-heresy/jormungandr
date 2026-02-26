@@ -205,6 +205,7 @@ decltype(auto) insert_uniq(std::string_view description,
  */
 template<typename DictContainer>
 decltype(auto) find_required(DictContainer& dict,
+                             // TODO(bd) also allow string_view if key is string
                              const typename DictContainer::key_type& key,
                              std::string_view container_type,
                              std::string_view key_type) {
