@@ -51,6 +51,7 @@ JMG_TAG_TYPE(Object);
 JMG_FIELD_CONCEPT();
 JMG_OBJECT_CONCEPT();
 
+// TODO(bd) constrain the types of fields with the correct concept
 template<typename... Fields>
 class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
 public:
@@ -76,6 +77,9 @@ public:
     else if constexpr (OwningArrayProxyT<Rslt>) {
       return Rslt(YAML::Node(node_[name]));
     }
+    else if constexpr (AnyEnumT<Rslt>) {
+      return Rslt(node_[name].as<std::underlying_type_t<DecayT<Rslt>>>());
+    }
     else if constexpr (yaml::ObjectT<Rslt>) { return Rslt(node_[name]); }
     else { return node_[name].as<Rslt>(); }
   }
@@ -93,6 +97,10 @@ public:
         using Rslt = std::optional<SafeT>;
         using UnsafeType = UnsafeTypeFromT<SafeT>;
         return Rslt(entry.as<UnsafeType>());
+      }
+      else if constexpr (AnyEnumT<Type>) {
+        using Rslt = std::optional<Type>;
+        return Rslt(Type(node_[name].as<std::underlying_type_t<DecayT<Type>>>()));
       }
       else if constexpr (OwningArrayProxyT<Type>) {
         using Rslt = std::optional<Type>;
