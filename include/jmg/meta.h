@@ -641,7 +641,7 @@ using DeTuplize = typename detail::DeTuplize<Ts...>::type;
 } // namespace jmg
 
 ////////////////////////////////////////////////////////////////////////////////
-// helper macro for sinking exceptions
+// helper macros for sinking exceptions
 ////////////////////////////////////////////////////////////////////////////////
 
 #define JMG_SINK_ALL_EXCEPTIONS(location)                                  \
@@ -651,6 +651,17 @@ using DeTuplize = typename detail::DeTuplize<Ts...>::type;
   }                                                                        \
   catch (...) {                                                            \
     std::cout << "caught exception of type ["                              \
+              << jmg::current_exception_type_name() << "] at " << location \
+              << "\n";                                                     \
+  }
+
+#define JMG_SINK_ALL_EXCEPTIONS_TO_STDERR(location)                        \
+  catch (const std::exception& e) {                                        \
+    std::cerr << "caught exception at " << location << ": " << e.what()    \
+              << "\n";                                                     \
+  }                                                                        \
+  catch (...) {                                                            \
+    std::cerr << "caught exception of type ["                              \
               << jmg::current_exception_type_name() << "] at " << location \
               << "\n";                                                     \
   }
