@@ -55,18 +55,20 @@ string snakeCaseToCamelCase(const string_view str, bool capitalize_leading) {
          | rng::to<string>();
 }
 
-string camelCaseToSnakeCase(std::string_view str) {
+string camelCaseToSnakeCase(const string_view str, const bool all_caps) {
   string rslt;
   rslt.reserve(2 * str.size());
   bool is_first = true;
   rng::copy(str | vws::transform([&](const char chr) -> string {
               if (is_first) {
                 is_first = false;
-                string rslt = from(to_lower(chr));
+                string rslt = from(all_caps ? to_upper(chr) : to_lower(chr));
                 return rslt;
               }
-              return isupper(chr) ? str_cat("_", string(1, to_lower(chr)))
-                                  : from(chr);
+              return isupper(chr)
+                       ? str_cat("_", string(1, all_caps ? to_upper(chr)
+                                                         : to_lower(chr)))
+                       : from(all_caps ? to_upper(chr) : chr);
             }) | vws::join,
             inserterator(rslt));
   return rslt;

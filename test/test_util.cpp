@@ -171,6 +171,13 @@ TEST(GeneralUtilitiesTest, TestCamelCaseToSnakeCase) {
   EXPECT_EQ("foo"s, camelCaseToSnakeCase("foo"));
   EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("FooBar"));
   EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("fooBar"));
+  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("foo_bar"));
+
+  EXPECT_EQ("FOO"s, camelCaseToSnakeCase("Foo", true /* all_caps */));
+  EXPECT_EQ("FOO"s, camelCaseToSnakeCase("foo", true /* all_caps */));
+  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("FooBar", true /* all_caps */));
+  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("fooBar", true /* all_caps */));
+  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("foo_bar", true /* all_caps */));
 }
 
 TEST(GeneralUtilitiesTest, TestUnsafeIfier) {
