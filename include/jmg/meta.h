@@ -142,6 +142,10 @@ concept EnumT = std::is_enum_v<DecayT<T>> && !std::is_scoped_enum_v<DecayT<T>>;
 template<typename T>
 concept ScopedEnumT = std::is_scoped_enum_v<DecayT<T>>;
 
+template<typename T>
+concept AnyEnumT =
+  std::is_enum_v<DecayT<T>> || std::is_scoped_enum_v<DecayT<T>>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // concept for non-bool types
 ////////////////////////////////////////////////////////////////////////////////
