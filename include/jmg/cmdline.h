@@ -114,7 +114,7 @@ template<typename T, StrLiteral kName, StrLiteral kDesc, TypeFlagT IsRequired>
 struct NamedParam : public FieldDef<T, kName, IsRequired>,
                     public detail::FieldTag {
   PARAM_BOILERPLATE;
-  static_assert(!std::same_as<T, bool> || IsRequired{}(),
+  static_assert(!std::same_as<T, bool> || IsRequired::value,
                 "named boolean parameters must be required");
 };
 
@@ -167,10 +167,10 @@ struct IsNamedParam<NamedFlag<kName, kDesc>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept PosnParamT = detail::IsPosnParam<std::remove_cvref_t<T>>{}();
+concept PosnParamT = detail::IsPosnParam<std::remove_cvref_t<T>>::value;
 
 template<typename T>
-concept NamedParamT = detail::IsNamedParam<std::remove_cvref_t<T>>{}();
+concept NamedParamT = detail::IsNamedParam<std::remove_cvref_t<T>>::value;
 
 ////////////////////////////////////////////////////////////////////////////////
 // specific exception for command line processing errors that should
@@ -218,7 +218,7 @@ public:
                           args.size(),
                           "] does not match size of matching flags span [",
                           matches.size(), "]");
-        constexpr auto param_idx = meta::find_index<ParamList, T>{}();
+        constexpr auto param_idx = meta::find_index<ParamList, T>::value;
         const auto is_required = RequiredFieldT<T>;
         if constexpr (NamedParamT<T>) {
           ////////////////////
@@ -331,7 +331,7 @@ public:
    */
   template<RequiredFieldT Param>
   decltype(auto) get() const {
-    constexpr auto idx = meta::find_index<ParamList, Param>{}();
+    constexpr auto idx = meta::find_index<ParamList, Param>::value;
     using Rslt = ReturnTypeForFieldT<Param>;
     if constexpr (ViewableFieldT<Param>) {
       return Rslt(std::get<idx>(values_));
@@ -347,7 +347,7 @@ public:
     // NOTE: non-required fields are stored in values_ already wrapped
     // in std::optional so the implementation of try_get() is the same
     // as the implementation of get() in this case
-    constexpr auto idx = meta::find_index<ParamList, Param>{}();
+    constexpr auto idx = meta::find_index<ParamList, Param>::value;
     return std::get<idx>(values_);
   }
 

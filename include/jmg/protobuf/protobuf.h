@@ -141,8 +141,8 @@ namespace jmg::protobuf
  * concept for a scalar type
  */
 template<typename T>
-concept ScalarTypeT = (SafeT<T> && isMemberOfList<UnwrapT<T>, ScalarTypes>())
-                      || isMemberOfList<T, ScalarTypes>() || ProtoEnumT<T>;
+concept ScalarTypeT = (SafeT<T> && MemberOfListT<UnwrapT<T>, ScalarTypes>)
+                      || MemberOfListT<T, ScalarTypes> || ProtoEnumT<T>;
 
 /**
  * concept for protobuf messages (NOT for JMG objects that wrap
@@ -291,8 +291,8 @@ struct StringField : public jmg::StringField<kName, IsRequired>,
  * @tparam kId Protobuf field ID
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
-  requires(isMemberOfList<T, ScalarTypes>()
-           || SameAsDecayedT<std::string, T> || ObjectT<T>)
+  requires(MemberOfListT<T, ScalarTypes> || SameAsDecayedT<std::string, T>
+           || ObjectT<T>)
 struct ArrayField : public jmg::ArrayField<T, kName, IsRequired>,
                     detail::FieldTag {
   static constexpr auto kFldId = kFieldId;
