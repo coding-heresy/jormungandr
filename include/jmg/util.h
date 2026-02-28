@@ -341,7 +341,7 @@ Tgt getFromArgs(Args&&... args) {
  */
 template<typename Tgt, typename... Args>
 std::optional<Tgt> tryGetFromArgs(Args&&... args) {
-  if constexpr (!isMemberOfList<Tgt, meta::list<Args...>>()) {
+  if constexpr (!MemberOfListT<Tgt, meta::list<Args...>>) {
     return std::nullopt;
   }
 

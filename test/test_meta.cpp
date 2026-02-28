@@ -212,13 +212,13 @@ using CountMatches =
 
 TEST(MetaprogrammingTests, TestListMembershipHelpers) {
   using List = meta::list<int, double, string>;
-  EXPECT_TRUE((isMemberOfList<int, List>()));
-  EXPECT_FALSE((isMemberOfList<char, List>()));
+  EXPECT_TRUE((MemberOfListT<int, List>));
+  EXPECT_FALSE((MemberOfListT<char, List>));
 
-  // isMemberOfList should work when the list is constructed directly
+  // MemberOfListT should work when the list is constructed directly
   // from a parameter pack
   auto dbl_checker = []<typename... Args>(Args&&...) {
-    return isMemberOfList<double, meta::list<Args...>>();
+    return MemberOfListT<double, meta::list<Args...>>;
   };
   EXPECT_TRUE(dbl_checker(20010911, 42.0, "foo"s));
 
@@ -243,12 +243,12 @@ TEST(MetaprogrammingTests, TestListMembershipHelpers) {
   // confirm that scoped enums work correctly
   enum class Enum { kFoo, kBar };
   using ListWithEnum = meta::list<int, double, Enum, string>;
-  EXPECT_TRUE((isMemberOfList<Enum, ListWithEnum>()));
+  EXPECT_TRUE((MemberOfListT<Enum, ListWithEnum>));
   EXPECT_TRUE((isUniqueMemberOfList<Enum, ListWithEnum>()));
 
   []<typename... Args>(Args&&...) {
     using ArgsList = meta::list<Args...>;
-    EXPECT_TRUE((isMemberOfList<Enum, ArgsList>()));
+    EXPECT_TRUE((MemberOfListT<Enum, ArgsList>));
   }(15, Enum::kBar);
 }
 
@@ -353,8 +353,8 @@ TEST(MetaprogrammingTests, TestEnumConcepts) {
 
 TEST(MetaprogrammingTests, TestTupleHandling) {
   using TestTuple = tuple<int, float>;
-  EXPECT_TRUE(isTuple<TestTuple>());
-  EXPECT_FALSE(isTuple<int>());
+  EXPECT_TRUE(TupleT<TestTuple>);
+  EXPECT_FALSE(TupleT<int>);
   using TestTypeList = meta::list<int, float>;
   EXPECT_TRUE((same_as<TestTypeList, DeTuplize<TestTuple>>));
 }

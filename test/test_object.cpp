@@ -79,12 +79,12 @@ TEST(ObjectTests, TestConceptsAndCharacteristics) {
   // TestField is associated with a value of type 'unsigned' and the
   // field is required to be present in the object
   EXPECT_TRUE((std::is_same_v<unsigned, TestField::type>));
-  EXPECT_TRUE(TestField::required{}());
+  EXPECT_TRUE(TestField::required::value);
 
   // GroupOptionalField is associated with a value of type 'int' and
   // the field is not required to be present in the object
   EXPECT_TRUE((std::is_same_v<int, GroupOptionalField::type>));
-  EXPECT_FALSE(GroupOptionalField::required{}());
+  EXPECT_FALSE(GroupOptionalField::required::value);
 
   // TestObject contains 4 fields after TestFieldGroup is properly
   // expanded

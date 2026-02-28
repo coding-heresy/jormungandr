@@ -181,7 +181,7 @@ struct IsSpanT<std::span<T, kSz>> : std::true_type {};
  * concept for span
  */
 template<typename T>
-concept SpanT = detail::IsSpanT<DecayT<T>>{}();
+concept SpanT = detail::IsSpanT<DecayT<T>>::value;
 
 /**
  * concept for vector
@@ -316,8 +316,8 @@ template<typename T>
 using ReturnTypeForT = detail::ReturnTypeFor<T>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
-// helper metafunctions for checking list membership and manipulating
-// lists
+// concepts and metafunctions for checking list membership and
+// manipulating lists
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -338,10 +338,9 @@ using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
 /**
  * determine if a type is a member of a list
  */
-template<typename T, TypeListT Lst>
-inline constexpr bool isMemberOfList() {
-  return detail::IsMemberOf<DecayT<T>, DecayAllT<Lst>>{}();
-}
+template<typename T, typename Lst>
+concept MemberOfListT =
+  TypeListT<Lst> && detail::IsMemberOf<DecayT<T>, DecayAllT<Lst>>::value;
 
 namespace detail
 {
@@ -382,7 +381,7 @@ inline constexpr bool isAtMostOnceMemberOfList() {
  */
 template<typename T, TypeListT Lst>
 inline constexpr size_t entryIdx() {
-  static_assert(meta::in<Lst, T>{}(),
+  static_assert(meta::in<Lst, T>::value,
                 "attempted to find the index of a type that is not present in "
                 "the argument list");
   using Tail = meta::find<Lst, T>;
@@ -441,8 +440,8 @@ template<AspectPolicyTagT BasePolicy,
          TypeListT AllTags,
          TypeListT PolicyList>
   requires(std::is_base_of_v<BasePolicy, DefaultPolicy>
-           && isMemberOfList<BasePolicy, AllTags>()
-           && PolicyListValidT<AllTags, PolicyList>{}())
+           && MemberOfListT<BasePolicy, AllTags>
+           && PolicyListValidT<AllTags, PolicyList>::value)
 struct PolicyResolver {
   using Recognizer = meta::bind_front<meta::quote<std::is_base_of>, BasePolicy>;
   using SearchResult = meta::find_if<PolicyList, Recognizer>;
@@ -589,9 +588,7 @@ struct IsTupleSelect<std::tuple<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-constexpr bool isTuple() {
-  return detail::IsTupleSelect<T>{};
-}
+concept TupleT = detail::IsTupleSelect<T>::value;
 
 ////////////////////////////////////////////////////////////////////////////////
 // convert from type list to tuple

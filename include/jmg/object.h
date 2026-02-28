@@ -57,7 +57,7 @@ struct IsFieldGroupDef<FieldGroupDef<Ts...>> : std::true_type {};
 } // namespace detail
 
 template<typename T>
-concept FieldGroupDefT = detail::IsFieldGroupDef<T>{}();
+concept FieldGroupDefT = detail::IsFieldGroupDef<T>::value;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains a type to being a field or a field group
@@ -156,14 +156,13 @@ template<typename T>
 concept ObjectDefT = detail::HasFields<T> && detail::HasValidContent<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// compile-time function used to prevent attempts to access or modify
-// a field that is not declared to be contained by an object
+// concept used to prevent attempts to access or modify a field that
+// is not declared to be contained by an object
 ////////////////////////////////////////////////////////////////////////////////
 
-template<FieldDefT T, ObjectDefT Obj>
-inline constexpr bool isMemberOfObject() {
-  return isMemberOfList<T, typename Obj::Fields>();
-}
+template<typename T, typename Obj>
+concept MemberOfObjectT =
+  FieldDefT<T> && ObjectDefT<Obj> && MemberOfListT<T, typename Obj::Fields>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // definitions of get() and try_get()
@@ -176,7 +175,7 @@ inline constexpr bool isMemberOfObject() {
  */
 template<RequiredFieldT Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj)
-  requires(isMemberOfObject<Fld, Obj>())
+  requires(MemberOfObjectT<Fld, Obj>)
 {
   return obj.template get<Fld>();
 }
@@ -187,7 +186,7 @@ decltype(auto) get(const Obj& obj)
  */
 template<OptionalFieldT Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForFieldT<Fld>> dflt)
-  requires(isMemberOfObject<Fld, Obj>())
+  requires(MemberOfObjectT<Fld, Obj>)
 {
   using Rslt = RemoveOptionalT<ReturnTypeForFieldT<Fld>>;
   auto opt_val = obj.template try_get<Fld>();
@@ -201,7 +200,7 @@ decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForFieldT<Fld>> dflt)
  */
 template<OptionalFieldT Fld, ObjectDefT Obj>
 decltype(auto) try_get(const Obj& obj)
-  requires(isMemberOfObject<Fld, Obj>())
+  requires(MemberOfObjectT<Fld, Obj>)
 {
   return obj.template try_get<Fld>();
 }
@@ -220,7 +219,7 @@ decltype(auto) try_get(const Obj& obj)
  */
 template<FieldDefT Fld, ObjectDefT Obj>
 void set(Obj& obj, ArgTypeForFieldT<Fld> arg)
-  requires(isMemberOfObject<Fld, Obj>())
+  requires(MemberOfObjectT<Fld, Obj>)
 {
   obj.template set<Fld>(arg);
 }
@@ -231,7 +230,7 @@ void set(Obj& obj, ArgTypeForFieldT<Fld> arg)
  */
 template<ViewableFieldT Fld, ObjectDefT Obj>
 void set(Obj& obj, const typename Fld::type& arg)
-  requires(isMemberOfObject<Fld, Obj>())
+  requires(MemberOfObjectT<Fld, Obj>)
 {
   obj.template set<Fld>(arg);
 }
@@ -242,7 +241,7 @@ void set(Obj& obj, const typename Fld::type& arg)
  */
 template<StringFieldT Fld, ObjectDefT Obj>
 void set(Obj& obj, const char* arg)
-  requires(isMemberOfObject<Fld, Obj>())
+  requires(MemberOfObjectT<Fld, Obj>)
 {
   obj.template set<Fld>(arg);
 }
@@ -252,7 +251,7 @@ void set(Obj& obj, const char* arg)
  */
 template<FieldDefT Fld, ObjectDefT Obj>
 void set(Obj& obj, typename Fld::type&& arg)
-  requires(isMemberOfObject<Fld, Obj>() && ClassT<typename Fld::type>)
+  requires(MemberOfObjectT<Fld, Obj> && ClassT<typename Fld::type>)
 {
   obj.template set<Fld>(std::move(arg));
 }
@@ -266,7 +265,7 @@ void set(Obj& obj, typename Fld::type&& arg)
 
 template<OptionalFieldT Fld, ObjectDefT Obj>
 void clear(Obj& obj)
-  requires(isMemberOfObject<Fld, Obj>())
+  requires(MemberOfObjectT<Fld, Obj>)
 {
   obj.template clear<Fld>();
 }

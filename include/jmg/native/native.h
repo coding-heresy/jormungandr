@@ -95,8 +95,8 @@ using MatchesFromFieldTypes =
 
 /**
  * the ReduceAllMatches metafunction takes a list of type pairs (where
- * a type pair is encoded as a list of size 2) to a single boolean
- * indicating whether or not all the types match
+ * a type pair is encoded as a list of size 2) and produces a single
+ * boolean indicating whether or not all the types match
  */
 template<typename ZippedLst>
 using ReduceAllMatches =
@@ -106,15 +106,18 @@ using ReduceAllMatches =
 
 template<typename Adapted, typename Arg>
 constexpr bool isAdaptedObject() {
-  if constexpr (!isTuple<Arg>()) { return false; }
+  if constexpr (!TupleT<Arg>) { return false; }
   else {
     using RawTypes = DeTuplize<Adapted>;
     using ArgTypes = DeTuplize<Arg>;
-    using Zipable = meta::list<RawTypes, ArgTypes>;
-    using AllFieldsMatch = detail::ReduceAllMatches<meta::zip<Zipable>>;
+    using ZipableList = meta::list<RawTypes, ArgTypes>;
+    using AllFieldsMatch = detail::ReduceAllMatches<meta::zip<ZipableList>>;
     return AllFieldsMatch{};
   }
 }
+
+template<typename Adapted, typename Arg>
+concept AdaptedObjectT = isAdaptedObject<Adapted, Arg>();
 
 } // namespace detail
 
@@ -138,7 +141,7 @@ public:
     using PackList = meta::list<Args...>;
     using Front = meta::front<PackList>;
     if constexpr ((1 == PackList::size())
-                  && detail::isAdaptedObject<adapted_type, Front>()) {
+                  && detail::AdaptedObjectT<adapted_type, Front>) {
       // there is only 1 argument and it consists of the type of tuple
       // that this object holds
       obj_ = adapted_type(std::forward<Args>(args)...);
