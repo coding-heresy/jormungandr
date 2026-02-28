@@ -147,8 +147,6 @@ TEST(MetaprogrammingTests, TestStringLikeConcepts) {
 }
 
 TEST(MetaprogrammingTests, TestViewStringConcepts) {
-  // EXPECT_FALSE(StringLikeT<int>);
-
   auto* literal = "foo";
   constexpr char compile_time[] = "bar";
 
@@ -167,6 +165,13 @@ TEST(MetaprogrammingTests, TestViewStringConcepts) {
 
 TEST(MetaprogrammingTests, TestMiscStringConcepts) {
   EXPECT_TRUE(StaticStringConstT<decltype("foo")>);
+  const char* const_c_str = "bar";
+  EXPECT_FALSE(StaticStringConstT<decltype(const_c_str)>);
+  array<char, 5> buf = {'b', 'l', 'u', 'b', '\0'};
+  char* c_str = buf.data();
+  EXPECT_EQ(0, (::strcmp(buf.data(), "blub")));
+  EXPECT_FALSE(StaticStringConstT<decltype(c_str)>);
+  EXPECT_FALSE(StaticStringConstT<int>);
 
   EXPECT_FALSE(NonStringClassT<string>);
   EXPECT_FALSE(NonStringClassT<int>);
