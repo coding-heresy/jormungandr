@@ -154,16 +154,6 @@ template<typename T>
 concept NonBoolT = !SameAsDecayedT<bool, T>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// concepts for class and non-class types
-////////////////////////////////////////////////////////////////////////////////
-
-template<typename T>
-concept ClassT = std::is_class_v<DecayT<T>>;
-
-template<typename T>
-concept NonClassT = !ClassT<T>;
-
-////////////////////////////////////////////////////////////////////////////////
 // concepts for spans and vectors
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -188,6 +178,30 @@ concept SpanT = detail::IsSpanT<DecayT<T>>::value;
  */
 template<typename T>
 concept VectorT = TemplateSpecializationOfT<T, std::vector>;
+
+namespace detail
+{
+template<typename T>
+struct IsStdArrayT : std::false_type {};
+template<typename T, size_t kSz>
+struct IsStdArrayT<std::array<T, kSz>> : std::true_type {};
+} // namespace detail
+
+/**
+ * concept for array
+ */
+template<typename T>
+concept ArrayT = std::is_array_v<T> || detail::IsStdArrayT<T>::value;
+
+////////////////////////////////////////////////////////////////////////////////
+// concepts for class and non-class types
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept ClassT = std::is_class_v<DecayT<T>>;
+
+template<typename T>
+concept NonClassT = !ClassT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for static string constant
@@ -292,8 +306,34 @@ using safe_back = meta::_t<detail::safe_back_<T>>;
 // value or by reference
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * tag class that can be used as a base class in order to enable
+ * return by value for proxy types
+ */
+struct ProxyTag {};
+
+/**
+ * concept for JMG proxy types
+ */
+template<typename T>
+concept ProxyT = std::derived_from<DecayT<T>, ProxyTag>;
+
+/**
+ * concept for classes, other than safe classes, that are returned by reference
+ */
+template<typename T>
+concept UnsafeNonViewableOrProxyClassT =
+  UnsafeClassT<T> &&
+  // strings are viewable
+  NonStringClassT<T> &&
+  // spans, vectors and arrays are viewable
+  !SpanT<T> && !VectorT<T> && !ArrayT<DecayT<T>> &&
+  // proxy types are always returned by value
+  !ProxyT<T>;
+
 namespace detail
 {
+// all of these are returned by value
 template<typename T>
 struct ReturnTypeFor {
   using type = DecayT<T>;
@@ -302,11 +342,28 @@ template<SafePrimitiveT T>
 struct ReturnTypeFor<T> {
   using type = DecayT<T>;
 };
+template<StringLikeT T>
+struct ReturnTypeFor<T> {
+  using type = std::string_view;
+};
+template<VectorT T>
+struct ReturnTypeFor<T> {
+  using type = std::span<typename T::value_type>;
+};
+template<ArrayT T>
+struct ReturnTypeFor<T> {
+  using type = std::span<typename T::value_type>;
+};
+template<SpanT T>
+struct ReturnTypeFor<T> {
+  using type = std::span<typename T::value_type>;
+};
+// only these 2 are returned by reference
 template<SafeClassT T>
 struct ReturnTypeFor<T> {
   using type = DecayT<T>&;
 };
-template<UnsafeClassT T>
+template<UnsafeNonViewableOrProxyClassT T>
 struct ReturnTypeFor<T> {
   using type = DecayT<T>&;
 };

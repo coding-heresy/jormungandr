@@ -37,6 +37,7 @@
 #include <vector>
 
 #include "jmg/array_proxy.h"
+#include "jmg/meta.h"
 
 using namespace jmg;
 using namespace std;
@@ -57,6 +58,10 @@ TEST(ArrayProxyTests, TestTrivialViewProxy) {
   const auto entry = ranges::find_if(proxy, pred);
   EXPECT_NE(proxy.end(), entry);
   EXPECT_EQ(3, *entry);
+
+  // proxy types are returned by value
+  EXPECT_TRUE(ProxyT<IntVecProxy>);
+  EXPECT_TRUE((same_as<IntVecProxy, ReturnTypeForT<IntVecProxy>>));
 }
 
 TEST(ArrayProxyTests, TestAdaptingViewProxy) {
@@ -99,6 +104,10 @@ TEST(ArrayProxyTests, TestAdaptingViewProxy) {
     EXPECT_NE(proxy.end(), entry);
     EXPECT_EQ(3, (*entry).val);
   }
+
+  // proxy types are returned by value
+  EXPECT_TRUE(ProxyT<AdaptingProxy>);
+  EXPECT_TRUE((same_as<AdaptingProxy, ReturnTypeForT<AdaptingProxy>>));
 }
 
 TEST(ArrayProxyTests, TestOwningProxy) {
@@ -116,4 +125,8 @@ TEST(ArrayProxyTests, TestOwningProxy) {
   EXPECT_EQ(proxy.begin(), entry);
   EXPECT_NE(proxy.end(), entry);
   EXPECT_EQ(1, *entry);
+
+  // proxy types are returned by value
+  EXPECT_TRUE(ProxyT<IntVecSpanProxy>);
+  EXPECT_TRUE((same_as<IntVecSpanProxy, ReturnTypeForT<IntVecSpanProxy>>));
 }

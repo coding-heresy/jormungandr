@@ -222,11 +222,14 @@ struct DefaultSizePolicy : SizeRetrievalPolicyTag {
  * class template for a proxy that can be used to wrap some container
  * type to look like an array
  *
- * TODO add more array-like features (such as random access) to the
+ * TODO(bd) add more array-like features (such as random access) to the
  * proxy
+ *
+ * NOTE: class is tagged as a proxy for purposes of return type
+ * calculation
  */
 template<typename ProxiedT, typename... PoliciesT>
-class ViewingArrayProxy {
+class ViewingArrayProxy : public ProxyTag {
   using Policies = meta::list<PoliciesT...>;
   using AllPolicyTags = meta::list<ItrPolicyTag, SizeRetrievalPolicyTag>;
   using DefaultItrPolicy = RawItrPolicy<ProxiedT>;
