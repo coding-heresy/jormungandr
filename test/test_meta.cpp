@@ -104,6 +104,32 @@ TEST(MetaprogrammingTests, TestNumericConcepts) {
   EXPECT_TRUE(ArithmeticT<int>);
 }
 
+TEST(MetaprogrammingTests, TestSpanAndVectorAndArrayConcepts) {
+  EXPECT_FALSE(VectorT<int>);
+  EXPECT_FALSE(SpanT<int>);
+  EXPECT_TRUE(VectorT<vector<int>>);
+  EXPECT_FALSE(VectorT<span<int>>);
+  EXPECT_FALSE(SpanT<vector<int>>);
+  EXPECT_TRUE(SpanT<span<int>>);
+  array<float, 5> floats;
+  EXPECT_TRUE(ArrayT<decltype(floats)>);
+  const auto floats_span = span(floats);
+  EXPECT_TRUE(SpanT<decltype(floats_span)>);
+}
+
+TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {
+  EXPECT_TRUE(ClassT<string>);
+  EXPECT_FALSE(NonClassT<string>);
+  EXPECT_FALSE(ClassT<double>);
+  EXPECT_TRUE(NonClassT<double>);
+
+  EXPECT_TRUE(NonClassT<const char*>);
+  auto* literal = "foo";
+  EXPECT_TRUE(NonClassT<decltype(literal)>);
+  constexpr char compile_time[] = "bar";
+  EXPECT_TRUE(NonClassT<decltype(compile_time)>);
+}
+
 TEST(MetaprogrammingTests, TestCStyleStringConcept) {
   EXPECT_TRUE(CStyleStringT<const char*>);
   auto* literal = "foo";
@@ -178,29 +204,27 @@ TEST(MetaprogrammingTests, TestMiscStringConcepts) {
   EXPECT_TRUE(NonStringClassT<BufferView>);
 }
 
-TEST(MetaprogrammingTests, TestSpanAndVectorConcepts) {
-  EXPECT_FALSE(VectorT<int>);
-  EXPECT_FALSE(SpanT<int>);
-  EXPECT_TRUE(VectorT<vector<int>>);
-  EXPECT_FALSE(VectorT<span<int>>);
-  EXPECT_FALSE(SpanT<vector<int>>);
-  EXPECT_TRUE(SpanT<span<int>>);
-  array<float, 5> floats;
-  const auto floats_span = span(floats);
-  EXPECT_TRUE(SpanT<decltype(floats_span)>);
-}
-
-TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {
-  EXPECT_TRUE(ClassT<string>);
-  EXPECT_FALSE(NonClassT<string>);
-  EXPECT_FALSE(ClassT<double>);
-  EXPECT_TRUE(NonClassT<double>);
-
-  EXPECT_TRUE(NonClassT<const char*>);
-  auto* literal = "foo";
-  EXPECT_TRUE(NonClassT<decltype(literal)>);
-  constexpr char compile_time[] = "bar";
-  EXPECT_TRUE(NonClassT<decltype(compile_time)>);
+TEST(MetaprogrammingTests, TestReturnTypeMetafunction) {
+  // primitive types are returned by value
+  EXPECT_TRUE((same_as<int, ReturnTypeForT<int>>));
+  // safe primitive types are returned by value
+  using TestId32 = SafeId32<>;
+  EXPECT_TRUE((same_as<TestId32, ReturnTypeForT<TestId32>>));
+  // safe class types are returned by reference
+  using TestIdStr = SafeIdStr<>;
+  EXPECT_TRUE((same_as<TestIdStr&, ReturnTypeForT<TestIdStr>>));
+  // string-like types return string_view
+  EXPECT_TRUE((same_as<string_view, ReturnTypeForT<string>>));
+  EXPECT_TRUE((same_as<string_view, ReturnTypeForT<string_view>>));
+  // vector and array types return span
+  using DblVec = vector<double>;
+  EXPECT_TRUE((same_as<span<double>, ReturnTypeForT<DblVec>>));
+  array<double, 1> dbls;
+  EXPECT_TRUE((same_as<span<double>, ReturnTypeForT<decltype(dbls)>>));
+  const auto dbls_span = span(dbls);
+  EXPECT_TRUE((same_as<span<double>, ReturnTypeForT<decltype(dbls_span)>>));
+  // non-safe class types returned by reference
+  EXPECT_TRUE((same_as<TimePoint&, ReturnTypeForT<TimePoint>>));
 }
 
 using namespace meta::placeholders;
