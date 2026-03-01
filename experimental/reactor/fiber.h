@@ -281,6 +281,10 @@ public:
 
   /**
    * lookup the list of IP endpoints associated with a host
+   *
+   * TODO(bd) use safe type for hostname
+   * TODO(bd) support use of safe type for service name
+   * TODO(bd) support taking IpPort as parameter
    */
   template<NullTerminatedStringT Str, typename... Args>
   IpEndpoints lookupNetworkEndpoints(const Str& host, Args&&... args) {
@@ -308,11 +312,14 @@ public:
 
       struct addrinfo* info_ptr = nullptr;
       const auto rc = ::getaddrinfo(host_ptr, svc_ptr, &hints, &info_ptr);
+      // TODO(bd) use explain_getaddrinfo() instead of gai_strerror?
       if (rc != 0) {
         JMG_THROW_EXCEPTION(std::runtime_error,
                             "unable to lookup network endpoints: ",
                             ::gai_strerror(rc));
       }
+      // caller is responsible for freeing resources
+      const auto info_cleaner = Cleanup([&] { freeaddrinfo(info_ptr); });
       struct addrinfo* ptr = nullptr;
       size_t rslt_sz = 0;
       for (ptr = info_ptr; ptr; ptr = ptr->ai_next) {
