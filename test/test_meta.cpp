@@ -35,6 +35,7 @@
 #include <iostream>
 #include <string>
 #include <tuple>
+#include <variant>
 
 #include <meta/meta.hpp>
 
@@ -115,6 +116,35 @@ TEST(MetaprogrammingTests, TestSpanAndVectorAndArrayConcepts) {
   EXPECT_TRUE(ArrayT<decltype(floats)>);
   const auto floats_span = span(floats);
   EXPECT_TRUE(SpanT<decltype(floats_span)>);
+}
+
+TEST(MetaprogrammingTests, TestEnumConcepts) {
+  EXPECT_FALSE(EnumT<int>);
+  EXPECT_FALSE(ScopedEnumT<int>);
+  EXPECT_FALSE(AnyEnumT<int>);
+
+  enum Enum { kFoo, kBar };
+  enum class ScopedEnum { kFoo, kBar };
+
+  EXPECT_TRUE(EnumT<Enum>);
+  EXPECT_FALSE(EnumT<ScopedEnum>);
+  EXPECT_FALSE(ScopedEnumT<Enum>);
+  EXPECT_TRUE(ScopedEnumT<ScopedEnum>);
+
+  EXPECT_TRUE(AnyEnumT<Enum>);
+  EXPECT_TRUE(AnyEnumT<ScopedEnum>);
+
+  const auto enumFoo = Enum::kFoo;
+  const auto scopedEnumFoo = ScopedEnum::kFoo;
+  EXPECT_TRUE(EnumT<decltype(enumFoo)>);
+  EXPECT_FALSE(ScopedEnumT<decltype(enumFoo)>);
+  EXPECT_FALSE(EnumT<decltype(scopedEnumFoo)>);
+  EXPECT_TRUE(ScopedEnumT<decltype(scopedEnumFoo)>);
+}
+
+TEST(MetaprogrammingTests, TestBoolConcept) {
+  EXPECT_FALSE(NonBoolT<bool>);
+  EXPECT_TRUE(NonBoolT<int>);
 }
 
 TEST(MetaprogrammingTests, TestClassAndNonClassConcepts) {
@@ -356,36 +386,22 @@ TEST(MetaprogrammingTests, TestRemoveOptional) {
   EXPECT_TRUE((same_as<TestType, RemoveOptionalT<OptionalType>>));
 }
 
-TEST(MetaprogrammingTests, TestEnumConcepts) {
-  EXPECT_FALSE(EnumT<int>);
-  EXPECT_FALSE(ScopedEnumT<int>);
-  EXPECT_FALSE(AnyEnumT<int>);
-
-  enum Enum { kFoo, kBar };
-  enum class ScopedEnum { kFoo, kBar };
-
-  EXPECT_TRUE(EnumT<Enum>);
-  EXPECT_FALSE(EnumT<ScopedEnum>);
-  EXPECT_FALSE(ScopedEnumT<Enum>);
-  EXPECT_TRUE(ScopedEnumT<ScopedEnum>);
-
-  EXPECT_TRUE(AnyEnumT<Enum>);
-  EXPECT_TRUE(AnyEnumT<ScopedEnum>);
-
-  const auto enumFoo = Enum::kFoo;
-  const auto scopedEnumFoo = ScopedEnum::kFoo;
-  EXPECT_TRUE(EnumT<decltype(enumFoo)>);
-  EXPECT_FALSE(ScopedEnumT<decltype(enumFoo)>);
-  EXPECT_FALSE(EnumT<decltype(scopedEnumFoo)>);
-  EXPECT_TRUE(ScopedEnumT<decltype(scopedEnumFoo)>);
-}
-
 TEST(MetaprogrammingTests, TestTupleHandling) {
   using TestTuple = tuple<int, float>;
   EXPECT_TRUE(TupleT<TestTuple>);
   EXPECT_FALSE(TupleT<int>);
   using TestTypeList = meta::list<int, float>;
-  EXPECT_TRUE((same_as<TestTypeList, DeTuplize<TestTuple>>));
+  EXPECT_TRUE((same_as<TestTypeList, DeTuplizeT<TestTuple>>));
+  EXPECT_TRUE((same_as<TestTuple, TuplizeT<TestTypeList>>));
+}
+
+TEST(MetaprogrammingTests, TestVariantHandling) {
+  using TestVariant = variant<int, float>;
+  EXPECT_TRUE(VariantT<TestVariant>);
+  EXPECT_FALSE(VariantT<int>);
+  using TestTypeList = meta::list<int, float>;
+  EXPECT_TRUE((same_as<TestTypeList, DeVariantizeT<TestVariant>>));
+  EXPECT_TRUE((same_as<TestVariant, VariantizeT<TestTypeList>>));
 }
 
 using namespace std::literals::string_literals;

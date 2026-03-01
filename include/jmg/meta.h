@@ -56,7 +56,7 @@ concept TypeFlagT =
   std::same_as<T, std::true_type> || std::same_as<T, std::false_type>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// helpers for decaying types
+// helpers for decaying types (i.e. removing const, volatile and reference
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -633,55 +633,84 @@ struct StrLiteral {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// detect if a type is a specialization of std::tuple
+// use the parameter pack of a typelist to specialize a variadic template
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace detail
 {
-template<typename... Ts>
-struct IsTupleSelect : std::false_type {};
-template<typename... Ts>
-struct IsTupleSelect<std::tuple<Ts...>> : std::true_type {};
-} // namespace detail
+template<template<typename...> typename Wrapper, typename... Ts>
+struct Wrapify {};
 
-template<typename T>
-concept TupleT = detail::IsTupleSelect<T>::value;
-
-////////////////////////////////////////////////////////////////////////////////
-// convert from type list to tuple
-////////////////////////////////////////////////////////////////////////////////
-
-namespace detail
-{
-template<typename... Ts>
-struct Tuplize {};
-
-template<typename... Ts>
-struct Tuplize<meta::list<Ts...>> {
-  using type = std::tuple<Ts...>;
+template<template<typename...> typename Wrapper, typename... Ts>
+struct Wrapify<Wrapper, meta::list<Ts...>> {
+  using type = Wrapper<Ts...>;
 };
 } // namespace detail
 
-template<typename... Ts>
-using Tuplize = typename detail::Tuplize<Ts...>::type;
+template<template<typename...> typename Wrapper, TypeListT Lst>
+using WrapifyT = typename detail::Wrapify<Wrapper, Lst>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
-// extract the types in a tuple as a type list
+// extract a typelist of the parameter pack from a specialized variadic template
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace detail
 {
 template<typename... Ts>
-struct DeTuplize {};
+struct DeWrapify {};
 
-template<typename... Ts>
-struct DeTuplize<std::tuple<Ts...>> {
+template<template<typename...> typename Wrapper, typename... Ts>
+struct DeWrapify<Wrapper<Ts...>> {
   using type = meta::list<Ts...>;
 };
 } // namespace detail
 
-template<typename... Ts>
-using DeTuplize = typename detail::DeTuplize<Ts...>::type;
+template<typename T>
+using DeWrapifyT = typename detail::DeWrapify<T>::type;
+
+////////////////////////////////////////////////////////////////////////////////
+// concepts and metafunctions related to std::tuple
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * concept for a specialization of std::tuple
+ */
+template<typename T>
+concept TupleT = TemplateSpecializationOfT<T, std::tuple>;
+
+/**
+ * specialize std::tuple using a typelist
+ */
+template<TypeListT T>
+using TuplizeT = WrapifyT<std::tuple, T>;
+
+/**
+ * convert the parameter pack used to specialize a std::tuple into a type list
+ */
+template<TupleT T>
+using DeTuplizeT = DeWrapifyT<T>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concepts and metafunctions related to std::variant
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * concept for a specialization of std::tuple
+ */
+template<typename T>
+concept VariantT = TemplateSpecializationOfT<T, std::variant>;
+
+/**
+ * specialize std::variant using a typelist
+ */
+template<TypeListT T>
+using VariantizeT = WrapifyT<std::variant, T>;
+
+/**
+ * convert the parameter pack used to specialize a std::variant into a type list
+ */
+template<VariantT T>
+using DeVariantizeT = DeWrapifyT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // helper macro for final 'else' case of 'if constexpr' case analysis
@@ -709,6 +738,10 @@ using DeTuplize = typename detail::DeTuplize<Ts...>::type;
               << "\n";                                                     \
   }
 
+/**
+ * sink all exceptions for an app that use traditional semantics of sending output
+ * to stdout for further processing in a pipeline and error messages to stderr
+ */
 #define JMG_SINK_ALL_EXCEPTIONS_TO_STDERR(location)                        \
   catch (const std::exception& e) {                                        \
     std::cerr << "caught exception at " << location << ": " << e.what()    \
