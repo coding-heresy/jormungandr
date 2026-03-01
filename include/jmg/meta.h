@@ -338,6 +338,10 @@ template<typename T>
 struct ReturnTypeFor {
   using type = DecayT<T>;
 };
+template<AnyEnumT T>
+struct ReturnTypeFor<T> {
+  using type = DecayT<T>;
+};
 template<SafePrimitiveT T>
 struct ReturnTypeFor<T> {
   using type = DecayT<T>;
@@ -392,6 +396,7 @@ using SameAsLambda =
 template<typename T, TypeListT Lst>
 using IsMemberOf = meta::fold<Lst, std::false_type, SameAsLambda<T>>;
 } // namespace detail
+
 /**
  * determine if a type is a member of a list
  */

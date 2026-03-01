@@ -237,15 +237,28 @@ TEST(MetaprogrammingTests, TestMiscStringConcepts) {
 TEST(MetaprogrammingTests, TestReturnTypeMetafunction) {
   // primitive types are returned by value
   EXPECT_TRUE((same_as<int, ReturnTypeForT<int>>));
+
+  // enum types are returned by value
+  enum Enum { kFoo, kBar };
+  const auto enumeration = Enum::kFoo;
+  EXPECT_TRUE((same_as<Enum, ReturnTypeForT<decltype(enumeration)>>));
+  enum class ScopedEnum { kBlub, kBarf };
+  const auto scoped_enumeration = ScopedEnum::kBlub;
+  EXPECT_TRUE(
+    (same_as<ScopedEnum, ReturnTypeForT<decltype(scoped_enumeration)>>));
+
   // safe primitive types are returned by value
   using TestId32 = SafeId32<>;
   EXPECT_TRUE((same_as<TestId32, ReturnTypeForT<TestId32>>));
+
   // safe class types are returned by reference
   using TestIdStr = SafeIdStr<>;
   EXPECT_TRUE((same_as<TestIdStr&, ReturnTypeForT<TestIdStr>>));
+
   // string-like types return string_view
   EXPECT_TRUE((same_as<string_view, ReturnTypeForT<string>>));
   EXPECT_TRUE((same_as<string_view, ReturnTypeForT<string_view>>));
+
   // vector and array types return span
   using DblVec = vector<double>;
   EXPECT_TRUE((same_as<span<double>, ReturnTypeForT<DblVec>>));
@@ -253,6 +266,7 @@ TEST(MetaprogrammingTests, TestReturnTypeMetafunction) {
   EXPECT_TRUE((same_as<span<double>, ReturnTypeForT<decltype(dbls)>>));
   const auto dbls_span = span(dbls);
   EXPECT_TRUE((same_as<span<double>, ReturnTypeForT<decltype(dbls_span)>>));
+
   // non-safe class types returned by reference
   EXPECT_TRUE((same_as<TimePoint&, ReturnTypeForT<TimePoint>>));
 }
