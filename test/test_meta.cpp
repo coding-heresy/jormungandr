@@ -301,23 +301,27 @@ TEST(MetaprogrammingTests, TestListMembershipHelpers) {
   EXPECT_TRUE(dbl_checker(20010911, dbl_ref, "foo"s));
 
   // confirm that unique membership test works
-  EXPECT_TRUE((isUniqueMemberOfList<int, List>()));
-  EXPECT_FALSE((isUniqueMemberOfList<float, List>()));
+  EXPECT_TRUE((UniqueMemberOfListT<int, List>));
+  // false for non-member
+  EXPECT_FALSE((UniqueMemberOfListT<float, List>));
 
   using DuplicateList = meta::list<int, double, string, int>;
-  EXPECT_TRUE((isUniqueMemberOfList<double, DuplicateList>()));
-  EXPECT_FALSE((isUniqueMemberOfList<int, DuplicateList>()));
+  EXPECT_TRUE((UniqueMemberOfListT<double, DuplicateList>));
+  // false for duplicate member
+  EXPECT_FALSE((UniqueMemberOfListT<int, DuplicateList>));
 
   // confirm that "at most once" membership test works
-  EXPECT_TRUE((isAtMostOnceMemberOfList<double, DuplicateList>()));
-  EXPECT_TRUE((isAtMostOnceMemberOfList<float, DuplicateList>()));
-  EXPECT_FALSE((isAtMostOnceMemberOfList<int, DuplicateList>()));
+  EXPECT_TRUE((AtMostOnceMemberOfListT<double, DuplicateList>));
+  // true for non-member
+  EXPECT_TRUE((AtMostOnceMemberOfListT<float, DuplicateList>));
+  // false for duplicate member
+  EXPECT_FALSE((AtMostOnceMemberOfListT<int, DuplicateList>));
 
   // confirm that scoped enums work correctly
   enum class Enum { kFoo, kBar };
   using ListWithEnum = meta::list<int, double, Enum, string>;
   EXPECT_TRUE((MemberOfListT<Enum, ListWithEnum>));
-  EXPECT_TRUE((isUniqueMemberOfList<Enum, ListWithEnum>()));
+  EXPECT_TRUE((UniqueMemberOfListT<Enum, ListWithEnum>));
 
   []<typename... Args>(Args&&...) {
     using ArgsList = meta::list<Args...>;
