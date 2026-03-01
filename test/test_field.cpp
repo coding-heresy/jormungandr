@@ -69,6 +69,11 @@ using OptStrFld = StringField<"opt_str", Optional>;
 using ArrayFld = ArrayField<double, "array_dbl", Required>;
 using OptArrayFld = ArrayField<uint64_t, "array_dbl", Optional>;
 
+TEST(FieldTests, SmokeTest) {
+  // retrieve the field type with meta::_t
+  EXPECT_TRUE((same_as<int, meta::_t<IntFld>>));
+}
+
 TEST(FieldTests, TestArgTypeForFieldT) {
   // primitive fields take argument by value, regardless of whether or
   // not they are safe types

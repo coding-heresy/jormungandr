@@ -422,21 +422,20 @@ using CountMatches =
 } // namespace detail
 
 /**
- * determine if a type occurs exactly once in a list
+ * concept for a type occurring exactly once in a list
  */
-template<typename T, TypeListT Lst>
-inline constexpr bool isUniqueMemberOfList() {
-  return static_cast<size_t>(1)
-         == detail::CountMatches<DecayT<T>, DecayAllT<Lst>>{};
-}
+template<typename T, typename Lst>
+concept UniqueMemberOfListT =
+  TypeListT<Lst>
+  && (1 == detail::CountMatches<DecayT<T>, DecayAllT<Lst>>::value);
 
 /**
- * determine if a type occurs at most once in a list
+ * concept for a type occurring at most once in a list
  */
-template<typename T, TypeListT Lst>
-inline constexpr bool isAtMostOnceMemberOfList() {
-  return detail::CountMatches<DecayT<T>, DecayAllT<Lst>>{} <= 1;
-}
+template<typename T, typename Lst>
+concept AtMostOnceMemberOfListT =
+  TypeListT<Lst>
+  && (1 >= detail::CountMatches<DecayT<T>, DecayAllT<Lst>>::value);
 
 /**
  * find the index of the first entry of a type in a list

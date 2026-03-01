@@ -84,11 +84,7 @@ struct ValidObjectContentCheckUnwrap<meta::list<Ts...>> {
 } // namespace detail
 
 template<typename T>
-inline constexpr bool isValidObjectContent() {
-  return detail::ValidObjectContentCheckUnwrap<T>::check();
-}
-template<typename T>
-concept ValidObjectContent = isValidObjectContent<T>();
+concept ValidObjectContentT = detail::ValidObjectContentCheckUnwrap<T>::check();
 
 ////////////////////////////////////////////////////////////////////////////////
 // type metafunction that expands field groups within an object
@@ -149,7 +145,7 @@ namespace detail
 template<typename T>
 concept HasFields = requires { typename T::Fields; };
 template<typename T>
-concept HasValidContent = ValidObjectContent<typename T::Fields>;
+concept HasValidContent = ValidObjectContentT<typename T::Fields>;
 } // namespace detail
 
 template<typename T>
