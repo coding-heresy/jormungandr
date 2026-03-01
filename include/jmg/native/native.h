@@ -108,8 +108,8 @@ template<typename Adapted, typename Arg>
 constexpr bool isAdaptedObject() {
   if constexpr (!TupleT<Arg>) { return false; }
   else {
-    using RawTypes = DeTuplize<Adapted>;
-    using ArgTypes = DeTuplize<Arg>;
+    using RawTypes = DeTuplizeT<Adapted>;
+    using ArgTypes = DeTuplizeT<Arg>;
     using ZipableList = meta::list<RawTypes, ArgTypes>;
     using AllFieldsMatch = detail::ReduceAllMatches<meta::zip<ZipableList>>;
     return AllFieldsMatch{};
@@ -133,7 +133,7 @@ class Object : public ObjectDef<Flds...>, public detail::ObjectTag {
 
 public:
   using Fields = typename base::Fields;
-  using adapted_type = jmg::Tuplize<meta::transform<Fields, Optionalize>>;
+  using adapted_type = jmg::TuplizeT<meta::transform<Fields, Optionalize>>;
 
   Object() = default;
   template<typename... Args>
@@ -147,7 +147,7 @@ public:
       obj_ = adapted_type(std::forward<Args>(args)...);
     }
     else {
-      using RawTypes = DeTuplize<adapted_type>;
+      using RawTypes = DeTuplizeT<adapted_type>;
       // NOTE: the argument to the meta::zip metafunction must consist
       // of a list of lists
       using Zipable = meta::list<RawTypes, PackList>;

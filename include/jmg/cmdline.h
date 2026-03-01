@@ -381,7 +381,7 @@ public:
 private:
   enum class ScanState { Opts, ReqdPosns, OptPosns };
   using ParamList = meta::list<Params...>;
-  using Values = Tuplize<meta::transform<ParamList, Optionalize>>;
+  using Values = TuplizeT<meta::transform<ParamList, Optionalize>>;
 
   /**
    * convert an element of the argument array to the appropriate type
