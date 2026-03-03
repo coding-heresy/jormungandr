@@ -133,7 +133,7 @@ class Object : public ObjectDef<Flds...>, public detail::ObjectTag {
 
 public:
   using Fields = typename base::Fields;
-  using adapted_type = jmg::TuplizeT<meta::transform<Fields, Optionalize>>;
+  using adapted_type = jmg::TuplizeT<meta::transform<Fields, OptionalizeT>>;
 
   Object() = default;
   template<typename... Args>

@@ -232,7 +232,7 @@ using OptionalizedFldType =
   Optionalize<typename Fld::type, typename Fld::required>;
 } // namespace detail
 
-using Optionalize = meta::quote_trait<detail::OptionalizedFldType>;
+using OptionalizeT = meta::quote_trait<detail::OptionalizedFldType>;
 
 namespace detail
 {
