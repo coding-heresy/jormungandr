@@ -82,6 +82,10 @@ using MaybeActiveField = FieldDef<Active, "maybe_active", Optional>;
 using ActiveObj = native::Object<ActiveField>;
 using MaybeActiveObj = native::Object<MaybeActiveField>;
 
+using UnionDef = Union<IntFld, StrFld>;
+using UnionFld = FieldDef<UnionDef, "union", Required>;
+using UnionObj = native::Object<DblFld, UnionFld>;
+
 TEST(NativeObjectTests, TestReturnTypes) {
   using TestObject =
     native::Object<IntFld, OptDblFld, StrFld, OptStrFld, SubObjFld,
@@ -189,6 +193,11 @@ TEST(NativeObjectTests, TestGet) {
     const auto val = jmg::try_get<MaybeActiveField>(engaged_obj);
     EXPECT_TRUE(pred(val));
     EXPECT_EQ(Active::kUnknown, *val);
+  }
+  {
+    using RawUnionData = UnionObj::adapted_type;
+    const auto union_obj = UnionObj(RawUnionData(-1.0, {20010911}));
+    EXPECT_TRUE(holds_alternative<int>(jmg::get<UnionFld>(union_obj)));
   }
 }
 
