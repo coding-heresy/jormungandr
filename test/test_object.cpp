@@ -41,7 +41,8 @@
 using namespace jmg;
 using namespace std;
 
-// Some field names
+// TODO(bd) add tests for UnionFieldT?
+
 using TestField = FieldDef<unsigned, "field", Required>;
 using GroupStringField = StringField<"group_string_field", Required>;
 using GroupDblField = FieldDef<double, "group_dbl_field", Required>;

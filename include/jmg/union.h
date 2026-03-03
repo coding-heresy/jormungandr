@@ -31,22 +31,46 @@
  */
 #pragma once
 
+#include <variant>
+
+#include "jmg/field.h"
+#include "jmg/meta.h"
+
 namespace jmg
 {
+
+#if !defined(JMG_USE_BACKWARDS_COMPATIBLE_UNION)
 
 /**
  * class template for a union that allows Jormungandr proxy objects to
  * be retrieved for native objects in a way that is integrated into
  * the get/try_get framework
  *
- * @todo add concepts to constrain the specialization to appropriate
+ * TODO(bd) add concepts to constrain the specialization to appropriate
  * types
+ */
+template<RequiredFieldT... Flds>
+class Union {
+public:
+  using fields = meta::list<Flds...>;
+  using objects = meta::transform<fields, meta::quote<meta::_t>>;
+  using return_type =
+    VariantizeT<meta::transform<DecayAllT<objects>, meta::quote<ReturnTypeForT>>>;
+
+  Union() = delete;
+};
+
+#else
+
+/**
+ * backwards-compatible version of Union that avoids breaking existing
+ * functionality that is in limited use
  */
 template<typename Obj, typename... Ts>
 class Union {
+public:
   using Alternates = meta::list<Ts...>;
 
-public:
   Union() = delete;
   explicit Union(const Obj& obj) : obj_(&obj) {}
 
@@ -61,6 +85,8 @@ private:
   const Obj* obj_;
 };
 
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Union concept
 ////////////////////////////////////////////////////////////////////////////////
@@ -74,4 +100,5 @@ struct IsUnion<Union<T, Ts...>> : std::true_type {};
 
 template<typename T>
 concept UnionT = detail::IsUnion<T>::value;
+
 } // namespace jmg

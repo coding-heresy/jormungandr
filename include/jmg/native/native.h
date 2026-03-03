@@ -36,6 +36,7 @@
 #include "jmg/meta.h"
 #include "jmg/object.h"
 #include "jmg/safe_types.h"
+#include "jmg/union.h"
 
 namespace jmg::native
 {
@@ -119,6 +120,31 @@ constexpr bool isAdaptedObject() {
 template<typename Adapted, typename Arg>
 concept AdaptedObjectT = isAdaptedObject<Adapted, Arg>();
 
+/**
+ * common case of "nativization": "optionalize" the field type
+ */
+template<typename T, TypeFlagT AnyFlag>
+struct Nativize {
+  using type = meta::_t<jmg::detail::Optionalize<T, AnyFlag>>;
+};
+
+/**
+ * specialized case of "nativization" for unions: embed the fields associated
+ * with the union in a std::variant
+ */
+template<UnionT T>
+struct Nativize<T, Required> {
+  using type = VariantizeT<typename T::objects>;
+};
+
+/**
+ * type metafunction that calculates the nativized type associated with a field
+ */
+template<FieldDefT Fld>
+using NativizedFldType = Nativize<typename Fld::type, typename Fld::required>;
+
+using NativizeT = meta::quote_trait<detail::NativizedFldType>;
+
 } // namespace detail
 
 /**
@@ -133,7 +159,8 @@ class Object : public ObjectDef<Flds...>, public detail::ObjectTag {
 
 public:
   using Fields = typename base::Fields;
-  using adapted_type = jmg::TuplizeT<meta::transform<Fields, OptionalizeT>>;
+  using adapted_type =
+    jmg::TuplizeT<meta::transform<Fields, detail::NativizeT>>;
 
   Object() = default;
   template<typename... Args>
@@ -166,9 +193,12 @@ public:
   template<RequiredFieldT Fld>
   decltype(auto) get() const {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
-    using Rslt = ReturnTypeForFieldT<Fld>;
-    if constexpr (ViewableFieldT<Fld>) { return Rslt(std::get<kIdx>(obj_)); }
-    else { return static_cast<Rslt>(std::get<kIdx>(obj_)); }
+    if constexpr (UnionFieldT<Fld>) { return std::get<kIdx>(obj_); }
+    else {
+      using Rslt = ReturnTypeForFieldT<Fld>;
+      if constexpr (ViewableFieldT<Fld>) { return Rslt(std::get<kIdx>(obj_)); }
+      else { return static_cast<Rslt>(std::get<kIdx>(obj_)); }
+    }
   }
 
   /**

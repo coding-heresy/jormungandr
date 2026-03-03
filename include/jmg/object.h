@@ -37,10 +37,12 @@
 
 #include "jmg/field.h"
 #include "jmg/meta.h"
+#include "jmg/union.h"
 
 namespace jmg
 {
 
+// TODO(bd) eliminate field groups?
 ////////////////////////////////////////////////////////////////////////////////
 // declaration of a field group
 ////////////////////////////////////////////////////////////////////////////////
@@ -66,6 +68,16 @@ concept FieldGroupDefT = detail::IsFieldGroupDef<T>::value;
 template<typename T>
 concept FieldOrGroupT = FieldDefT<T> || FieldGroupDefT<T>;
 
+template<typename T>
+concept FieldGroupOrUnionT = FieldDefT<T> || FieldGroupDefT<T> || UnionT<T>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for a field that contains a union
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept UnionFieldT = RequiredFieldT<T> && UnionT<typename T::type>;
+
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains the Fields typelist associated with an
 // Object to contain only fields or field groups
@@ -79,7 +91,9 @@ struct ValidObjectContentCheckUnwrap {
 };
 template<typename... Ts>
 struct ValidObjectContentCheckUnwrap<meta::list<Ts...>> {
-  static inline constexpr bool check() { return (FieldOrGroupT<Ts> || ...); }
+  static inline constexpr bool check() {
+    return (FieldGroupOrUnionT<Ts> || ...);
+  }
 };
 } // namespace detail
 
@@ -125,7 +139,7 @@ struct ObjectTag {};
 
 } // namespace detail
 
-template<FieldOrGroupT... Flds>
+template<FieldGroupOrUnionT... Flds>
 struct ObjectDef : public detail::ObjectTag {
   using Fields = ExpandedFields<meta::list<Flds...>>;
 };

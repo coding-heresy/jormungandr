@@ -35,6 +35,9 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+// TODO(bd) remove this after converting to use new Union style
+#define JMG_USE_BACKWARDS_COMPATIBLE_UNION
+
 #include "jmg/array_proxy.h"
 #include "jmg/object.h"
 #include "jmg/union.h"
