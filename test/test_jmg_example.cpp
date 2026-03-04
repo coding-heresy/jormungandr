@@ -96,12 +96,12 @@ TEST(JmgExampleTests, TestFields) {
 
 TEST(JmgExampleTests, TestObjects) {
   EXPECT_TRUE(ObjectDefT<Person>);
-  EXPECT_TRUE((MemberOfObjectT<FirstName, Person>));
-  EXPECT_TRUE((MemberOfObjectT<LastName, Person>));
-  EXPECT_TRUE((MemberOfObjectT<MiddleName, Person>));
-  EXPECT_TRUE((MemberOfObjectT<PersonAge, Person>));
+  EXPECT_TRUE((ObjectMemberT<FirstName, Person>));
+  EXPECT_TRUE((ObjectMemberT<LastName, Person>));
+  EXPECT_TRUE((ObjectMemberT<MiddleName, Person>));
+  EXPECT_TRUE((ObjectMemberT<PersonAge, Person>));
 
   EXPECT_TRUE(ObjectDefT<Numbers>);
-  EXPECT_TRUE((MemberOfObjectT<Ints, Numbers>));
-  EXPECT_TRUE((MemberOfObjectT<Reals, Numbers>));
+  EXPECT_TRUE((ObjectMemberT<Ints, Numbers>));
+  EXPECT_TRUE((ObjectMemberT<Reals, Numbers>));
 }

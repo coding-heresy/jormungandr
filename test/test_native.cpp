@@ -196,8 +196,11 @@ TEST(NativeObjectTests, TestGet) {
   }
   {
     using RawUnionData = UnionObj::adapted_type;
-    const auto union_obj = UnionObj(RawUnionData(-1.0, {20010911}));
+    auto union_obj = UnionObj(RawUnionData(-1.0, {20010911}));
     EXPECT_TRUE(holds_alternative<int>(jmg::get<UnionFld>(union_obj)));
+
+    jmg::set<UnionFld>(union_obj, "foo"s);
+    EXPECT_TRUE(holds_alternative<string>(jmg::get<UnionFld>(union_obj)));
   }
 }
 
