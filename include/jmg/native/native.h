@@ -134,7 +134,7 @@ struct Nativize {
  */
 template<UnionT T>
 struct Nativize<T, Required> {
-  using type = VariantizeT<typename T::objects>;
+  using type = VariantizeT<typename T::members>;
 };
 
 /**
@@ -231,6 +231,9 @@ public:
     else { return Rslt(std::get<kIdx>(obj_)); }
   }
 
+  ////////////////////
+  // delegates for set() that take arguments by value or const ref
+
   /**
    * delegate for jmg::set() for non-viewable types
    */
@@ -277,6 +280,9 @@ public:
     entry = arg;
   }
 
+  ////////////////////
+  // delegates for set() that take arguments by rvalue ref
+
   /**
    * delegate for jmg::set() for rvalue reference of non-viewable
    * types
@@ -300,6 +306,23 @@ public:
     entry = FldType(arg);
   }
 
+  ////////////////////
+  // delegates for set() that take arguments by "universal" ref
+
+  /**
+   * delegate for jmg::set() for union field
+   */
+  template<UnionFieldT Fld, typename Arg>
+    requires(UnionMemberT<typename Fld::type, DecayT<Arg>>)
+  void set(Arg&& arg) {
+    constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
+    auto& entry = std::get<kIdx>(obj_);
+    entry = std::forward<Arg>(arg);
+  }
+
+  /**
+   * clear the value of a field
+   */
   template<OptionalFieldT Fld>
   void clear() {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();

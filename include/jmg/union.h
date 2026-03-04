@@ -42,9 +42,8 @@ namespace jmg
 #if !defined(JMG_USE_BACKWARDS_COMPATIBLE_UNION)
 
 /**
- * class template for a union that allows Jormungandr proxy objects to
- * be retrieved for native objects in a way that is integrated into
- * the get/try_get framework
+ * class template for a union that allows implementations like protobuf oneof to
+ * be support by JMG get(), try_get() and set()
  *
  * TODO(bd) add concepts to constrain the specialization to appropriate
  * types
@@ -53,9 +52,9 @@ template<RequiredFieldT... Flds>
 class Union {
 public:
   using fields = meta::list<Flds...>;
-  using objects = meta::transform<fields, meta::quote<meta::_t>>;
+  using members = meta::transform<fields, meta::quote<meta::_t>>;
   using return_type =
-    VariantizeT<meta::transform<DecayAllT<objects>, meta::quote<ReturnTypeForT>>>;
+    VariantizeT<meta::transform<DecayAllT<members>, meta::quote<ReturnTypeForT>>>;
 
   Union() = delete;
 };
@@ -100,5 +99,16 @@ struct IsUnion<Union<T, Ts...>> : std::true_type {};
 
 template<typename T>
 concept UnionT = detail::IsUnion<T>::value;
+
+#if !defined(JMG_USE_BACKWARDS_COMPATIBLE_UNION)
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for member of union
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename U, typename T>
+concept UnionMemberT = UnionT<U> && MemberOfListT<T, typename U::members>;
+
+#endif
 
 } // namespace jmg

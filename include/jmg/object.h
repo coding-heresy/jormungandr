@@ -171,7 +171,7 @@ concept ObjectDefT = detail::HasFields<T> && detail::HasValidContent<T>;
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T, typename Obj>
-concept MemberOfObjectT =
+concept ObjectMemberT =
   FieldDefT<T> && ObjectDefT<Obj> && MemberOfListT<T, typename Obj::Fields>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -185,7 +185,7 @@ concept MemberOfObjectT =
  */
 template<RequiredFieldT Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj)
-  requires(MemberOfObjectT<Fld, Obj>)
+  requires(ObjectMemberT<Fld, Obj>)
 {
   return obj.template get<Fld>();
 }
@@ -196,7 +196,7 @@ decltype(auto) get(const Obj& obj)
  */
 template<OptionalFieldT Fld, ObjectDefT Obj>
 decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForFieldT<Fld>> dflt)
-  requires(MemberOfObjectT<Fld, Obj>)
+  requires(ObjectMemberT<Fld, Obj>)
 {
   using Rslt = RemoveOptionalT<ReturnTypeForFieldT<Fld>>;
   auto opt_val = obj.template try_get<Fld>();
@@ -210,7 +210,7 @@ decltype(auto) get(const Obj& obj, RemoveOptionalT<ArgTypeForFieldT<Fld>> dflt)
  */
 template<OptionalFieldT Fld, ObjectDefT Obj>
 decltype(auto) try_get(const Obj& obj)
-  requires(MemberOfObjectT<Fld, Obj>)
+  requires(ObjectMemberT<Fld, Obj>)
 {
   return obj.template try_get<Fld>();
 }
@@ -229,7 +229,7 @@ decltype(auto) try_get(const Obj& obj)
  */
 template<FieldDefT Fld, ObjectDefT Obj>
 void set(Obj& obj, ArgTypeForFieldT<Fld> arg)
-  requires(MemberOfObjectT<Fld, Obj>)
+  requires(ObjectMemberT<Fld, Obj>)
 {
   obj.template set<Fld>(arg);
 }
@@ -240,7 +240,7 @@ void set(Obj& obj, ArgTypeForFieldT<Fld> arg)
  */
 template<ViewableFieldT Fld, ObjectDefT Obj>
 void set(Obj& obj, const typename Fld::type& arg)
-  requires(MemberOfObjectT<Fld, Obj>)
+  requires(ObjectMemberT<Fld, Obj>)
 {
   obj.template set<Fld>(arg);
 }
@@ -251,17 +251,35 @@ void set(Obj& obj, const typename Fld::type& arg)
  */
 template<StringFieldT Fld, ObjectDefT Obj>
 void set(Obj& obj, const char* arg)
-  requires(MemberOfObjectT<Fld, Obj>)
+  requires(ObjectMemberT<Fld, Obj>)
 {
   obj.template set<Fld>(arg);
 }
+
+#if !defined(JMG_USE_BACKWARDS_COMPATIBLE_UNION)
+
+/**
+ * special case of set() for union fields
+ */
+template<UnionFieldT Fld, ObjectDefT Obj, typename Arg>
+void set(Obj& obj, Arg&& arg)
+  requires(ObjectMemberT<Fld, Obj>
+           && UnionMemberT<typename Fld::type, DecayT<Arg>>)
+{
+  obj.template set<Fld>(std::forward<Arg>(arg));
+}
+
+#endif
+
+// TODO(bd) add further specialization of set() for union members that are
+// viewable types?
 
 /**
  * version of set() that will move
  */
 template<FieldDefT Fld, ObjectDefT Obj>
 void set(Obj& obj, typename Fld::type&& arg)
-  requires(MemberOfObjectT<Fld, Obj> && ClassT<typename Fld::type>)
+  requires(ObjectMemberT<Fld, Obj> && ClassT<typename Fld::type>)
 {
   obj.template set<Fld>(std::move(arg));
 }
@@ -275,7 +293,7 @@ void set(Obj& obj, typename Fld::type&& arg)
 
 template<OptionalFieldT Fld, ObjectDefT Obj>
 void clear(Obj& obj)
-  requires(MemberOfObjectT<Fld, Obj>)
+  requires(ObjectMemberT<Fld, Obj>)
 {
   obj.template clear<Fld>();
 }

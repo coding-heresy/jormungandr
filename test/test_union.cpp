@@ -38,18 +38,19 @@
 using namespace jmg;
 using namespace std;
 
-TEST(UnionTests, TestMetafunctions) {
+TEST(UnionTests, TestMetafunctionsAndConcepts) {
   using IntFld = FieldDef<int, "int", Required>;
   using DblFld = FieldDef<double, "dbl", Required>;
 
   using TestUnion = Union<IntFld, DblFld>;
-  using Objects = TestUnion::objects;
+  using Members = TestUnion::members;
   EXPECT_TRUE((
-    SameAsDecayedT<int, decltype(std::get<0>(declval<VariantizeT<Objects>>()))>));
+    SameAsDecayedT<int, decltype(std::get<0>(declval<VariantizeT<Members>>()))>));
   EXPECT_TRUE((SameAsDecayedT<double, decltype(std::get<1>(
-                                        declval<VariantizeT<Objects>>()))>));
-  cout << type_name_for<TestUnion::objects>() << endl;
-  cout << type_name_for<TestUnion::return_type>() << endl;
+                                        declval<VariantizeT<Members>>()))>));
+
+  EXPECT_TRUE((UnionMemberT<TestUnion, int>));
+  EXPECT_FALSE((UnionMemberT<TestUnion, float>));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
