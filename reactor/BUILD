@@ -120,37 +120,6 @@ cc_library(
     srcs = ["simple_tcp_service.cpp"],
     hdrs = ["simple_tcp_service.h"],
     include_prefix = "jmg/reactor",
-    deps = [":reactor"],
-)
-
-####################
-# misc demo programs
-
-cc_binary(
-    name = "lookup_address",
-    srcs = ["misc/lookup_address.cpp"],
     visibility = ["//visibility:public"],
     deps = [":reactor"],
-)
-
-cc_binary(
-    name = "echo_client",
-    srcs = ["misc/echo_client.cpp"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":reactor_based_client",
-        ":simple_tcp_service",
-    ],
-)
-
-cc_binary(
-    name = "echo_server",
-    srcs = ["misc/echo_server.cpp"],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":reactor",
-        ":reactor_based_server",
-        ":simple_tcp_service",
-        "//:jmg_server_main",
-    ],
 )
