@@ -9,7 +9,7 @@ package:
 types:
   - Active:
       type: "enum"
-      underlying_type: u8
+      underlying_type: "u8"
       values:
         - name: "unknown"
           value: 0
@@ -19,13 +19,13 @@ types:
           value: 2
   - StrId:
       type: "str"
-      concept: key
+      concept: "key"
   - IntId:
-      type: u32
-      concept: key
+      type: "u32"
+      concept: "key"
   - ImportantValue:
-      type: u64
-      concept: arithmetic
+      type: "u64"
+      concept: "arithmetic"
 # TODO(bd) support groups?
 #groups:
 objects:

@@ -67,7 +67,7 @@ public:
    * references is very troublesome
    */
   template<RequiredFieldT Fld>
-  typename Fld::type get() const {
+  decltype(auto) get() const {
     using Rslt = typename Fld::type;
     const char* name = Fld::name;
     if constexpr (SafeT<typename Fld::type>) {
