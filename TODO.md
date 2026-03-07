@@ -204,6 +204,9 @@ concepts and type metafunctions:
 ## YAML objects
 
 * Correctly support StringField instead of allowing FieldDef<string...>
+* Support unions?
+  * Tough question: how to figure out what field a union holds
+    * Seems like a job for a fold expression...
 
 # Ongoing/interrupted project notes
 
@@ -217,6 +220,11 @@ coupling between the _field_ and _object_ definitions.
 
 Another alternative would be to break open the serialization encoding
 and tie the _object_ implementation to it, but this seems excessive...
+
+## Test cases for things that should not build
+
+* Unions can be in optional fields, but a union may not **contain** an
+  optional field
 
 ## Misc Standardization
 

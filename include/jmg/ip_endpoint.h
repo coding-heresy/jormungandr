@@ -50,6 +50,7 @@ using IpPort = SafeType<uint16_t, SafeIdType>;
 #else
 JMG_NEW_SAFE_TYPE(IpPort, uint16_t, SafeIdType);
 #endif
+using HostName = SafeId<std::string>;
 
 constexpr auto kAnyIpPort = IpPort(0);
 
