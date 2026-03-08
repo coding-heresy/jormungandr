@@ -1,3 +1,4 @@
+load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 cc_library(
@@ -65,4 +66,9 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [":jmg"],
+)
+
+buildifier(
+    name = "buildifier",
+    exclude_patterns = ["./.git/*"],
 )
