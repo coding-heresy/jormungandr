@@ -11,7 +11,7 @@ def _jmgc_wrapper_gen_impl(ctx):
     tgt_base = src_base.removesuffix(".yaml")
     tgt_hdr = ctx.actions.declare_file("{}.{}.h".format(
         tgt_base,
-        encoding
+        encoding,
     ))
 
     print("generating header file [{}] for encoding [{}]".format(
@@ -28,7 +28,7 @@ def _jmgc_wrapper_gen_impl(ctx):
             ctx.executable._tool.path,
             encoding,
             src_yaml.path,
-            tgt_hdr.path
+            tgt_hdr.path,
         ],
         mnemonic = "JmgcWrapperGen",
         progress_message = "generating %s from %s" % (
@@ -45,7 +45,7 @@ _jmgc_wrapper_gen = rule(
     attrs = {
         "src": attr.label(
             allow_single_file = True,
-            mandatory = True
+            mandatory = True,
         ),
         "encoding": attr.string(
             mandatory = True,
@@ -55,22 +55,21 @@ _jmgc_wrapper_gen = rule(
         "_tool": attr.label(
             default = Label("//jmgc:jmgc"),
             executable = True,
-            cfg = "exec"
+            cfg = "exec",
         ),
     },
 )
 
 # macro for jmgc wrapper generation
 def cc_jmg_library(
-    name,
-    src,
-    encoding,
-    **kwargs
-):
+        name,
+        src,
+        encoding,
+        **kwargs):
     """generate an encoding wrapper from a JMG IDL YAML file"""
-    
+
     gen_target = "{}_gen".format(name)
-    
+
     _jmgc_wrapper_gen(
         name = gen_target,
         src = src,
@@ -108,7 +107,7 @@ def _jmgc_proto_gen_impl(ctx):
         arguments = [
             ctx.executable._tool.path,
             src_yaml.path,
-            tgt_proto.path
+            tgt_proto.path,
         ],
         mnemonic = "JmgcProtoGen",
         progress_message = "generating %s from %s" % (
@@ -125,26 +124,25 @@ _jmgc_proto_gen = rule(
     attrs = {
         "src": attr.label(
             allow_single_file = True,
-            mandatory = True
+            mandatory = True,
         ),
         "_tool": attr.label(
             default = Label("//jmgc:jmgc"),
             executable = True,
-            cfg = "exec"
+            cfg = "exec",
         ),
     },
 )
 
 # macro for jmgc .proto generation
 def proto_jmg_library(
-    name,
-    src,
-    **kwargs
-):
+        name,
+        src,
+        **kwargs):
     """generate a .proto file from a JMG IDL YAML file"""
-    
+
     gen_target = "{}_gen".format(name)
-    
+
     _jmgc_proto_gen(
         name = gen_target,
         src = src,

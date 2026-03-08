@@ -32,9 +32,9 @@ cc_binary(
     srcs = ["echo_server.cpp"],
     visibility = ["//visibility:public"],
     deps = [
-        "//reactor:reactor",
+        "//:jmg_server_main",
+        "//reactor",
         "//reactor:reactor_based_server",
         "//reactor:simple_tcp_service",
-        "//:jmg_server_main",
     ],
 )
