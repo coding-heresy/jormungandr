@@ -36,6 +36,7 @@
 #include <ranges>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "jmg/safe_types.h"
@@ -94,12 +95,12 @@ TEST(GeneralUtilitiesTest, TestStreamOctetOut) {
 }
 
 TEST(GeneralUtilitiesTest, TestUniqers) {
-  Dict<int, double> stuff;
+  unordered_map<int, double> stuff;
   emplace_uniq("stuff"sv, stuff, 1, 42.0);
   emplace_uniq("stuff"sv, stuff, 2, -1.0);
   EXPECT_THROW(emplace_uniq("stuff"sv, stuff, 1, 3.14159), runtime_error);
 
-  Set<int> things;
+  unordered_set<int> things;
   insert_uniq("things"sv, things, 1);
   insert_uniq("things"sv, things, 5);
   EXPECT_THROW(insert_uniq("things"sv, things, 1), runtime_error);

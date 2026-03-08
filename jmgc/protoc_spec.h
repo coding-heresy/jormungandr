@@ -45,7 +45,12 @@ public:
   void emit(std::ostream& strm) const override;
 
 private:
-  static const jmg::Dict<std::string, std::string> kTypeTranslations;
+  using ProtocTypeTranslations =
+    jmg::Dict<std::string,
+              std::string,
+              "translations from JMG IDL type names to protobuf IDL type names",
+              "JMG IDL type">;
+  static const ProtocTypeTranslations kTypeTranslations;
 
   void emitPkg(std::ostream& strm, const jmg::PkgDef& pkg_def) const override;
 

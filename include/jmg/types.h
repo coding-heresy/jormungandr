@@ -36,6 +36,7 @@
 
 #include <ctime>
 
+#include <initializer_list>
 #include <string>
 #include <string_view>
 
@@ -113,17 +114,166 @@ constexpr auto unwrap(const T& wrapped) {
 // TODO(bd) investigate claims that some boost unordered containers
 // are faster than abseil
 
-template<typename... Ts>
-using Dict = absl::flat_hash_map<Ts...>;
+namespace detail
+{
+template<StrLiteral kContainerDescription,
+         StrLiteral kContainerKeyOrElementDescription>
+struct AssocContainerBase {
+  static constexpr auto kDescription = kContainerDescription.value;
+  static constexpr auto kKeyOrElementDescription =
+    kContainerKeyOrElementDescription.value;
+};
 
-template<typename... Ts>
-using OrderedDict = absl::btree_map<Ts...>;
+template<template<typename...> typename Impl,
+         typename KeyType,
+         typename MappedType,
+         StrLiteral kDictDescription,
+         StrLiteral kKeyDescription,
+         typename... Ts>
+struct DictBase : detail::AssocContainerBase<kDictDescription, kKeyDescription>,
+                  Impl<KeyType, MappedType, Ts...> {
+  using Base = AssocContainerBase<kDictDescription, kKeyDescription>;
+  using dict_type = Impl<KeyType, MappedType, Ts...>;
+  using value_type = dict_type::value_type;
+  using Initializer = std::initializer_list<value_type>;
 
-template<typename... Ts>
-using Set = absl::flat_hash_set<Ts...>;
+  DictBase() = default;
+  virtual ~DictBase() = default;
+  JMG_DEFAULT_COPYABLE(DictBase);
+  JMG_DEFAULT_MOVEABLE(DictBase);
+  DictBase(Initializer&& vals) : dict_type(std::forward<Initializer>(vals)) {}
 
-template<typename... Ts>
-using OrderedSet = absl::btree_set<Ts...>;
+  /**
+   * emplace a new item in the dictionary or throw an exception if the key
+   * already exists
+   *
+   * NOTE: Key is left as an explicit type parameter in order to
+   * correctly support transparent hashing of e.g. std::string_view
+   */
+  template<typename... Args>
+  decltype(auto) emplace_uniq(const KeyType& key, Args&&... args) {
+    auto [entry, inserted] =
+      this->try_emplace(key, std::forward<Args>(args)...);
+    JMG_ENFORCE(inserted, "attempted to insert duplicate ",
+                Base::kKeyOrElementDescription, " [", key, "] into ",
+                Base::kDescription);
+    return *entry;
+  }
+
+  /**
+   * return a reference to the item referenced by the
+   * argument key or throw an exception if no such item is present
+   *
+   * NOTE: Key is left as an explicit type parameter in order to
+   * correctly support transparent hashing of e.g. std::string_view
+   */
+  decltype(auto) find_required(const KeyType& key) {
+    const auto entry = this->find(key);
+    JMG_ENFORCE(this->end() != entry, Base::kDescription,
+                " had no value for required ", Base::kKeyOrElementDescription,
+                "[", key, "]");
+    return std::get<1>(*entry);
+  }
+
+  /**
+   * const version of find_required
+   */
+  decltype(auto) find_required(const KeyType& key) const {
+    auto& self = const_cast<DictBase&>(*this);
+    auto& entry = self.find_required(key);
+    using Rslt = DecayT<decltype(entry)>;
+    return (const Rslt&)entry;
+  }
+};
+
+template<template<typename...> typename Impl,
+         typename ElementType,
+         StrLiteral kSetDescription,
+         StrLiteral kElementDescription,
+         typename... Ts>
+struct SetBase
+  : detail::AssocContainerBase<kSetDescription, kElementDescription>,
+    Impl<ElementType, Ts...> {
+  using Base = AssocContainerBase<kSetDescription, kElementDescription>;
+  using set_type = Impl<ElementType, Ts...>;
+  using value_type = set_type::value_type;
+
+  SetBase() = default;
+  virtual ~SetBase() = default;
+  JMG_DEFAULT_COPYABLE(SetBase);
+  JMG_DEFAULT_MOVEABLE(SetBase);
+  SetBase(std::initializer_list<value_type>&& vals)
+    : set_type(std::forward<std::initializer_list<value_type>>(vals)) {}
+
+  /**
+   * emplace a new item in a set or throw an exception if the item already exists
+   *
+   * NOTE: Key is left as an explicit type parameter in order to
+   * correctly support transparent hashing of e.g. std::string_view
+   */
+  template<typename... Vals>
+  decltype(auto) insert_uniq(Vals&&... vals) {
+    const auto [entry, inserted] = this->insert(std::forward<Vals>(vals)...);
+    JMG_ENFORCE(inserted, "attempted to insert duplicate ",
+                Base::kKeyOrElementDescription, " [", vals..., "] into ",
+                Base::kDescription);
+    return *entry;
+  }
+};
+
+} // namespace detail
+
+#define JMG_DEFINE_DICT(dict_name, base_type)                                  \
+  template<typename KeyType, typename MappedType, StrLiteral kDictDescription, \
+           StrLiteral kKeyDescription, typename... Ts>                         \
+  struct dict_name                                                             \
+    : detail::DictBase<base_type, KeyType, MappedType, kDictDescription,       \
+                       kKeyDescription, Ts...> {                               \
+    using Base = detail::DictBase<base_type,                                   \
+                                  KeyType,                                     \
+                                  MappedType,                                  \
+                                  kDictDescription,                            \
+                                  kKeyDescription,                             \
+                                  Ts...>;                                      \
+    using value_type = Base::value_type;                                       \
+    dict_name() = default;                                                     \
+    virtual ~dict_name() = default;                                            \
+    JMG_DEFAULT_COPYABLE(dict_name);                                           \
+    JMG_DEFAULT_MOVEABLE(dict_name);                                           \
+    dict_name(std::initializer_list<value_type>&& vals)                        \
+      : Base(std::forward<std::initializer_list<value_type>>(vals)) {}         \
+  }
+
+JMG_DEFINE_DICT(Dict, absl::flat_hash_map);
+
+JMG_DEFINE_DICT(OrderedDict, absl::btree_map);
+
+#undef JMG_DEFINE_DICT
+
+#define JMG_DEFINE_SET(set_name, base_type)                                  \
+  template<typename ElementType, StrLiteral kSetDescription,                 \
+           StrLiteral kElementDescription, typename... Ts>                   \
+  struct set_name : detail::SetBase<base_type, ElementType, kSetDescription, \
+                                    kElementDescription, Ts...> {            \
+    using Base = detail::SetBase<base_type,                                  \
+                                 ElementType,                                \
+                                 kSetDescription,                            \
+                                 kElementDescription,                        \
+                                 Ts...>;                                     \
+    using value_type = Base::value_type;                                     \
+    set_name() = default;                                                    \
+    virtual ~set_name() = default;                                           \
+    JMG_DEFAULT_COPYABLE(set_name);                                          \
+    JMG_DEFAULT_MOVEABLE(set_name);                                          \
+    set_name(std::initializer_list<value_type>&& vals)                       \
+      : Base(std::forward<std::initializer_list<value_type>>(vals)) {}       \
+  }
+
+JMG_DEFINE_SET(Set, absl::flat_hash_set);
+
+JMG_DEFINE_SET(OrderedSet, absl::btree_set);
+
+#undef JMG_DEFINE_SET
 
 ////////////////////////////////////////////////////////////////////////////////
 // time point/duration/zone

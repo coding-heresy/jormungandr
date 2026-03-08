@@ -119,3 +119,19 @@ TEST(TypesTest, TestDescriptorTypes) {
   EXPECT_TRUE(WritableDescriptorT<EventFd>);
   EXPECT_TRUE(WritableDescriptorT<PipeWriteFd>);
 }
+
+TEST(TypesTest, TestUniqers) {
+  Dict<int, double, "stuff container", "stuff ID"> stuff;
+  stuff.emplace_uniq(1, 42.0);
+  stuff.emplace_uniq(2, -1.0);
+  EXPECT_THROW(stuff.emplace_uniq(1, 3.14159), runtime_error);
+
+  Set<int, "IDs", "ID"> ids;
+  ids.insert_uniq(1);
+  ids.insert_uniq(5);
+  EXPECT_THROW(ids.insert_uniq(1), runtime_error);
+
+  EXPECT_DOUBLE_EQ(42.0, stuff.find_required(1));
+  EXPECT_DOUBLE_EQ(-1.0, stuff.find_required(2));
+  EXPECT_THROW(stuff.find_required(3), runtime_error);
+}

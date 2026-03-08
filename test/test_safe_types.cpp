@@ -135,7 +135,7 @@ TEST(SafeTypesTests, TestIdsAreComparable) {
     EXPECT_TRUE(inserted);                                                \
     EXPECT_TRUE(itr != dict.end());                                       \
     EXPECT_FALSE(dict.empty());                                           \
-    EXPECT_EQ(dict.count(key), 1);                                        \
+    EXPECT_TRUE(dict.contains(key));                                      \
     EXPECT_EQ(dict.at(key), value);                                       \
   } while (0)
 

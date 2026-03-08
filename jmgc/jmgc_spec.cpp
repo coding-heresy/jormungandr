@@ -55,7 +55,9 @@ namespace
 const auto kKeyConcept = "key"s;
 const auto kArithmeticConcept = "arithmetic"s;
 
-const auto kConceptTranslations = Dict<string, string>{
+using ConceptTranslations =
+  Dict<string, string, "JMG IDL concept", "strong type library concept">;
+const auto kConceptTranslations = ConceptTranslations{
   {kKeyConcept,
    ",\n  st::equality_comparable,\n  st::hashable,\n  st::orderable\n"s},
   {kArithmeticConcept, ", st::arithmetic"s}};
@@ -64,12 +66,20 @@ const auto kConceptTranslations = Dict<string, string>{
 
 namespace jmgc
 {
-const jmg::Dict<string, string> JmgYamlSpec::kPrimitiveTypeTranslations = {
-  {"bool"s, "bool"s},   {"dbl"s, "double"s},      {"flt"s, "float"s},
-  {"i8"s, "int8_t"s},   {"i16"s, "int16_t"s},     {"i32"s, "int32_t"s},
-  {"i64"s, "int64_t"s}, {"str"s, "std::string"s}, {"timepoint"s, "TimePoint"s},
-  {"u8"s, "uint8_t"s},  {"u16"s, "uint16_t"s},    {"u32"s, "uint32_t"s},
-  {"u64"s, "uint64_t"s}};
+using PrimitiveTypeTranslations =
+  Dict<string,
+       string,
+       "translations from JMG IDL primitive types to C++ types",
+       "JMG IDL primitive type">;
+const JmgYamlSpec::PrimitiveTypeTranslations
+  JmgYamlSpec::kPrimitiveTypeTranslations = {
+    {"bool"s, "bool"s},           {"dbl"s, "double"s},
+    {"flt"s, "float"s},           {"i8"s, "int8_t"s},
+    {"i16"s, "int16_t"s},         {"i32"s, "int32_t"s},
+    {"i64"s, "int64_t"s},         {"str"s, "std::string"s},
+    {"timepoint"s, "TimePoint"s}, {"u8"s, "uint8_t"s},
+    {"u16"s, "uint16_t"s},        {"u32"s, "uint32_t"s},
+    {"u64"s, "uint64_t"s}};
 
 /**
  * translate the JMG IDL type name to the correct C++ type
@@ -106,7 +116,7 @@ void JmgYamlSpec::processType(const Node& jmg_type) {
   }
 
   // update symbol table and internal data structure
-  insert_uniq("known type name", type_names_, type_name);
+  type_names_.insert_uniq(type_name);
   types_.emplace_back(std::move(type_def));
 }
 
@@ -123,16 +133,16 @@ void JmgYamlSpec::processObjFld(const string_view obj_name,
 
   // lookup the entry for the object
   auto& flds = [&]() -> JmgObjGrpFlds& {
-    auto entry = obj_dict_.find(obj_name);
-    if (obj_dict_.end() == entry) {
+    auto entry = declared_objs_.find(obj_name);
+    if (declared_objs_.end() == entry) {
       // add new entry for this object
-      JmgObjGrpFlds new_flds;
-      entry = emplace_uniq("object dictionary", obj_dict_, string(obj_name),
-                           new_flds);
+      auto& new_entry =
+        declared_objs_.emplace_uniq(string(obj_name), JmgObjGrpFlds());
       obj_names_.push_back(string(obj_name));
 
       // add this object to the list of known types
-      insert_uniq("known type name", type_names_, string(obj_name));
+      type_names_.insert_uniq(string(obj_name));
+      return value_of(new_entry);
     }
     return value_of(*entry);
   }();
@@ -171,11 +181,11 @@ void JmgYamlSpec::emit(ostream& strm) const {
   // declared out of order?
 
   // emit all objects in the order in which they occur in the input
-  Set<string> fld_names;
+  using FldNames = Set<string, "field names", "field name">;
+  FldNames fld_names;
   for (const auto& obj_name : obj_names_) {
     // emit all fields of the object
-    const auto& flds =
-      find_required(obj_dict_, obj_name, "defined objects", "object name");
+    const auto& flds = declared_objs_.find_required(obj_name);
     for (const auto& fld : flds) {
       const auto& fld_name = jmg::get<Name>(*fld);
       const auto [_, inserted] = fld_names.insert(fld_name);
@@ -279,8 +289,7 @@ void JmgYamlSpec::emitSafeType(ostream& strm,
   strm << translateType(inner_type);
   if (safe_concept) {
     // TODO(bd) should not need to convert deref'd safe_concept to string here
-    strm << find_required(kConceptTranslations, string(*safe_concept),
-                          "safe-type concepts"sv, "concept"sv);
+    strm << kConceptTranslations.find_required(string(*safe_concept));
   }
 #if defined(JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS)
   strm << ">;\n";

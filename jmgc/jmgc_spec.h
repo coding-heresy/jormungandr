@@ -156,7 +156,20 @@ protected:
   static constexpr auto kArray = std::string_view("array");
   static constexpr auto kUnion = std::string_view("union");
 
-  static const jmg::Dict<std::string, std::string> kPrimitiveTypeTranslations;
+  using TypeNames = jmg::Set<std::string, "declared type names", "type name">;
+  using PrimitiveTypeTranslations =
+    jmg::Dict<std::string,
+              std::string,
+              "primitive type translations",
+              "JMG IDL primitive type specifier">;
+  using DeclaredFields =
+    jmg::Dict<std::string, JmgObjGrpFldPtr, "declared fields", "field name">;
+  using DeclaredObjects =
+    jmg::Dict<std::string, JmgObjGrpFlds, "declared objects", "object name">;
+  using ExtraTranslations =
+    jmg::Dict<std::string, std::string, "extra type translations", "declared type">;
+
+  static const PrimitiveTypeTranslations kPrimitiveTypeTranslations;
 
   bool isPrimitiveTypeValid(std::string_view type_name);
 
@@ -206,12 +219,12 @@ protected:
   virtual std::string_view translateType(std::string_view jmg_idl_type) const;
 
   std::unique_ptr<jmg::PkgDef> pkg_;
-  jmg::Set<std::string> type_names_;
+  TypeNames type_names_;
   std::vector<jmg::TypeDef> types_;
   std::vector<std::string> obj_names_;
-  jmg::Dict<std::string, JmgObjGrpFldPtr> flds_dict_;
-  jmg::Dict<std::string, JmgObjGrpFlds> obj_dict_;
-  mutable jmg::Dict<std::string, std::string> extraTranslations_;
+  DeclaredFields flds_dict_;
+  DeclaredObjects declared_objs_;
+  mutable ExtraTranslations extraTranslations_;
 };
 
 /**

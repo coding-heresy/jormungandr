@@ -67,8 +67,7 @@ void ProtoYamlSpec::emitEnum(ostream& strm,
                              const jmg::Enumerations& enumerations) const {
   // don't emit the enum, which should come from the .proto declaration;
   // instead, add the enriched name to the extra translations
-  emplace_uniq("extra type translations"sv, extraTranslations_, string(name),
-               str_cat(proto_ns, "::", name));
+  extraTranslations_.emplace_uniq(string(name), str_cat(proto_ns, "::", name));
 }
 
 void ProtoYamlSpec::enrichFld(ostream& strm, const ObjGrpFld& fld_def) const {
@@ -112,8 +111,7 @@ void ProtoYamlSpec::emitObj(ostream& strm,
 
   // add translation from protobuf generated class name to the JMG object that
   // wraps it
-  emplace_uniq("extra type translations"sv, extraTranslations_, string(name),
-               str_cat(name, "Obj"));
+  extraTranslations_.emplace_uniq(string(name), str_cat(name, "Obj"));
 }
 
 } // namespace jmgc
