@@ -191,15 +191,15 @@ public:
    * process all entries in the 'messages' element
    */
   void processMsgs(const auto& msgsElement) {
-    Set<string> names;
+    using Names = Set<string, "names", "name">;
+    Names names;
     for (const auto& msg :
          jmg::get<FixDefinition>(msgsElement).template as<FixMsgDefs>()) {
       const auto& tag = jmg::get<ptree::xml::ElementTag>(msg);
       JMG_ENFORCE(kFixMsg == tag, "unexpected XML tag [", tag,
                   "] on element in [messages] section");
       const auto& name = jmg::get<FixMsgName>(msg);
-      const auto [_, inserted] = names.insert(name);
-      JMG_ENFORCE(inserted, "encountered duplicate message name [", name, "]");
+      names.insert_uniq(name);
       msgs_.push_back(processFieldDeclarations(name, jmg::get<MsgFields>(msg)));
     }
   }
@@ -212,7 +212,7 @@ public:
                    const auto& enumValues) {
     char delim = '\'';
     EnumType enumType = EnumType::kInt;
-    if (kCharFieldTypes_.count(fieldType)) {
+    if (kCharFieldTypes_.contains(fieldType)) {
       if (("STRING" == fieldType) && (enumValues.size() > 1)
           && (enumValues.end()
               != ranges::find_if(enumValues, [&](const auto& enumVal) {
@@ -228,10 +228,9 @@ public:
                   "] associated with field [", fieldName,
                   "] that is an enumeration");
     }
-    auto [entry, inserted] = enums_.insert({fieldName, {}});
-    JMG_ENFORCE(inserted, "duplicate enumerations for field [", fieldName, "]");
-    std::get<0>(value_of(*entry)) = enumType;
-    auto& values = std::get<1>(value_of(*entry));
+    auto& [_, spec] = enums_.emplace_uniq(fieldName, EnumSpec());
+    std::get<EnumType>(spec) = enumType;
+    auto& values = std::get<FieldEnumerations>(spec);
     for (const auto& enumVal : enumValues) {
       const auto& tag = jmg::get<ptree::xml::ElementTag>(enumVal);
       JMG_ENFORCE(kEnumValue == tag, "unexpected XML tag [", tag,
@@ -269,6 +268,8 @@ public:
       string effectiveType = fieldType;
       const auto enumValues = jmg::try_get<FixFieldEnums>(field);
       if (enumValues) { processEnum(fieldName, fieldType, *enumValues); }
+      // NOTE: intentionally not using emplace_uniq here in order to get an
+      // error message with more context
       auto [_, inserted] =
         fields_.try_emplace(fieldName,
                             FieldSpec{.tag = static_cast<unsigned>(fixTag),
@@ -377,8 +378,23 @@ private:
     string value;
     string name;
   };
+  using FieldEnumerations = vector<FieldEnumeration>;
   enum class EnumType : uint8_t { kChar, kString, kInt };
-  using EnumSpec = tuple<EnumType, vector<FieldEnumeration>>;
+  using EnumSpec = tuple<EnumType, FieldEnumerations>;
+
+  using TypeTranslations =
+    Dict<string,
+         string,
+         "translations from QuickFIX type names to C++ types",
+         "QuickFIX type">;
+  using CharFieldTypes =
+    Set<string, "character field type names", "character field type">;
+  using FldSpecs = Dict<string,
+                        FieldSpec,
+                        "mapping from FIX field name to field spec",
+                        "field name">;
+  using EnumSpecs =
+    Dict<string, EnumSpec, "mapping from enum name to enum spec", "enum name">;
 
   auto processFieldDeclarations(const string_view name, const auto& fields) {
     Msg msg;
@@ -403,17 +419,14 @@ private:
     cout << "struct " << fld.name << " : ";
 
     // look up field spec using name
-    const auto& spec =
-      find_required(fields_, fld.name, "FIX field names"sv, "field name"sv);
+    const auto& spec = fields_.find_required(fld.name);
 
     // look up the field type using the name
     const auto enumEntry = enums_.find(fld.name);
     if (enums_.end() == enumEntry) {
       // values for this field come from a standard type and not an
       // enumeration
-      const auto& protocol_type =
-        find_required(kTypeTranslation_, spec.type, "FIX protocol types"sv,
-                      "protocol type"sv);
+      const auto& protocol_type = kTypeTranslation_.find_required(spec.type);
 
       // emit the field type
       if ("std::string"s == protocol_type) {
@@ -486,19 +499,19 @@ private:
 
   // translation from type string in the XML declaration to the
   // appropriate C++ type
-  static const Dict<string, string> kTypeTranslation_;
-  // set of types for that are represented by strings or single
+  static const TypeTranslations kTypeTranslation_;
+  // set of names for fields that are represented by strings or single
   // characters
-  static const Set<string> kCharFieldTypes_;
+  static const CharFieldTypes kCharFieldTypes_;
 
   Msg header_;
   Msg trailer_;
-  Dict<string, FieldSpec> fields_;
-  Dict<string, EnumSpec> enums_;
+  FldSpecs fields_;
+  EnumSpecs enums_;
   vector<Msg> msgs_;
 };
 
-const Dict<string, string> AllFixDefs::kTypeTranslation_ = {
+const AllFixDefs::TypeTranslations AllFixDefs::kTypeTranslation_ = {
   {"STRING", "std::string"},
   {"CHAR", "char"},
   {"BOOLEAN", "bool"},
@@ -526,8 +539,8 @@ const Dict<string, string> AllFixDefs::kTypeTranslation_ = {
   // TODO use some sort of raw byte buffer type for this
   {"DATA", "std::string"}};
 
-const Set<string> AllFixDefs::kCharFieldTypes_ = {"CHAR", "STRING", "BOOLEAN",
-                                                  "MULTIPLEVALUESTRING"};
+const AllFixDefs::CharFieldTypes AllFixDefs::kCharFieldTypes_ = {
+  "CHAR", "STRING", "BOOLEAN", "MULTIPLEVALUESTRING"};
 
 void process(const string_view filePath) {
   const auto data = loadXmlData(filePath, "quickfix"sv);

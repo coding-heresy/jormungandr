@@ -118,9 +118,9 @@ concept OptionalFixFieldT = OptionalFieldT<T> && FixTagT<T>;
 template<jmg::FieldOrGroupT... Flds>
 class Object : public ObjectDef<Flds...>, public detail::ObjectTag {
 public:
+  using LengthFields = Dict<unsigned, unsigned, "lengths by tag", "FIX tag">;
   Object() = delete;
-  Object(const std::string_view msg,
-         const Dict<unsigned, unsigned>& length_fields) {
+  Object(const std::string_view msg, const LengthFields& length_fields) {
     using namespace std::string_view_literals;
 
     constexpr std::string_view kFieldDelim = "";
@@ -159,8 +159,7 @@ public:
       }
 
       // store the data in the dictionary
-      emplace_uniq("message tag"sv, fields_, tag,
-                   msg.substr(pos + 1, stop - pos - 1));
+      fields_.emplace_uniq(tag, msg.substr(pos + 1, stop - pos - 1));
 
       if (msg.size() == stop) {
         // last character of the message should be a field delimiter
@@ -182,13 +181,9 @@ public:
   typename Fld::type get() const {
     using namespace std::string_view_literals;
     using Type = typename Fld::type;
-    const auto& str =
-      find_required(fields_, Fld::kFixTag, "FIX fields"sv, "FIX tag"sv);
+    const auto& str = fields_.find_required(Fld::kFixTag);
     if constexpr (std::same_as<Type, std::string>) { return std::string(str); }
-    else {
-      Type val = from(str);
-      return val;
-    }
+    else { return static_cast<Type>(from(str)); }
   }
 
   /**
@@ -227,7 +222,8 @@ public:
   }
 
 private:
-  Dict<uint32_t, std::string> fields_;
+  using FixFields = Dict<uint32_t, std::string, "FIX field values", "FIX tag">;
+  FixFields fields_;
 };
 #endif
 

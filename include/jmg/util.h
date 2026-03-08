@@ -202,6 +202,9 @@ decltype(auto) insert_uniq(std::string_view description,
 /**
  * return a reference to the dictionary item referenced by the
  * argument key or throw an exception if no such item is present
+ *
+ * NOTE: Key is left as an explicit type parameter in order to
+ * correctly support transparent hashing of e.g. std::string_view
  */
 template<typename DictContainer>
 decltype(auto) find_required(DictContainer& dict,

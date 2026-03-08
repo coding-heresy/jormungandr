@@ -99,18 +99,25 @@ using Spec = yaml::Object<Package, Types, Groups, Objects>;
 // constants
 ////////////////////////////////////////////////////////////////////////////////
 
-const Set<string> primitive_types = {"bool"s,     "array"s, //
-                                     "double"s,   "float"s, //
-                                     "int8_t"s,   "int16_t"s,
-                                     "int32_t"s,  "int64_t"s, //
-                                     "uint8_t"s,  "uint16_t"s,
-                                     "uint32_t"s, "uint64_t"s, //
-                                     "string"s};
+using PrimitiveTypes = Set<string, "JMG IDL primitive types", "JMG IDL type">;
+using AllowedEnumUlTypes =
+  Set<string,
+      "C++ types that are permitted to be underlying types of enums",
+      "C++ type">;
+using AllowedConcepts = Set<string, "allowed type concepts", "type concept">;
 
-const Set<string> allowed_enum_ul_types = {"uint8_t"s, "uint16_t"s, "uint32_t"s,
-                                           "uint64_t"s};
+const PrimitiveTypes primitive_types = {"bool"s,     "array"s,    //
+                                        "double"s,   "float"s,    //
+                                        "int8_t"s,   "int16_t"s,  //
+                                        "int32_t"s,  "int64_t"s,  //
+                                        "uint8_t"s,  "uint16_t"s, //
+                                        "uint32_t"s, "uint64_t"s, //
+                                        "string"s};
 
-const Set<string> allowed_concepts = {"aritmetic"s, "key"s};
+const AllowedEnumUlTypes allowed_enum_ul_types = {"uint8_t"s, "uint16_t"s,
+                                                  "uint32_t"s, "uint64_t"s};
+
+const AllowedConcepts allowed_concepts = {"aritmetic"s, "key"s};
 
 /**
  * corrections that may be applied to convert the string values of types
@@ -299,8 +306,6 @@ class AllJmgDefs {
     typename EncodingPolicy::FieldData extra_data;
   };
 
-  using StringLists = Dict<string, vector<string>>;
-
 public:
   AllJmgDefs(const Spec& spec) {
     const auto& pkg = get<Package>(spec);
@@ -321,7 +326,7 @@ public:
           types_.push_back(make_tuple(def_name,
                                       StrongAlias(correctedTypeName(type_name),
                                                   *cncpt)));
-          insert_uniq("known types", known_types_, def_name);
+          known_types_.insert_uniq(def_name);
         }
         else if (kEnum == type_name) {
           const auto& enumerations = try_get<EnumValues>(def);
@@ -349,7 +354,7 @@ public:
           enums_.push_back(make_tuple(def_name,
                                       DefEnum{.ul_type = ul_type,
                                               .values = std::move(def_values)}));
-          insert_uniq("enumerations", known_enums_, def_name);
+          known_enums_.insert_uniq(def_name);
         }
         else if (kArray == type_name) {
           // TODO(bd) support array aliases?
@@ -367,11 +372,12 @@ public:
     // process groups
     const auto groups = try_get<Groups>(spec);
     if (groups.has_value()) {
-      groups_ = processGroupsOrObjects("groups", *groups);
+      groups_group_flds_ = processGroupsOrObjects<GroupFlds>("groups", *groups);
     }
 
     // process objects
-    objects_ = processGroupsOrObjects("objects", jmg::get<Objects>(spec));
+    obj_flds_ =
+      processGroupsOrObjects<ObjFlds>("objects", jmg::get<Objects>(spec));
   }
 
   void emit() const {
@@ -403,14 +409,14 @@ public:
 
     // emit groups
     cout << "////////////////////\n// groups\n\n";
-    for (const auto& [name, fields] : groups_) {
+    for (const auto& [name, fields] : groups_group_flds_) {
       cout << "using " << name << " = jmg::FieldGroupDef<"
            << str_join(fields, ", ") << ">;\n\n";
     }
 
     // emit objects
     cout << "////////////////////\n// objects\n\n";
-    for (const auto& [name, fields] : objects_) {
+    for (const auto& [name, fields] : obj_flds_) {
       cout << "using " << name << " = jmg::" << kNamespace << "::Object<"
            << str_join(fields, ", ") << ">;\n\n";
     }
@@ -419,6 +425,21 @@ public:
   }
 
 private:
+  using GroupFlds = Dict<string,
+                         vector<string>,
+                         "mapping of group names to fields in the group",
+                         "group name">;
+  using ObjFlds = Dict<string,
+                       vector<string>,
+                       "mapping of object names to fields in the object",
+                       "object name">;
+  using FldsIdx = Dict<string,
+                       size_t,
+                       "mapping of field names to field array indices",
+                       "field name">;
+  using KnownTypes = Set<string, "known types", "type name">;
+  using KnownEnums = Set<string, "known enums", "enum name">;
+
   ////////////////////////////////////////////////////////////////////////////////
   // member functions
   ////////////////////////////////////////////////////////////////////////////////
@@ -501,13 +522,14 @@ private:
   /**
    * verify that a type or subtype of a field was previously declared
    */
+  template<typename StringLists>
   void verifyFieldType(const string_view fld_name,
                        const string_view fld_type,
                        StringLists internally_declared) {
     JMG_ENFORCE((primitive_types.contains(fld_type)
                  || known_types_.contains(fld_type)
                  || known_enums_.contains(fld_type)
-                 || objects_.contains(fld_type)
+                 || obj_flds_.contains(fld_type)
                  || internally_declared.contains(fld_type)),
                 "field [", fld_name, "] has type (or subtype) [", fld_type,
                 "] that was not previously declared");
@@ -518,9 +540,10 @@ private:
    *
    * NOTE: the format is the same for both
    */
-  StringLists processGroupsOrObjects(const string_view description,
-                                     const yaml::Array<ObjGrp>& spec) {
-    StringLists rslt;
+  template<typename Rslt>
+  Rslt processGroupsOrObjects(const string_view description,
+                              const yaml::Array<ObjGrp>& spec) {
+    Rslt rslt;
     for (const auto& sub_spec : spec) {
       const auto spec_name = get<Name>(sub_spec);
       const auto& spec_fields = get<ObjGrpFields>(sub_spec);
@@ -536,8 +559,8 @@ private:
         const bool required =
           field_required.has_value() ? *field_required : true;
         // check if the field already exists
-        const auto& entry = fields_indices_.find(field_name);
-        if (entry != fields_indices_.end()) {
+        const auto& entry = flds_idx_.find(field_name);
+        if (entry != flds_idx_.end()) {
           // verify that the details match the existing field
           const auto& def = value_of(fields_.at(value_of(*entry)));
           verifyField(field_name, field_type, field_sub_type, required, def);
@@ -555,11 +578,11 @@ private:
                                                 .sub_type_name = field_sub_type,
                                                 .required = required,
                                                 .extra_data = extra_data}));
-          emplace_uniq("fields", fields_indices_, field_name, idx);
+          flds_idx_.emplace_uniq(field_name, idx);
         }
         fields.push_back(std::move(field_name));
       }
-      emplace_uniq(description, rslt, spec_name, std::move(fields));
+      rslt.emplace_uniq(spec_name, std::move(fields));
     }
     return rslt;
   }
@@ -583,18 +606,18 @@ private:
 
   // types
   vector<tuple<string, StrongAlias>> types_;
-  Set<string> known_types_;
+  KnownTypes known_types_;
 
   // enums
   vector<tuple<string, DefEnum>> enums_;
-  Set<string> known_enums_;
+  KnownEnums known_enums_;
 
   // fields
   vector<tuple<string, DefField>> fields_;
-  Dict<string, size_t> fields_indices_;
+  FldsIdx flds_idx_;
 
-  StringLists groups_;
-  StringLists objects_;
+  GroupFlds groups_group_flds_;
+  ObjFlds obj_flds_;
 };
 
 namespace

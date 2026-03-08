@@ -64,8 +64,7 @@ void ProtocYamlSpec::emit(ostream& strm) const {
 
   // emit all objects in the order in which they were encountered
   for (const auto& obj_name : obj_names_) {
-    const auto& flds =
-      find_required(obj_dict_, obj_name, "defined objects", "object name");
+    const auto& flds = declared_objs_.find_required(obj_name);
     emitObj(strm, obj_name, flds);
   }
 }
@@ -153,16 +152,16 @@ void ProtocYamlSpec::emitObj(ostream& strm,
   strm << "}\n\n";
 }
 
-const Dict<string, string> ProtocYamlSpec::kTypeTranslations = {
-  {"bool"s, "bool"s},
-  {"dbl"s, "double"s},
-  {"flt"s, "float"s},
-  {"i32"s, "sint32"s},
-  {"i64"s, "sint64"s},
-  {"str"s, "string"s},
-  {"timepoint"s, "google.protobuf.Timestamp"s},
-  {"u32"s, "uint32"s},
-  {"u64"s, "uint64"s}};
+const ProtocYamlSpec::ProtocTypeTranslations ProtocYamlSpec::kTypeTranslations =
+  {{"bool"s, "bool"s},
+   {"dbl"s, "double"s},
+   {"flt"s, "float"s},
+   {"i32"s, "sint32"s},
+   {"i64"s, "sint64"s},
+   {"str"s, "string"s},
+   {"timepoint"s, "google.protobuf.Timestamp"s},
+   {"u32"s, "uint32"s},
+   {"u64"s, "uint64"s}};
 
 /**
  * translate the JMG IDL type name to the correct protobuf IDL type
