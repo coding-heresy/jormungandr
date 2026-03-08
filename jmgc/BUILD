@@ -68,8 +68,8 @@ proto_jmg_library(
 # c++ bindings for .proto
 cc_proto_library(
     name = "test_jmgc_proto_cc",
-    deps = [":test_jmgc_src_proto"],
     visibility = ["//visibility:private"],
+    deps = [":test_jmgc_src_proto"],
 )
 
 # c++ JMG wrapper from IDL spec
@@ -84,13 +84,13 @@ cc_test(
     name = "test_jmgc_proto",
     size = "small",
     srcs = ["test_jmgc_any.cpp"],
-    visibility = ["//visibility:public"],
     defines = ["TEST_PROTOBUF"],
+    visibility = ["//visibility:public"],
     deps = [
-        "@com_google_googletest//:gtest_main",
-        "//:jmg",
         ":test_jmgc_proto_cc",
         ":test_jmgc_proto_wrap_cc",
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
     ],
 )
 
