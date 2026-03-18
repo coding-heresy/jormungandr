@@ -159,6 +159,7 @@ concept NonBoolT = !SameAsDecayedT<bool, T>;
 
 namespace detail
 {
+// NOTE: this is required due to limitations of TemplateSpecializationOfT
 template<typename T>
 struct IsSpanT : std::false_type {};
 template<typename T>
