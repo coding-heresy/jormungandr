@@ -112,6 +112,7 @@ TEST(MetaprogrammingTests, TestSpanAndVectorAndArrayConcepts) {
   EXPECT_FALSE(VectorT<span<int>>);
   EXPECT_FALSE(SpanT<vector<int>>);
   EXPECT_TRUE(SpanT<span<int>>);
+  EXPECT_TRUE(SpanT<span<const double>>);
   array<float, 5> floats;
   EXPECT_TRUE(ArrayT<decltype(floats)>);
   const auto floats_span = span(floats);

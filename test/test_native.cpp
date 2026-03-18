@@ -292,6 +292,11 @@ TEST(NativeObjectTests, TestSet) {
   jmg::set<StrFld>(obj, blob);
   EXPECT_EQ(jmg::get<StrFld>(obj), "blob"sv);
 
+  // string_view from variable works for required string field
+  const auto bloat = "bloat"sv;
+  jmg::set<StrFld>(obj, bloat);
+  EXPECT_EQ(jmg::get<StrFld>(obj), "bloat"sv);
+
   // raw string works for optional string field
   jmg::set<OptStrFld>(obj, "something");
   VALIDATE_TRY_GET_OPTIONAL(OptStrFld, obj, "something"sv);
