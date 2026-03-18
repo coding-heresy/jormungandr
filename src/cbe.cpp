@@ -387,11 +387,16 @@ template<typename T>
 size_t encodePrimitive(BufferProxy tgt, T src) {
   if constexpr (IntegralT<T>) { return encodeInt(tgt, src); }
   else if constexpr (FloatingPointT<T>) { return encodeFlt(tgt, src); }
-  else if constexpr (NonViewStringT<T>) {
-    return encodePrimitive(tgt, string_view(src));
-  }
   else if constexpr (SameAsDecayedT<std::string_view, T>) {
     return encodeStr(tgt, src);
+  }
+  else if constexpr (NonViewStringT<T> && !SpanT<T>) {
+    return encodeStr(tgt, string_view(src));
+  }
+  else if constexpr (SpanT<T>
+                     && SameAsDecayedT<uint8_t, typename T::value_type>) {
+    return encodeStr(tgt, string(reinterpret_cast<const char*>(src.data()),
+                                 src.size()));
   }
   else { JMG_NOT_EXHAUSTIVE(T); }
 }
@@ -425,6 +430,8 @@ std::tuple<T, size_t> decodePrimitive(BufferView src) {
   template size_t detail::encodePrimitive<type>(BufferProxy, type); \
   template tuple<type, size_t> detail::decodePrimitive<type>(BufferView)
 
+INSTANTIATE(int8_t);
+INSTANTIATE(uint8_t);
 INSTANTIATE(int16_t);
 INSTANTIATE(uint16_t);
 INSTANTIATE(int32_t);
