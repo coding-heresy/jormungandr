@@ -59,7 +59,7 @@ constexpr auto kDfltPort = jmg::IpPort(8888);
 namespace jmg
 {
 
-class ReactorBasedEchoClient : public ReactorBasedClient {
+class SimpleTcpEchoClient : public ReactorBasedClient {
   // command line argument
   using HostName =
     cmdline::NamedStringParam<"host",
@@ -72,8 +72,8 @@ class ReactorBasedEchoClient : public ReactorBasedClient {
   using CmdLine = cmdline::CmdLineArgs<HostName, Port>;
 
 public:
-  ReactorBasedEchoClient() = default;
-  virtual ~ReactorBasedEchoClient() = default;
+  SimpleTcpEchoClient() = default;
+  virtual ~SimpleTcpEchoClient() = default;
 
   void processArguments(const int argc, const char** argv) override {
     const auto cmdline = CmdLine(argc, argv);
@@ -120,6 +120,6 @@ private:
   IpPort port_;
 };
 
-JMG_REGISTER_CLIENT(ReactorBasedEchoClient);
+JMG_REGISTER_CLIENT(SimpleTcpEchoClient);
 
 } // namespace jmg
