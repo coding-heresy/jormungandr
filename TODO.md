@@ -101,6 +101,9 @@ concepts and type metafunctions:
 
 ## All Fields
 
+* Support a bytes/octets field type that is consistent with the
+  buffer type (i.e. `std::vector<uint8_t>`).
+  * Use `Octet` for this and maybe for buffer as well?
 * Make all field definitions consistent
 * Decide whether `ArrayField` should explicitly specify `std::vector`
   as the container type
@@ -168,6 +171,8 @@ concepts and type metafunctions:
 
 ## Native and CBE objects
 
+* Support serialization of CBE objects to `std::string` or
+  `absl::Cord` or similar dynamically-sized type.
 * Represent JMG `Union` type using `std::variant`?
   * Try fleshing out the design in test_native.cpp
 
