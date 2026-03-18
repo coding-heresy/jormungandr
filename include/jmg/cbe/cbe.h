@@ -221,33 +221,39 @@ public:
   /**
    * delegate for jmg::get()
    */
-  template<RequiredFieldT FldT>
+  template<RequiredFieldT Fld>
   decltype(auto) get() const {
-    return static_cast<const base*>(this)->template get<FldT>();
+    return static_cast<const base*>(this)->template get<Fld>();
   }
 
   /**
    * delegate for jmg::try_get()
    */
-  template<OptionalFieldT FldT>
+  template<OptionalFieldT Fld>
   decltype(auto) try_get() const {
-    return static_cast<const base*>(this)->template try_get<FldT>();
+    return static_cast<const base*>(this)->template try_get<Fld>();
   }
 
   /**
    * delegate for jmg::set()
    */
-  template<FieldDefT FldT, typename T>
+  template<FieldDefT Fld, typename T>
   void set(T val) {
-    return static_cast<base*>(this)->template set<FldT>(val);
+    if constexpr (StringFieldT<Fld> && SameAsDecayedT<std::string_view, T>) {
+      static_cast<base*>(this)->template set<Fld>(std::string(val));
+    }
+    else if constexpr (ArrayFieldT<Fld>) {
+      static_cast<base*>(this)->template set<Fld>(std::vector(val));
+    }
+    else { static_cast<base*>(this)->template set<Fld>(val); }
   }
 
   /**
    * delegate for jmg::clear()
    */
-  template<OptionalFieldT FldT>
+  template<OptionalFieldT Fld>
   void clear() {
-    return static_cast<base*>(this)->template clear<FldT>();
+    static_cast<base*>(this)->template clear<Fld>();
   }
 };
 
