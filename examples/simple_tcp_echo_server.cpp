@@ -46,7 +46,7 @@ using namespace std::chrono_literals;
 namespace jmg
 {
 
-class EchoServer : public ReactorBasedServer {
+class SimpleTcpEchoServer : public ReactorBasedServer {
   using Port = cmdline::
     NamedParam<IpPort, "port", "port to listen on (defaults to 8888)", Optional>;
   using CmdLine = cmdline::CmdLineArgs<Port>;
@@ -55,8 +55,8 @@ class EchoServer : public ReactorBasedServer {
   static constexpr auto kDfltPort = IpPort(8888);
 
 public:
-  EchoServer() = default;
-  virtual ~EchoServer() = default;
+  SimpleTcpEchoServer() = default;
+  virtual ~SimpleTcpEchoServer() = default;
 
   void processArguments(const int argc, const char** argv) override final {
     const auto cmdline = CmdLine(argc, argv);
@@ -108,6 +108,6 @@ private:
   SocketDescriptor listener_sd_ = kInvalidSocketDescriptor;
 };
 
-JMG_REGISTER_SERVER(EchoServer);
+JMG_REGISTER_SERVER(SimpleTcpEchoServer);
 
 } // namespace jmg

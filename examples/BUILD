@@ -18,8 +18,8 @@ cc_binary(
 )
 
 cc_binary(
-    name = "echo_client",
-    srcs = ["echo_client.cpp"],
+    name = "simple_tcp_echo_client",
+    srcs = ["simple_tcp_echo_client.cpp"],
     visibility = ["//visibility:public"],
     deps = [
         "//reactor:reactor_based_client",
@@ -28,8 +28,8 @@ cc_binary(
 )
 
 cc_binary(
-    name = "echo_server",
-    srcs = ["echo_server.cpp"],
+    name = "simple_tcp_echo_server",
+    srcs = ["simple_tcp_echo_server.cpp"],
     visibility = ["//visibility:public"],
     deps = [
         "//:jmg_server_main",
