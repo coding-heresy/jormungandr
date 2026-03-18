@@ -16,10 +16,6 @@ build --linkopt='-lstdc++exp'
 build --cxxopt='-Wall'
 build --cxxopt='-Wextra'
 build --cxxopt='-Werror'
-# TODO(bd) this is currently causing a build failure in abseil code
-# build --cxxopt='-Wpedantic'
-# build --cxxopt='-pedantic-errors'
-
 # TODO(bd) gcc is angrily yeeting out pedantic errors over some abseil
 # code that is using non-standard SIMD type __int128
 #build --cxxopt='-Wpedantic'
@@ -44,6 +40,7 @@ build --action_env=CC=/usr/bin/gcc-14
 build --action_env=CXX=/usr/bin/g++-14
 # need to be able to diagnose severe errors in concepts
 build --cxxopt='-fconcepts-diagnostics-depth=10'
+build --cxxopt='-fdiagnostics-all-candidates'
 
 # clang toolchain
 # build --repo_env=CC=/usr/bin/clang
