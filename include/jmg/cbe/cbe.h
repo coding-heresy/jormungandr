@@ -137,8 +137,10 @@ public:
  */
 template<StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 struct StringField
-  : public cbe::Field<std::string, kName, IsRequired, kFieldId> {
+  : public cbe::Field<std::string, kName, IsRequired, kFieldId>,
+    public jmg::detail::StringFieldTag {
   using view_type = std::string_view;
+  using const_view_type = std::string_view;
 };
 
 /**
@@ -149,8 +151,10 @@ struct StringField
  */
 template<typename T, StrLiteral kName, TypeFlagT IsRequired, uint32_t kFieldId>
 struct ArrayField
-  : public cbe::Field<std::vector<T>, kName, IsRequired, kFieldId> {
+  : public cbe::Field<std::vector<T>, kName, IsRequired, kFieldId>,
+    public jmg::detail::ArrayFieldTag {
   using view_type = std::span<T>;
+  using const_view_type = std::span<const T>;
 };
 
 /**
