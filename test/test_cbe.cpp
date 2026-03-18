@@ -290,6 +290,19 @@ TEST(CbeTest, TestObj) {
   EXPECT_EQ(20010911, jmg::get<IntFld>(sub_obj));
 }
 
+TEST(CbeTest, TestFieldSetting) {
+  using StrFld = cbe::StringField<"str", Required, 0U /* kFldId */>;
+  using StrObj = cbe::Object<StrFld>;
+
+  // string_view from variable works for required string field
+  StrObj obj;
+  const auto bar = "bar"sv;
+  jmg::set<StrFld>(obj, bar);
+  EXPECT_EQ(jmg::get<StrFld>(obj), "bar"sv);
+}
+
+enum class TestEnum : uint16_t { kTest1 = 1, kTest2 = 2 };
+
 TEST(CbeTest, TestSerializerAndDeserializer) {
   using IntFld = cbe::Field<int, "int", Required, 0U /* kFldId */>;
   using DblFld = cbe::Field<double, "dbl", Required, 1U /* kFldId */>;
@@ -303,16 +316,20 @@ TEST(CbeTest, TestSerializerAndDeserializer) {
   using SubObjFld = cbe::Field<SubObject, "sub_obj", Required, 6U /* kFldId */>;
   using OptSubObjFld =
     cbe::Field<SubObject, "sub_obj", Optional, 7U /* kFldId */>;
+  using EnumFld = cbe::Field<TestEnum, "test_enum", Required, 8U /* kFldId */>;
+  using OptEnumFld =
+    cbe::Field<TestEnum, "test_enum", Optional, 9U /* kFldId */>;
 
   using TestObject = cbe::Object<IntFld, DblFld, StrFld, OptFld, ArrayFld,
-                                 SubObjFld, OptSubObjFld>;
+                                 SubObjFld, OptSubObjFld, EnumFld, OptEnumFld>;
 
   const auto vec = vector{5U, 10U, 20U};
-  const auto obj = TestObject(20010911, 42.0, "foo"s, nullopt, vec,
-                              SubObject(20070625, -1.0), nullopt);
+  const auto obj =
+    TestObject(20010911, 42.0, "foo"s, nullopt, vec, SubObject(20070625, -1.0),
+               nullopt, TestEnum::kTest1, TestEnum::kTest2);
 
   array<uint8_t, 1024> buf = {0};
-  auto serializer = cbe::Serializer<TestObject>(span(buf));
+  auto serializer = cbe::Serializer<TestObject>(buffer_from(buf));
   serializer.serialize(obj);
 
   auto serialized_data = span(buf.begin(), serializer.consumed());
@@ -337,5 +354,11 @@ TEST(CbeTest, TestSerializerAndDeserializer) {
   {
     const auto* opt_sub_obj = jmg::try_get<OptSubObjFld>(deserialized);
     EXPECT_FALSE(pred(opt_sub_obj));
+  }
+  EXPECT_EQ(TestEnum::kTest1, jmg::get<EnumFld>(deserialized));
+  {
+    const auto& opt_enum = jmg::try_get<OptEnumFld>(deserialized);
+    EXPECT_TRUE(pred(opt_enum));
+    EXPECT_EQ(TestEnum::kTest2, *opt_enum);
   }
 }

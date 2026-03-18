@@ -368,10 +368,27 @@ size_t encode(BufferProxy tgt, T src) {
     // NOTE: std::optional<T> should be handled above this level
     static_assert(always_false<T>, "trying to encode std::optional");
   }
+  else if constexpr (ScopedEnumT<T>) {
+    return detail::encodePrimitive(tgt, std::to_underlying(src));
+  }
   else if constexpr (VectorT<T>) {
     // NOTE: vectors must be handled here since encodeVec cannot be
     // explicitly specialized
     return encodeVec(tgt, src);
+  }
+  else if constexpr (SpanT<T>) {
+    // NOTE: span requires specialized handling
+    using ValueType = typename T::value_type;
+    if constexpr (!SameAsDecayedT<uint8_t, ValueType>) {
+      // span must be stored as a vector
+      return encodeVec(tgt, std::vector<ValueType>(src.begin(), src.end()));
+    }
+    else {
+      // treat span of octets the same as string
+      return detail::encodePrimitive(
+        tgt, std::string_view(reinterpret_cast<const char*>(src.data()),
+                              src.size()));
+    }
   }
   else if constexpr (cbe::ObjectT<T>) { return encodeObj(tgt, src); }
   else { return detail::encodePrimitive(tgt, src); }
@@ -386,6 +403,11 @@ std::tuple<T, size_t> decode(BufferView src) {
   else if constexpr (OptionalT<T>) {
     // NOTE: std::optional<T> should be handled above this level
     static_assert(always_false<T>, "trying to decode std::optional");
+  }
+  else if constexpr (ScopedEnumT<T>) {
+    using UlType = std::underlying_type_t<T>;
+    const auto& [decoded, consumed] = detail::decodePrimitive<UlType>(src);
+    return std::make_tuple(static_cast<T>(decoded), consumed);
   }
   else if constexpr (VectorT<T>) {
     // NOTE: vectors must be handled here since decodeVec cannot be
