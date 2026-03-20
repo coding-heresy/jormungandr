@@ -80,6 +80,7 @@ public:
   virtual void shutdownSrvr() = 0;
 
 protected:
+  std::atomic<bool> is_started_;
   std::atomic<bool> is_shutdown_;
   Reactor reactor_;
 };
