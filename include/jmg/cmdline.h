@@ -36,6 +36,8 @@
 #include <span>
 #include <string_view>
 
+#include <ctre.hpp>
+
 #include "jmg/conversion.h"
 #include "jmg/object.h"
 #include "jmg/preprocessor.h"
@@ -203,12 +205,25 @@ class CmdLineArgs : public ObjectDef<Params...>, public detail::ObjectTag {
 public:
   CmdLineArgs() = delete;
   CmdLineArgs(const int argc, const char* argv[]) {
+    namespace rng = std::ranges;
     JMG_ENFORCE_USING(
       std::logic_error, argc >= 1,
       "internal error, argument vector must have at least 1 element");
     try {
       program_ = argv[0];
       const auto args = std::span(argv + 1, argc - 1);
+
+      // pre-scan the input looking for options specified with a '--' prefix,
+      // which is not supported
+      {
+        const auto entry = rng::find_if(args, [](const char* str) {
+          return ctre::search<"^--">(str);
+        });
+        JMG_ENFORCE(args.end() == entry,
+                    "illegal use of '--' prefix in argument [", *entry,
+                    "], only single '-' is supported");
+      }
+
       auto matches = std::vector<bool>(args.size());
 
       auto processParam = [&]<typename T>() {
