@@ -36,13 +36,15 @@ using namespace std;
 
 namespace jmg
 {
-ReactorBasedServer::ReactorBasedServer() : is_shutdown_(false) {}
+ReactorBasedServer::ReactorBasedServer()
+  : is_started_(false), is_shutdown_(false) {}
 
 void ReactorBasedServer::startImpl(const int argc, const char** argv) {
   ////////////////////
   // delegate argument processing to subclass
   processArguments(argc, argv);
 
+  // TODO(bd) use a more structured logger for this?
   cout << "starting up with PID [" << getpid() << "]...\n";
 
   // start reactor
@@ -50,6 +52,7 @@ void ReactorBasedServer::startImpl(const int argc, const char** argv) {
   auto reactor_worker = thread([&] {
     try {
       reactor_start_signal.set_value();
+      is_started_ = true;
       reactor_.start();
     }
     JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
@@ -68,8 +71,12 @@ void ReactorBasedServer::startImpl(const int argc, const char** argv) {
 void ReactorBasedServer::shutdownImpl() {
   cout << "shutting down...\n";
   is_shutdown_ = true;
-  shutdownSrvr();
-  reactor_.shutdown();
+  if (is_started_) {
+    // only need to shut down the server if it was actually started (i.e. there
+    // was no failure before the reactor was started
+    shutdownSrvr();
+    reactor_.shutdown();
+  }
 }
 
 } // namespace jmg
