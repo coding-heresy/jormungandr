@@ -455,8 +455,9 @@ public:
   explicit Serializer(BufferProxy buf) : buf_(buf) {}
 
   template<FieldDefT... Flds>
-  void serialize(const cbe::Object<Flds...>& object) {
+  BufferView serialize(const cbe::Object<Flds...>& object) {
     (encodeField<Flds>(object), ...);
+    return BufferView(buf_.data(), idx_);
   }
 
   size_t consumed() const { return idx_; }

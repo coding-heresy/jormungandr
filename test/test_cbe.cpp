@@ -330,10 +330,10 @@ TEST(CbeTest, TestSerializerAndDeserializer) {
 
   array<uint8_t, 1024> buf = {0};
   auto serializer = cbe::Serializer<TestObject>(buffer_from(buf));
-  serializer.serialize(obj);
+  const auto serialized = serializer.serialize(obj);
+  EXPECT_EQ(serializer.consumed(), serialized.size());
 
-  auto serialized_data = span(buf.begin(), serializer.consumed());
-  auto deserializer = Deserializer<TestObject>(serialized_data);
+  auto deserializer = Deserializer<TestObject>(serialized);
   const auto deserialized = deserializer.deserialize();
   EXPECT_EQ(20010911, jmg::get<IntFld>(deserialized));
   EXPECT_EQ(42.0, jmg::get<DblFld>(deserialized));
