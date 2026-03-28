@@ -123,3 +123,15 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [":reactor"],
 )
+
+cc_library(
+    name = "simple_rpc_service",
+    hdrs = [
+        "simple_rpc_client.h",
+        "simple_rpc_common.h",
+        "simple_rpc_service.h",
+    ],
+    include_prefix = "jmg/reactor",
+    visibility = ["//visibility:public"],
+    deps = [":simple_tcp_service"],
+)

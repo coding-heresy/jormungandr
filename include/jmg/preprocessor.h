@@ -99,6 +99,12 @@
   } while (0)
 
 /**
+ * helper macro for throwing std::runtime_error.
+ */
+#define JMG_RUNTIME_ERROR(...) \
+  JMG_THROW_EXCEPTION(std::runtime_error, __VA_ARGS__)
+
+/**
  * throw an exception of a specified type constructed with the
  * argument error message if a predicate fails
  */
