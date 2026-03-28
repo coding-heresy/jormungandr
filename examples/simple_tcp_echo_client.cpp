@@ -87,7 +87,7 @@ public:
       try {
         // connect to the server
         auto cnxn = SimpleTcpSvc::connectTo(fbr, IpEndpoint(hostname_, port_));
-        const auto msg = string("Hello echo server!");
+        const auto msg = string("Hello TCP echo server!");
 
         // send the message
         cnxn.sendTo(buffer_from(msg));
