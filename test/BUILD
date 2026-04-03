@@ -219,7 +219,6 @@ cc_test(
     name = "test_yaml",
     size = "small",
     srcs = ["test_yaml.cpp"],
-    data = ["data/experimental.yaml"],
     linkstatic = True,
     deps = [
         "//:jmg",
