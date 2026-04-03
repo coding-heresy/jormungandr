@@ -54,6 +54,10 @@ build --cxxopt='-fdiagnostics-all-candidates'
 
 build --features=external_include_paths
 
+# work around problems in some BCR boost modules that are generating
+# warnings about #pragma once in header files
+build --features=-parse_headers
+
 # use nanosecond precision with boost
 build --cxxopt='-DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG'
 
@@ -94,6 +98,12 @@ build:tsan --copt='-g'
 build:asan --copt='-fno-omit-frame-pointer'
 build:tsan --linkopt='-fsanitize=thread'
 build:tsan --linkopt='-static-libtsan'
+
+# code coverage tests
+coverage --combined_report=lcov
+coverage --instrumentation_filter="//[:]"
+coverage --instrument_test_targets
+coverage --nocache_test_results
 
 # TODO flags to use for segmented stacks
 # -fsplit-stack
