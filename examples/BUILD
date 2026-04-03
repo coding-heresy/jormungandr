@@ -51,10 +51,10 @@ cc_binary(
     srcs = ["rpc_echo_server.cpp"],
     visibility = ["//visibility:public"],
     deps = [
+        ":rpc_echo",
         "//:jmg_server_main",
         "//reactor:reactor_based_server",
         "//reactor:simple_rpc_service",
-        ":rpc_echo",
     ],
 )
 
@@ -63,8 +63,8 @@ cc_binary(
     srcs = ["rpc_echo_client.cpp"],
     visibility = ["//visibility:public"],
     deps = [
+        ":rpc_echo",
         "//reactor:reactor_based_client",
         "//reactor:simple_rpc_service",
-        ":rpc_echo",
     ],
 )
