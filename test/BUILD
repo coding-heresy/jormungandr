@@ -259,11 +259,11 @@ cc_test(
 genrule(
     name = "jmg_yaml_example_header",
     srcs = [
-        "//jmgc:jmgc_old",
+        "//jmgc/old:jmgc_old",
         "data/example.yaml",
     ],
     outs = ["jmg_yaml_example.h"],
-    cmd = "$(location //jmgc:jmgc_old) -JMG-YAML $(location data/example.yaml) > $@",
+    cmd = "$(location //jmgc/old:jmgc_old) -JMG-YAML $(location data/example.yaml) > $@",
     visibility = ["//visibility:public"],
 )
 
@@ -285,11 +285,11 @@ cc_test(
 genrule(
     name = "jmg_cbe_example_header",
     srcs = [
-        "//jmgc:jmgc_old",
+        "//jmgc/old:jmgc_old",
         "data/example.yaml",
     ],
     outs = ["jmg_cbe_example.h"],
-    cmd = "$(location //jmgc:jmgc_old) -JMG-CBE $(location data/example.yaml) > $@",
+    cmd = "$(location //jmgc/old:jmgc_old) -JMG-CBE $(location data/example.yaml) > $@",
     visibility = ["//visibility:public"],
 )
 
@@ -315,11 +315,11 @@ cc_test(
 genrule(
     name = "jmg_protobuf_example_header",
     srcs = [
-        "//jmgc:jmgc_old",
+        "//jmgc/old:jmgc_old",
         "data/test_proto.yaml",
     ],
     outs = ["test_proto.h"],
-    cmd = "$(location //jmgc:jmgc_old) -JMG-proto $(location data/test_proto.yaml) > $@",
+    cmd = "$(location //jmgc/old:jmgc_old) -JMG-proto $(location data/test_proto.yaml) > $@",
     visibility = ["//visibility:public"],
 )
 
