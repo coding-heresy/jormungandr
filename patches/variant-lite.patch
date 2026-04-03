@@ -1,0 +1,164 @@
+diff --git a/.bazelrc b/.bazelrc
+new file mode 100644
+index 0000000..5e1a384
+--- /dev/null
++++ b/.bazelrc
+@@ -0,0 +1,85 @@
++
++# use bzlmod
++common --enable_bzlmod
++
++# builds with C++23
++build --action_env=BAZEL_CXXOPTS="-std=c++23"
++build --cxxopt='-std=c++23'
++
++# allow C++23 stack traces
++build --linkopt='-lstdc++exp'
++
++# be safe...
++build --cxxopt='-Wall'
++build --cxxopt='-Wextra'
++build --cxxopt='-Werror'
++# TODO(bd) gcc is angrily yeeting out pedantic errors over some abseil
++# code that is using non-standard SIMD type __int128
++build --cxxopt='-Wpedantic'
++build --cxxopt='-pedantic-errors'
++
++# gcc toolchain
++build --repo_env=CC=/usr/bin/gcc-14
++build --repo_env=CXX=/usr/bin/g++-14
++build --action_env=CC=/usr/bin/gcc-14
++build --action_env=CXX=/usr/bin/g++-14
++# need to be able to diagnose severe errors in concepts
++build --cxxopt='-fconcepts-diagnostics-depth=10'
++build --cxxopt='-fdiagnostics-all-candidates'
++
++# clang toolchain
++# build --repo_env=CC=/usr/bin/clang
++# build --repo_env=CXX=/usr/bin/clang++
++# build --action_env=CC=/usr/bin/clang
++# build --action_env=CXX=/usr/bin/clang++
++# # TODO(bd) compiler flag is specific to clang and prevents an
++# # error that seems to be caused by the abseil library insisting on
++# # building its files with clang instead of clang++
++# build --cxxopt='-Wno-gcc-compat'
++
++build --features=external_include_paths
++
++# use nanosecond precision with boost
++build --cxxopt='-DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG'
++
++# debug builds
++build:dbg --strip=never
++build:dbg --copt='-Og'
++build:dbg --copt='-fno-inline'
++build:dbg --copt='-g3'
++build:dbg --copt='-fstack-protector-all'
++build:dbg --copt='-fno-omit-frame-pointer'
++
++# optimized builds
++build:opt --copt='-O3'
++build:opt --copt='-g0'
++build:opt --copt='-march=native'
++build:opt --copt='-mtune=native'
++build:opt --copt='-DNDEBUG'
++# TODO(bd) should optimized builds omit the frame pointer?
++build:opt --copt='-fno-omit-frame-pointer'
++
++# TODO(bd) run sanitizer builds across multiple optimization levels?
++
++# address sanitizer builds
++build:asan --strip=never
++build:asan --copt='-fsanitize=address'
++build:asan --copt='-DADDRESS_SANITIZER'
++build:asan --copt='-O1'
++build:asan --copt='-g'
++build:asan --copt='-fno-omit-frame-pointer'
++build:asan --linkopt='-fsanitize=address'
++build:asan --linkopt='-static-libasan'
++
++# thread sanitizer builds
++build:tsan --strip=never
++build:tsan --copt='-fsanitize=thread'
++build:tsan --copt='-O2'
++build:tsan --copt='-g'
++build:asan --copt='-fno-omit-frame-pointer'
++build:tsan --linkopt='-fsanitize=thread'
++build:tsan --linkopt='-static-libtsan'
++
++common --enable_platform_specific_config
++# Enable the CC toolchain resolution based on platforms.
++build:linux --incompatible_enable_cc_toolchain_resolution
+diff --git a/.bazelversion b/.bazelversion
+new file mode 100644
+index 0000000..ba7f754
+--- /dev/null
++++ b/.bazelversion
+@@ -0,0 +1 @@
++7.4.0
+diff --git a/BUILD b/BUILD
+new file mode 100644
+index 0000000..a8b020a
+--- /dev/null
++++ b/BUILD
+@@ -0,0 +1,8 @@
++load("@rules_cc//cc:cc_library.bzl", "cc_library")
++
++cc_library(
++    name = "variant-lite",
++    hdrs = ["include/nonstd/variant.hpp"],
++    includes = ["include"],
++    visibility = ["//visibility:public"],
++)
+diff --git a/BUILD~ b/BUILD~
+new file mode 100644
+index 0000000..8ecf77a
+--- /dev/null
++++ b/BUILD~
+@@ -0,0 +1,8 @@
++load("@rules_cc//cc:cc_library.bzl", "cc_library")
++
++cc_library(
++    name = "optional-lite",
++    hdrs = ["include/nonstd/optional.hpp"],
++    includes = ["include"],
++    visibility = ["//visibility:public"],
++)
+diff --git a/MODULE.bazel b/MODULE.bazel
+new file mode 100644
+index 0000000..f74c6e6
+--- /dev/null
++++ b/MODULE.bazel
+@@ -0,0 +1,13 @@
++module(
++    name = "variant-lite",
++    version = "3.0.0",
++)
++
++########################################
++# bazel rules
++########################################
++
++bazel_dep(
++    name = "rules_cc",
++    version = "0.2.17",
++)
+diff --git a/MODULE.bazel~ b/MODULE.bazel~
+new file mode 100644
+index 0000000..fd56c91
+--- /dev/null
++++ b/MODULE.bazel~
+@@ -0,0 +1,13 @@
++module(
++    name = "optional-lite",
++    version = "3.6.0",
++)
++
++########################################
++# bazel rules
++########################################
++
++bazel_dep(
++    name = "rules_cc",
++    version = "0.2.17",
++)

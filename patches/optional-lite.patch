@@ -1,0 +1,455 @@
+diff --git a/.bazelrc b/.bazelrc
+new file mode 100644
+index 0000000..5e1a384
+--- /dev/null
++++ b/.bazelrc
+@@ -0,0 +1,85 @@
++
++# use bzlmod
++common --enable_bzlmod
++
++# builds with C++23
++build --action_env=BAZEL_CXXOPTS="-std=c++23"
++build --cxxopt='-std=c++23'
++
++# allow C++23 stack traces
++build --linkopt='-lstdc++exp'
++
++# be safe...
++build --cxxopt='-Wall'
++build --cxxopt='-Wextra'
++build --cxxopt='-Werror'
++# TODO(bd) gcc is angrily yeeting out pedantic errors over some abseil
++# code that is using non-standard SIMD type __int128
++build --cxxopt='-Wpedantic'
++build --cxxopt='-pedantic-errors'
++
++# gcc toolchain
++build --repo_env=CC=/usr/bin/gcc-14
++build --repo_env=CXX=/usr/bin/g++-14
++build --action_env=CC=/usr/bin/gcc-14
++build --action_env=CXX=/usr/bin/g++-14
++# need to be able to diagnose severe errors in concepts
++build --cxxopt='-fconcepts-diagnostics-depth=10'
++build --cxxopt='-fdiagnostics-all-candidates'
++
++# clang toolchain
++# build --repo_env=CC=/usr/bin/clang
++# build --repo_env=CXX=/usr/bin/clang++
++# build --action_env=CC=/usr/bin/clang
++# build --action_env=CXX=/usr/bin/clang++
++# # TODO(bd) compiler flag is specific to clang and prevents an
++# # error that seems to be caused by the abseil library insisting on
++# # building its files with clang instead of clang++
++# build --cxxopt='-Wno-gcc-compat'
++
++build --features=external_include_paths
++
++# use nanosecond precision with boost
++build --cxxopt='-DBOOST_DATE_TIME_POSIX_TIME_STD_CONFIG'
++
++# debug builds
++build:dbg --strip=never
++build:dbg --copt='-Og'
++build:dbg --copt='-fno-inline'
++build:dbg --copt='-g3'
++build:dbg --copt='-fstack-protector-all'
++build:dbg --copt='-fno-omit-frame-pointer'
++
++# optimized builds
++build:opt --copt='-O3'
++build:opt --copt='-g0'
++build:opt --copt='-march=native'
++build:opt --copt='-mtune=native'
++build:opt --copt='-DNDEBUG'
++# TODO(bd) should optimized builds omit the frame pointer?
++build:opt --copt='-fno-omit-frame-pointer'
++
++# TODO(bd) run sanitizer builds across multiple optimization levels?
++
++# address sanitizer builds
++build:asan --strip=never
++build:asan --copt='-fsanitize=address'
++build:asan --copt='-DADDRESS_SANITIZER'
++build:asan --copt='-O1'
++build:asan --copt='-g'
++build:asan --copt='-fno-omit-frame-pointer'
++build:asan --linkopt='-fsanitize=address'
++build:asan --linkopt='-static-libasan'
++
++# thread sanitizer builds
++build:tsan --strip=never
++build:tsan --copt='-fsanitize=thread'
++build:tsan --copt='-O2'
++build:tsan --copt='-g'
++build:asan --copt='-fno-omit-frame-pointer'
++build:tsan --linkopt='-fsanitize=thread'
++build:tsan --linkopt='-static-libtsan'
++
++common --enable_platform_specific_config
++# Enable the CC toolchain resolution based on platforms.
++build:linux --incompatible_enable_cc_toolchain_resolution
+diff --git a/.bazelversion b/.bazelversion
+new file mode 100644
+index 0000000..ba7f754
+--- /dev/null
++++ b/.bazelversion
+@@ -0,0 +1 @@
++7.4.0
+diff --git a/BUILD b/BUILD
+new file mode 100644
+index 0000000..8ecf77a
+--- /dev/null
++++ b/BUILD
+@@ -0,0 +1,8 @@
++load("@rules_cc//cc:cc_library.bzl", "cc_library")
++
++cc_library(
++    name = "optional-lite",
++    hdrs = ["include/nonstd/optional.hpp"],
++    includes = ["include"],
++    visibility = ["//visibility:public"],
++)
+diff --git a/MODULE.bazel b/MODULE.bazel
+new file mode 100644
+index 0000000..fd56c91
+--- /dev/null
++++ b/MODULE.bazel
+@@ -0,0 +1,13 @@
++module(
++    name = "optional-lite",
++    version = "3.6.0",
++)
++
++########################################
++# bazel rules
++########################################
++
++bazel_dep(
++    name = "rules_cc",
++    version = "0.2.17",
++)
+diff --git a/MODULE.bazel~ b/MODULE.bazel~
+new file mode 100644
+index 0000000..8775759
+--- /dev/null
++++ b/MODULE.bazel~
+@@ -0,0 +1,318 @@
++module(
++    name = "jinja2cpp",
++    version = "1.3.2",
++)
++
++########################################
++# bazel rules
++########################################
++
++bazel_dep(
++    name = "rules_cc",
++    version = "0.2.17",
++)
++
++########################################
++# toolchains and utilities
++########################################
++
++bazel_dep(
++    name = "buildifier_prebuilt",
++    version = "8.2.1",
++)
++
++########################################
++# google test
++########################################
++
++bazel_dep(
++    name = "googletest",
++    version = "1.17.0",
++    dev_dependency = True,
++    repo_name = "com_google_googletest",
++)
++
++########################################
++# optional-lite
++########################################
++
++bazel_dep(
++    name = "optional-lite",
++    version = "3.6.0",
++)
++
++archive_override(
++    module_name = "optional-lite",
++    #integrity = "sha256-",
++    patch_strip = 1,
++    #patches = ["//patches:ctre_bazel.patch"],
++    strip_prefix = "optional-lite-3.6.0",
++    urls = ["https://github.com/nonstd-lite/optional-lite/archive/refs/tags/v3.6.0.tar.gz"],
++)
++
++########################################
++# boost library
++########################################
++
++bazel_dep(
++    name = "boost.algorithm",
++    version = "1.87.0",
++)
++
++bazel_dep(
++    name = "boost.any",
++    version = "1.87.0",
++)
++
++bazel_dep(
++    name = "boost.filesystem",
++    version = "1.87.0",
++)
++
++bazel_dep(
++    name = "boost.lexical_cast",
++    version = "1.87.0",
++)
++
++bazel_dep(
++    name = "boost.numeric_conversion",
++    version = "1.87.0",
++)
++
++bazel_dep(
++    name = "boost.regex",
++    version = "1.87.0",
++)
++
++bazel_dep(
++    name = "boost.variant",
++    version = "1.87.0",
++)
++
++# ########################################
++# # google abseil
++# ########################################
++
++# bazel_dep(
++#     name = "abseil-cpp",
++#     version = "20250814.1",
++#     repo_name = "com_google_abseil",
++# )
++
++# ########################################
++# # boost library
++# ########################################
++
++# # TODO(bd) figure out how to make boost.asio work with shadow stacks
++# # or try a different thread pool implementation
++# # bazel_dep(
++# #     name = "boost.asio",
++# #     version = "1.87.0",
++# # )
++
++# bazel_dep(
++#     name = "boost.date_time",
++#     version = "1.87.0",
++# )
++# bazel_dep(
++#     name = "boost.property_tree",
++#     version = "1.87.0",
++# )
++
++# ########################################
++# # compile time regular expressions
++# ########################################
++
++# bazel_dep(
++#     name = "ctre",
++#     version = "3.10.0",
++# )
++
++# # TODO(bd) issue pull request to
++# # https://github.com/hanickadot/compile-time-regular-expressions and
++# # update here if it is accepted
++# archive_override(
++#     module_name = "ctre",
++#     integrity = "sha256-sX5smmzAzqZRMvYqbGmc7+2VJyEGNWnWM56zykcQReY=",
++#     patch_strip = 1,
++#     patches = ["//patches:ctre_bazel.patch"],
++#     strip_prefix = "compile-time-regular-expressions-3.10.0",
++#     urls = ["https://github.com/hanickadot/compile-time-regular-expressions/archive/refs/tags/v3.10.0.tar.gz"],
++# )
++
++# ########################################
++# # liburing
++# ########################################
++
++# bazel_dep(
++#     name = "liburing",
++#     version = "2.14",
++# )
++
++# ########################################
++# # meta-programming library from Eric Niebler
++# ########################################
++
++# bazel_dep(
++#     name = "ericniebler_meta",
++#     version = "1.0.0",
++# )
++
++# # TODO issue pull request to https://github.com/ericniebler/meta and
++# # update here if it is accepted
++# archive_override(
++#     module_name = "ericniebler_meta",
++#     integrity = "sha256-KIf+Iv4VFewjAybyqR0XlDDLSUCLWEVXbcZeFLWmOaQ=",
++#     strip_prefix = "meta-1.0.0",
++#     urls = ["https://github.com/coding-heresy/meta/archive/refs/tags/1.0.0.tar.gz"],
++# )
++
++# ########################################
++# # more concepts for c++ standard library types
++# ########################################
++
++# bazel_dep(
++#     name = "more_concepts",
++#     version = "0.0.0",
++# )
++# archive_override(
++#     module_name = "more_concepts",
++#     integrity = "sha256-Opzeu3mNTbwuR22F9O7s4CeVgEx0jrEyR4Ff8V6/6TM=",
++#     patch_strip = 1,
++#     patches = [
++#         "//patches:more_concepts.patch",
++#     ],
++#     strip_prefix = "more_concepts-ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb",
++#     urls = ["https://github.com/MiSo1289/more_concepts/archive/ea5b6815f5929cdb086f76d43f3e9b122bbcaaeb.tar.gz"],
++# )
++
++# ########################################
++# # quickfix
++# ########################################
++
++# bazel_dep(name = "quickfix")
++# archive_override(
++#     module_name = "quickfix",
++#     integrity = "sha256-HEMipocEUmyj0fIT57Dc0w4GeogVvip5sqsRl+9w3Pc=",
++#     patch_strip = 0,
++#     patches = [
++#         "//patches:quickfix.module.bazel.patch",
++#         "//patches:quickfix.add_build_file.patch",
++#     ],
++#     strip_prefix = "quickfix-1.15.1",
++#     urls = ["https://github.com/quickfix/quickfix/archive/refs/tags/v1.15.1.tar.gz"],
++# )
++
++# ########################################
++# # protobuf
++# ########################################
++
++# bazel_dep(
++#     name = "protobuf",
++#     version = "33.4",
++# )
++# bazel_dep(
++#     name = "toolchains_protoc",
++#     version = "0.6.1",
++# )
++
++# protoc = use_extension(
++#     "@toolchains_protoc//protoc:extensions.bzl",
++#     "protoc",
++# )
++# protoc.toolchain(
++#     google_protobuf = "com_google_protobuf",
++#     # NOTE: this version is specific to protobuf 33.4
++#     version = "v29.4",
++# )
++# use_repo(
++#     protoc,
++#     "com_google_protobuf",
++#     "toolchains_protoc_hub",
++# )
++
++# register_toolchains("@toolchains_protoc_hub//:all")
++
++# ########################################
++# # strong type aliases from Doom
++# ########################################
++
++# bazel_dep(
++#     name = "doom_strong_type",
++#     version = "1.1.0",
++# )
++
++# # TODO issue pull request to https://github.com/doom/strong_type and
++# # update here if it is accepted
++# archive_override(
++#     module_name = "doom_strong_type",
++#     integrity = "sha256-CyRxFGE9/t9PCBw2T7pddmOwy6z6QaYq+F6QH1rfAeo=",
++#     strip_prefix = "strong_type-1.1.0",
++#     urls = ["https://github.com/coding-heresy/strong_type/archive/refs/tags/1.1.0.tar.gz"],
++# )
++
++# ########################################
++# # thread pool libraries
++# ########################################
++
++# bazel_dep(
++#     name = "bs_thread-pool",
++#     # AKA bshoshany_thread-pool
++#     version = "5.1.0",
++# )
++
++# # TODO(bd) issue pull request to
++# # https://github.com/bshoshany/thread-pool and update here if it is
++# # accepted
++# archive_override(
++#     module_name = "bs_thread-pool",
++#     integrity = "sha256-VDePucvq7nKZbT+HYUacQ7t90tSwf67G0ppoJ3vZGlE=",
++#     patch_strip = 1,
++#     patches = ["//patches:bshoshany_thread_pool_bazel.patch"],
++#     strip_prefix = "thread-pool-5.1.0",
++#     urls = ["https://github.com/bshoshany/thread-pool/archive/refs/tags/v5.1.0.tar.gz"],
++# )
++
++# bazel_dep(
++#     name = "dp_thread-pool",
++#     # AKA developerpaul123_thread-pool
++#     version = "0.7.0",
++# )
++# archive_override(
++#     module_name = "dp_thread-pool",
++#     integrity = "sha256-eWt+HqmYfUS1BvfeUuTutB2U4L1leuXL5LwU4qZqJj4=",
++#     patch_strip = 1,
++#     patches = ["//patches:developerpaul123_thread_pool_bazel.patch"],
++#     strip_prefix = "thread-pool-0.7.0",
++#     urls = ["https://github.com/DeveloperPaul123/thread-pool/archive/refs/tags/0.7.0.tar.gz"],
++# )
++
++# ########################################
++# # yaml library
++# ########################################
++
++# bazel_dep(
++#     name = "yaml-cpp",
++#     version = "0.8.0",
++# )
++
++# ########################################
++# # bazel_module_versions below here
++# ########################################
++
++# bazel_dep(
++#     name = "bazel_module_versions",
++#     version = "0.0.0",
++# )
++# archive_override(
++#     module_name = "bazel_module_versions",
++#     integrity = "sha256-t0dFYSC417MvkHbDdhk8GePkp9r4nnVP0VnqGXSsHf8=",
++#     strip_prefix = "bazel_module_versions-0.0.0",
++#     urls = ["https://github.com/coding-heresy/bazel_module_versions/archive/refs/tags/0.0.0.tar.gz"],
++# )
++
++# module_versions = use_extension(
++#     "@bazel_module_versions//:extensions.bzl",
++#     "dependent_module_versions",
++# )
++# use_repo(module_versions, "module_versions")

@@ -248,6 +248,76 @@ bazel_dep(
 )
 
 ########################################
+# jinja2 cpp library
+########################################
+
+bazel_dep(
+    name = "jinja2cpp",
+    version = "1.3.2",
+)
+archive_override(
+    module_name = "jinja2cpp",
+    integrity = "sha256-dk5QkSIrLjiNduc1w4XX6ZW62yW/5rPfMfI0qohHhVM=",
+    strip_prefix = "Jinja2Cpp-6ccf4a558db82d66710609e75f295a3f41df40e2",
+    urls = ["https://github.com/coding-heresy/Jinja2cpp/archive/6ccf4a558db82d66710609e75f295a3f41df40e2.tar.gz"],
+)
+
+####################
+# lite libraries required by jinja2cpp
+
+bazel_dep(
+    name = "expected-lite",
+    version = "0.10.0",
+)
+archive_override(
+    module_name = "expected-lite",
+    integrity = "sha256-z+CC5P/t7u2sR3Y1BBAmRqOcCAWZx8H+mSmdah+Zr5I=",
+    patch_strip = 1,
+    patches = ["//patches:expected-lite.patch"],
+    strip_prefix = "expected-lite-0.10.0",
+    urls = ["https://github.com/nonstd-lite/expected-lite/archive/refs/tags/v0.10.0.tar.gz"],
+)
+
+bazel_dep(
+    name = "optional-lite",
+    version = "3.6.0",
+)
+archive_override(
+    module_name = "optional-lite",
+    integrity = "sha256-K+F/z8dkgJYSKCw+coyrxCr+cDudwzPMh8SNiC/PwsI=",
+    patch_strip = 1,
+    patches = ["//patches:optional-lite.patch"],
+    strip_prefix = "optional-lite-3.6.0",
+    urls = ["https://github.com/nonstd-lite/optional-lite/archive/refs/tags/v3.6.0.tar.gz"],
+)
+
+bazel_dep(
+    name = "string-view-lite",
+    version = "1.8.0",
+)
+archive_override(
+    module_name = "string-view-lite",
+    integrity = "sha256-mzjDJiHrGoGn+llCcUQwkiXEFKe65SKrOi2a4jndNb4=",
+    patch_strip = 1,
+    patches = ["//patches:string-view-lite.patch"],
+    strip_prefix = "string-view-lite-1.8.0",
+    urls = ["https://github.com/nonstd-lite/string-view-lite/archive/refs/tags/v1.8.0.tar.gz"],
+)
+
+bazel_dep(
+    name = "variant-lite",
+    version = "3.0.0",
+)
+archive_override(
+    module_name = "variant-lite",
+    integrity = "sha256-vVllUDafM++UVVZoIvWk1ShSpjoz09cKwfu1KbeKvHs=",
+    patch_strip = 1,
+    patches = ["//patches:variant-lite.patch"],
+    strip_prefix = "variant-lite-3.0.0",
+    urls = ["https://github.com/nonstd-lite/variant-lite/archive/refs/tags/v3.0.0.tar.gz"],
+)
+
+########################################
 # bazel_module_versions below here
 ########################################
 
