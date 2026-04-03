@@ -10,3 +10,4 @@ test_object
 test_ptree
 test_safe_types
 test_yaml
+.coverage_report
