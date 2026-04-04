@@ -102,8 +102,18 @@ TEST(ConversionTests, TestIntFromString) {
   EXPECT_EQ(42, static_cast<int>(from("42")));
 }
 
-TEST(ConversionTests, TestDoubleFromString) {
+TEST(ConversionTests, TestStringFromInt) {
+  EXPECT_EQ("42"s, static_cast<std::string>(from(42L)));
+}
+
+TEST(ConversionTests, TestFloatingPointFromString) {
   EXPECT_DOUBLE_EQ(0.5, static_cast<double>(from("0.5")));
+  EXPECT_DOUBLE_EQ(0.25f, static_cast<float>(from("0.25")));
+}
+
+TEST(ConversionTests, TestStringFromFloatingPoint) {
+  EXPECT_EQ("0.5"s, static_cast<std::string>(from(0.5)));
+  EXPECT_EQ("0.25"s, static_cast<std::string>(from(0.25f)));
 }
 
 TEST(ConversionTests, TestNumericFromStringView) {

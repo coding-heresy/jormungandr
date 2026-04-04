@@ -195,6 +195,42 @@ struct ConvertImpl {
       else { JMG_NOT_EXHAUSTIVE(Tgt); }
     }
     ////////////////////////////////////////////////////////////
+    // this section converts from number to string
+    ////////////////////////////////////////////////////////////
+    else if constexpr (IntegralT<Src>) {
+      if constexpr (std::same_as<std::string, Tgt>) {
+        DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, integral, string);
+        std::array<char, 22> buffer;
+        auto [ptr, err] =
+          std::to_chars(buffer.data(), buffer.data() + buffer.size(), src);
+        JMG_ENFORCE(std::errc() == err, "unable to convert integer value [",
+                    src,
+                    "] to string value: ", std::make_error_code(err).message());
+        *ptr = '\0';
+        const auto sz = ptr - buffer.data();
+        return std::string(buffer.data(), sz);
+      }
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+    }
+    else if constexpr (FloatingPointT<Src>) {
+      if constexpr (std::same_as<std::string, Tgt>) {
+        // TODO(bd) support std::chars_format in Extras?
+        DETAIL_ENFORCE_EMPTY_EXTRAS(Extras, floatingpoint, string);
+        constexpr auto kMaxSz = 4 + std::numeric_limits<Src>::max_digits10
+                                + std::numeric_limits<Src>::max_exponent10;
+        std::array<char, kMaxSz> buffer;
+        auto [ptr, err] =
+          std::to_chars(buffer.data(), buffer.data() + buffer.size(), src);
+        JMG_ENFORCE(std::errc() == err,
+                    "unable to convert floating point value [", src,
+                    "] to string value: ", std::make_error_code(err).message());
+        *ptr = '\0';
+        const auto sz = ptr - buffer.data();
+        return std::string(buffer.data(), sz);
+      }
+      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+    }
+    ////////////////////////////////////////////////////////////
     // this section converts from struct sockaddr_in to string
     //
     // TODO(bd) support struct sockaddr, struct sockaddr_in6 and
