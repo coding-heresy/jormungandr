@@ -42,8 +42,6 @@ class ProtocYamlSpec : public JmgYamlSpec {
 public:
   std::string tgtFileName() const override;
 
-  void emit(std::ostream& strm) const override;
-
 private:
   using ProtocTypeTranslations =
     jmg::Dict<std::string,
@@ -52,25 +50,29 @@ private:
               "JMG IDL type">;
   static const ProtocTypeTranslations kTypeTranslations;
 
-  void emitPkg(std::ostream& strm, const jmg::PkgDef& pkg_def) const override;
+  virtual std::string pkgTmplData() const override;
 
-  void emitEnum(std::ostream& strm,
-                std::string_view name,
-                std::optional<std::string_view> ul_type,
-                const jmg::Enumerations& enumerations) const override;
+  virtual std::string typeTmplData() const override;
 
-  void emitSafeType(std::ostream& strm,
-                    std::string_view name,
-                    std::string_view inner_type,
-                    std::optional<std::string_view> safe_concept) const override;
+  virtual std::string objTmplData() const override;
 
-  void emitFld(std::ostream& strm, const jmg::ObjGrpFld& fld_def) const override;
+  void enrichJ2Type(jinja2::ValuesMap& j2_type,
+                    const jmg::TypeDef& type_def) const override;
 
-  void emitObj(std::ostream& strm,
-               const std::string_view name,
-               const JmgObjGrpFlds& flds) const override;
+  void enrichJ2Fld(jinja2::ValuesMap& j2_fld,
+                   const jmg::ObjGrpFld& fld_def) const override;
+
+  void enrichJ2Obj(jinja2::ValuesMap& j2_obj,
+                   std::string_view obj_name) const override;
+
+  void enrichJ2Pkg(jinja2::ValuesMap& j2_pkg,
+                   const jmg::PkgDef& pkg_def) const override;
 
   std::string_view translateType(std::string_view jmg_idl_type) const override;
+
+  static const std::string kProtocPkgTmpl;
+  static const std::string kProtocTypeTmpl;
+  static const std::string kProtocObjTmpl;
 };
 
 } // namespace jmgc

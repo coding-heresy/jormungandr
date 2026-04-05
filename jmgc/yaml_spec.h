@@ -45,7 +45,7 @@ public:
   std::string_view encodingHeaderFileName() const override;
 
 private:
-  std::string encodingObjDef() const override;
+  std::string_view encodingName() const override;
 };
 
 } // namespace jmgc

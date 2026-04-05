@@ -37,119 +37,133 @@ using namespace std;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
+namespace j2 = jinja2;
 namespace vws = std::views;
 
 namespace jmgc
 {
 
-std::string ProtocYamlSpec::tgtFileName() const {
+const string ProtocYamlSpec::kProtocPkgTmpl = R"(
+{% import "type.tmpl" as type_tmpl -%}
+{% import "object.tmpl" as obj_tmpl -%}
+syntax = "proto2";
+
+package {{ proto_pkg }};
+
+{% for type_def in type_defs -%}
+{{ type_tmpl.render_type_def(type_def) -}}
+{% endfor -%}
+
+{% for obj_def in obj_defs -%}
+{{ obj_tmpl.render_obj(obj_def) }}
+{%- if not loop.last -%}
+
+{% endif -%}
+{%- endfor -%}
+)"s;
+
+const string ProtocYamlSpec::kProtocTypeTmpl = R"(
+{% macro render_type_def(type_def) -%}
+{% if type_def.type == 'enum' -%}
+enum {{ type_def.name }} {
+{% for enumeration in type_def.values -%}
+  {{ enumeration.name }} = {{ enumeration.value }};
+{% endfor -%}
+}
+{% endif -%}
+{% endmacro -%}
+)"s;
+
+const string ProtocYamlSpec::kProtocObjTmpl = R"(
+{% macro render_obj(obj_def) -%}
+message {{ obj_def.name }} {
+{% for field in obj_def.fields -%}
+  {% if field.type == 'array' %}repeated {{ field.subtype }}
+{%- else %}{{ field.required }} {{ field.type }}{% endif -%}
+ {{ field.name }} = {{ field.field_id }};
+{% if not loop.last -%}
+
+{% endif -%}
+{% endfor -%}
+}
+{% endmacro -%}
+)"s;
+
+string ProtocYamlSpec::tgtFileName() const {
   JMG_ENFORCE_USING(
     logic_error, pred(pkg_),
     "requested target file name before input file was processed");
   return str_cat(snakeCaseToCamelCase(jmg::get<Name>(*pkg_)), ".proto");
 }
 
-void ProtocYamlSpec::emit(ostream& strm) const {
-  JMG_ENFORCE_USING(
-    logic_error, pkg_,
-    "attempted to emit spec results before processing a [package] section");
+string ProtocYamlSpec::pkgTmplData() const { return string(kProtocPkgTmpl); }
 
-  strm << "\nsyntax = \"proto2\";\n\n";
+string ProtocYamlSpec::typeTmplData() const { return string(kProtocTypeTmpl); }
 
-  // emit package
-  emitPkg(strm, *pkg_);
+string ProtocYamlSpec::objTmplData() const { return string(kProtocObjTmpl); }
 
-  // emit all types
-  for (const auto& type_def : types_) { emitType(strm, type_def); }
-
-  // emit all objects in the order in which they were encountered
-  for (const auto& obj_name : obj_names_) {
-    const auto& flds = declared_objs_.find_required(obj_name);
-    emitObj(strm, obj_name, flds);
+void ProtocYamlSpec::enrichJ2Type(jinja2::ValuesMap& j2_type,
+                                  const jmg::TypeDef& type_def) const {
+  const auto inner_type = jmg::get<Type>(type_def);
+  if (kEnum == inner_type) {
+    {
+      const auto& name = j2_type["name"].asString();
+      j2_type["name"] =
+        snakeCaseToCamelCase(name, true /* capitalize_leading */);
+    }
+    {
+      auto& enumerations = j2_type["values"].asList();
+      j2::ValuesList rewritten;
+      rewritten.reserve(enumerations.size());
+      for (const auto& enumeration : enumerations) {
+        auto clone = enumeration.asMap();
+        // rewrite the enumeration name to all caps snake case to conform to
+        // protobuf conventions/requirements
+        clone["name"] =
+          camelCaseToSnakeCase(clone["name"].asString(), true /* app_caps */);
+        rewritten.push_back(std::move(clone));
+      }
+      j2_type["values"] = std::move(rewritten);
+    }
   }
 }
 
-void ProtocYamlSpec::emitPkg(ostream& strm, const jmg::PkgDef& pkg_def) const {
+void ProtocYamlSpec::enrichJ2Fld(jinja2::ValuesMap& j2_fld,
+                                 const jmg::ObjGrpFld& fld_def) const {
+  const auto fld_name = jmg::get<Name>(fld_def);
+  j2_fld["name"] = camelCaseToSnakeCase(fld_name);
+  {
+    const auto required = j2_fld["required"].asString();
+    j2_fld["required"] =
+      ("jmg::Required"sv == required) ? "required"s : "optional"s;
+  }
+  {
+    const auto inner_type = j2_fld["type"].asString();
+    if ("str"sv == inner_type) { j2_fld["type"] = "string"sv; }
+    if ("array"sv == inner_type) {
+      const auto rpt_type = jmg::try_get<SubType>(fld_def);
+      JMG_ENFORCE(pred(rpt_type), "no subtype provided for repeated field [",
+                  fld_name, "]");
+      j2_fld["subtype"] = string(translateType(*rpt_type));
+    }
+  }
+  {
+    const auto fld_id = jmg::try_get<ProtobufId>(fld_def);
+    JMG_ENFORCE(pred(fld_id), "no protobuf field ID provided for field [",
+                fld_name, "] when generating .proto IDL output");
+    j2_fld["field_id"] = str_cat(*fld_id);
+  }
+}
+
+void ProtocYamlSpec::enrichJ2Obj(jinja2::ValuesMap& j2_obj,
+                                 std::string_view obj_name) const {}
+
+void ProtocYamlSpec::enrichJ2Pkg(jinja2::ValuesMap& j2_pkg,
+                                 const jmg::PkgDef& pkg_def) const {
   const auto proto_pkg = jmg::try_get<ProtobufPackage>(pkg_def);
   JMG_ENFORCE(pred(proto_pkg), "no [protobuf_pkg] provided for package [",
               jmg::get<Name>(pkg_def), "] when generating .proto IDL output");
-  strm << "package " << *proto_pkg << ";\n\n";
-
-  if (const auto proto_imports = jmg::try_get<ProtobufImports>(pkg_def);
-      proto_imports) {
-    JMG_ENFORCE(!(proto_imports->empty()),
-                "provided [proto_imports] section was empty");
-    for (const auto proto_import : *proto_imports) {
-      const auto file_path = jmg::get<File>(proto_import);
-    }
-  }
-
-  // TODO(bd) add more here
-}
-
-void ProtocYamlSpec::emitEnum(ostream& strm,
-                              string_view name,
-                              optional<string_view> /* ul_type */,
-                              const jmg::Enumerations& enumerations) const {
-  strm << "enum " << snakeCaseToCamelCase(name, true /* capitalize_leading */)
-       << " {\n";
-  const auto enums_view =
-    enumerations | vws::transform([&](const auto& enumeration) {
-      auto enum_name =
-        camelCaseToSnakeCase(jmg::get<Name>(enumeration), true /* app_caps */);
-      const auto enum_val = jmg::get<EnumValue>(enumeration);
-      return str_cat("  ", std::move(enum_name), " = ", enum_val, ";");
-    });
-  strm << str_join(enums_view, "\n") << "\n}\n\n";
-}
-
-void ProtocYamlSpec::emitSafeType(
-  ostream& /* strm */,
-  string_view name,
-  string_view /* inner_type */,
-  optional<string_view> /* safe_concept */) const {
-  cerr << "WARN: skipping safe type definition [" << name
-       << "] since safe types are not supported directly by protoc\n";
-}
-
-void ProtocYamlSpec::emitFld(ostream& strm,
-                             const jmg::ObjGrpFld& fld_def) const {
-  const auto fld_name = jmg::get<Name>(fld_def);
-  const auto fld_type = jmg::get<Type>(fld_def);
-  strm << "\n  ";
-  if (kArray == fld_type) {
-    strm << "repeated ";
-    const auto rpt_type = jmg::try_get<SubType>(fld_def);
-    JMG_ENFORCE(pred(rpt_type), "no subtype provided for repeated field [",
-                fld_name, "]");
-    strm << translateType(*rpt_type);
-  }
-  else {
-    if (const auto required_flag = jmg::try_get<RequiredFlag>(fld_def);
-        required_flag) {
-      if (*required_flag) { strm << "required "; }
-      else { strm << "optional "; }
-    }
-    else { strm << "required "; }
-    strm << translateType(fld_type);
-  }
-
-  strm << " " << camelCaseToSnakeCase(fld_name);
-
-  const auto fld_id = jmg::try_get<ProtobufId>(fld_def);
-  JMG_ENFORCE(pred(fld_id), "no protobuf field ID provided for field [",
-              fld_name, "] when generating .proto IDL output");
-  strm << " = " << *fld_id;
-
-  strm << ";\n";
-}
-
-void ProtocYamlSpec::emitObj(ostream& strm,
-                             const string_view name,
-                             const JmgObjGrpFlds& flds) const {
-  strm << "message " << name << " {\n";
-  for (const auto& fld : flds) { emitFld(strm, *fld); }
-  strm << "}\n\n";
+  j2_pkg["proto_pkg"] = string(*proto_pkg);
 }
 
 const ProtocYamlSpec::ProtocTypeTranslations ProtocYamlSpec::kTypeTranslations =

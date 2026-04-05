@@ -50,15 +50,14 @@ string_view CbeYamlSpec::encodingHeaderFileName() const {
   return "jmg/cbe/cbe.h"sv;
 }
 
-string_view CbeYamlSpec::encodingNamespace() const { return "jmg::cbe"sv; }
+string_view CbeYamlSpec::encodingName() const { return "cbe"sv; }
 
-string_view CbeYamlSpec::encodingFieldDef() const { return "Field"sv; }
-
-void CbeYamlSpec::enrichFld(ostream& strm, const ObjGrpFld& fld_def) const {
+void CbeYamlSpec::enrichJ2Fld(jinja2::ValuesMap& j2_fld,
+                              const ObjGrpFld& fld_def) const {
   const auto id = jmg::try_get<CbeId>(fld_def);
   JMG_ENFORCE(pred(id), "no CBE field ID was provided for field [",
               jmg::get<Name>(fld_def), "]");
-  strm << ", " << *id << "U";
+  j2_fld["field_id"] = str_cat(*id, "U");
 }
 
 } // namespace jmgc

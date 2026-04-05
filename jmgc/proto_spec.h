@@ -45,24 +45,19 @@ public:
 
   std::string_view encodingHeaderFileName() const override;
 
+  void emit(std::ostream& strm) override;
+
 private:
-  std::string_view encodingNamespace() const override;
+  std::string_view encodingName() const override;
 
-  std::string_view encodingFieldDef() const override;
+  void enrichJ2Pkg(jinja2::ValuesMap& j2_pkg,
+                   const jmg::PkgDef& pkg_def) const override;
 
-  void emitEnum(std::ostream& strm,
-                std::string_view name,
-                std::optional<std::string_view> ul_type,
-                const jmg::Enumerations& enumerations) const override;
+  void enrichJ2Obj(jinja2::ValuesMap& j2_obj,
+                   std::string_view obj_name) const override;
 
-  void enrichFld(std::ostream& strm,
-                 const jmg::ObjGrpFld& fld_def) const override;
-
-  void emitPkg(std::ostream& strm, const jmg::PkgDef& pkg_def) const override;
-
-  void emitObj(std::ostream& strm,
-               const std::string_view name,
-               const JmgObjGrpFlds& flds) const override;
+  void enrichJ2Fld(jinja2::ValuesMap& j2_fld,
+                   const jmg::ObjGrpFld& fld_def) const override;
 
   mutable std::string proto_ns = "";
 };
