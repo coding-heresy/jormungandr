@@ -26,6 +26,20 @@ types:
 # TODO(bd) support groups?
 #groups:
 objects:
+  - SafeTypesMsg:
+      # TODO(bd) allow safe string types as object fields?
+      # - str_id_fld:
+      #     type: "StrId"
+      #     protobuf_id: 1
+      #     cbe_id: 1
+      - int_id_fld:
+          type: "IntId"
+          protobuf_id: 2
+          cbe_id: 2
+      - important_value_fld:
+          type: "ImportantValue"
+          protobuf_id: 3
+          cbe_id: 3
   - InnerMsg:
       - inner_int_32:
           type: "i32"
