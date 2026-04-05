@@ -183,7 +183,8 @@ protected:
   static constexpr auto kArray = std::string_view("array");
   static constexpr auto kUnion = std::string_view("union");
 
-  using TypeNames = jmg::Set<std::string, "declared type names", "type name">;
+  using TypeDefs =
+    jmg::Dict<std::string, jmg::TypeDef, "declared types", "type name">;
   using PrimitiveTypeTranslations =
     jmg::Dict<std::string,
               std::string,
@@ -249,12 +250,12 @@ protected:
   virtual std::string_view translateType(std::string_view jmg_idl_type) const;
 
   std::unique_ptr<jmg::PkgDef> pkg_;
-  // TODO(bd) review this block of fields to see which ones can be removed
-  TypeNames type_names_;
-  std::vector<jmg::TypeDef> types_;
+  TypeDefs type_defs_;
   std::vector<std::string> obj_names_;
 
+  ////////////////////
   // jinja2
+
   jinja2::MemoryFileSystem tmpl_store_;
   // jinja2::TemplateEnv contains a mutex and cannot be copied or moved
   std::unique_ptr<jinja2::TemplateEnv> tmpl_env_;
