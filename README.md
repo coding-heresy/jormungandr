@@ -1123,6 +1123,7 @@ please use these abbreviations where appropriate.
 * strm  - stream
 * svc   - service
 * sz    - size/length/count
+* tmpl  - template
 * tp    - time point
 * ts    - timestamp
 
