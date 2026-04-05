@@ -43,7 +43,7 @@ namespace jmg
 class ReactorBasedClient {
 public:
   JMG_NON_COPYABLE(ReactorBasedClient);
-  JMG_NON_MOVEABLE(ReactorBasedClient);
+  JMG_NON_MOVABLE(ReactorBasedClient);
   ReactorBasedClient() = default;
   virtual ~ReactorBasedClient() = default;
 

@@ -171,7 +171,7 @@ class Uring {
 public:
   Uring() = delete;
   JMG_NON_COPYABLE(Uring);
-  JMG_NON_MOVEABLE(Uring);
+  JMG_NON_MOVABLE(Uring);
   ~Uring();
 
   // TODO(bd) allow user to pass flags as well?

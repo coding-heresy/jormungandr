@@ -54,7 +54,7 @@ class BoostThreadPool {
 public:
   BoostThreadPool(size_t thread_count = 1) : pool_(thread_count) {}
   JMG_NON_COPYABLE(BoostThreadPool);
-  JMG_NON_MOVEABLE(BoostThreadPool);
+  JMG_NON_MOVABLE(BoostThreadPool);
   ~BoostThreadPool() = default;
 
   void join() { pool_.join(); }
@@ -74,7 +74,7 @@ class BsThreadPool {
 public:
   BsThreadPool(size_t thread_count = 1) : pool_(thread_count) {}
   JMG_NON_COPYABLE(BsThreadPool);
-  JMG_NON_MOVEABLE(BsThreadPool);
+  JMG_NON_MOVABLE(BsThreadPool);
   ~BsThreadPool() = default;
 
   void join() { pool_.wait(); }
@@ -94,7 +94,7 @@ class DpThreadPool {
 public:
   DpThreadPool(size_t thread_count = 1) : pool_(thread_count) {}
   JMG_NON_COPYABLE(DpThreadPool);
-  JMG_NON_MOVEABLE(DpThreadPool);
+  JMG_NON_MOVABLE(DpThreadPool);
   ~DpThreadPool() = default;
 
   void join() { pool_.wait_for_tasks(); }

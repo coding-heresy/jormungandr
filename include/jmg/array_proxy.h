@@ -58,7 +58,7 @@ public:
   using iterator_concept = std::forward_iterator_tag;
 
   explicit StashingConstItrProxy() = default;
-  JMG_DEFAULT_MOVEABLE(StashingConstItrProxy);
+  JMG_DEFAULT_MOVABLE(StashingConstItrProxy);
   JMG_DEFAULT_COPYABLE(StashingConstItrProxy);
   explicit StashingConstItrProxy(ProxiedItrT&& itr) : itr_(std::move(itr)) {
     if (itr_) { stash_ = ValueProxyT(*(itr_.value())); }
@@ -109,7 +109,7 @@ public:
   using iterator_concept = std::forward_iterator_tag;
 
   AdaptingConstItrProxy() = default;
-  JMG_DEFAULT_MOVEABLE(AdaptingConstItrProxy);
+  JMG_DEFAULT_MOVABLE(AdaptingConstItrProxy);
   JMG_DEFAULT_COPYABLE(AdaptingConstItrProxy);
   explicit AdaptingConstItrProxy(ProxiedItrT&& itr) : itr_(std::move(itr)) {}
 

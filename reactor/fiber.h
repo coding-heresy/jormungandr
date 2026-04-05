@@ -82,7 +82,7 @@ public:
 
   Fiber() = default;
   JMG_NON_COPYABLE(Fiber);
-  JMG_NON_MOVEABLE(Fiber);
+  JMG_NON_MOVABLE(Fiber);
   ~Fiber() = default;
 
   /**

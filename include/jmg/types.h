@@ -140,7 +140,7 @@ struct DictBase : detail::AssocContainerBase<kDictDescription, kKeyDescription>,
   DictBase() = default;
   virtual ~DictBase() = default;
   JMG_DEFAULT_COPYABLE(DictBase);
-  JMG_DEFAULT_MOVEABLE(DictBase);
+  JMG_DEFAULT_MOVABLE(DictBase);
   DictBase(Initializer&& vals) : dict_type(std::forward<Initializer>(vals)) {}
 
   /**
@@ -202,7 +202,7 @@ struct SetBase
   SetBase() = default;
   virtual ~SetBase() = default;
   JMG_DEFAULT_COPYABLE(SetBase);
-  JMG_DEFAULT_MOVEABLE(SetBase);
+  JMG_DEFAULT_MOVABLE(SetBase);
   SetBase(std::initializer_list<value_type>&& vals)
     : set_type(std::forward<std::initializer_list<value_type>>(vals)) {}
 
@@ -242,7 +242,7 @@ struct SetBase
     dict_name() = default;                                                     \
     virtual ~dict_name() = default;                                            \
     JMG_DEFAULT_COPYABLE(dict_name);                                           \
-    JMG_DEFAULT_MOVEABLE(dict_name);                                           \
+    JMG_DEFAULT_MOVABLE(dict_name);                                            \
     dict_name(std::initializer_list<value_type>&& vals)                        \
       : Base(std::forward<std::initializer_list<value_type>>(vals)) {}         \
   }
@@ -267,7 +267,7 @@ JMG_DEFINE_DICT(OrderedDict, absl::btree_map);
     set_name() = default;                                                    \
     virtual ~set_name() = default;                                           \
     JMG_DEFAULT_COPYABLE(set_name);                                          \
-    JMG_DEFAULT_MOVEABLE(set_name);                                          \
+    JMG_DEFAULT_MOVABLE(set_name);                                           \
     set_name(std::initializer_list<value_type>&& vals)                       \
       : Base(std::forward<std::initializer_list<value_type>>(vals)) {}       \
   }

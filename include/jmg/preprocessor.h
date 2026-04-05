@@ -195,11 +195,11 @@
   class(const class& src) = delete; \
   class& operator=(const class& rhs) = delete
 
-#define JMG_DEFAULT_MOVEABLE(class) \
-  class(class && src) = default;    \
+#define JMG_DEFAULT_MOVABLE(class) \
+  class(class && src) = default;   \
   class& operator=(class&& rhs) = default
 
-#define JMG_NON_MOVEABLE(class) \
+#define JMG_NON_MOVABLE(class)  \
   class(class && src) = delete; \
   class& operator=(class&& rhs) = delete
 

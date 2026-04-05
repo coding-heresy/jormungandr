@@ -58,7 +58,7 @@ public:
   class Cnxn {
   public:
     JMG_NON_COPYABLE(Cnxn);
-    // JMG_DEFAULT_MOVEABLE(Cnxn);
+    // JMG_DEFAULT_MOVABLE(Cnxn);
     Cnxn(Cnxn&& src);
     ~Cnxn();
 
@@ -91,7 +91,7 @@ public:
       std::function<void(Fiber&, Cnxn cnxn, IpEndpoint peer)>;
 
     JMG_DEFAULT_COPYABLE(CnxnAccepter);
-    JMG_DEFAULT_MOVEABLE(CnxnAccepter);
+    JMG_DEFAULT_MOVABLE(CnxnAccepter);
     ~CnxnAccepter() = default;
 
     /**
