@@ -140,11 +140,22 @@ void ProtocYamlSpec::enrichJ2Fld(jinja2::ValuesMap& j2_fld,
   {
     const auto inner_type = j2_fld["type"].asString();
     if ("str"sv == inner_type) { j2_fld["type"] = "string"sv; }
-    if ("array"sv == inner_type) {
+    else if ("array"sv == inner_type) {
       const auto rpt_type = jmg::try_get<SubType>(fld_def);
       JMG_ENFORCE(pred(rpt_type), "no subtype provided for repeated field [",
                   fld_name, "]");
       j2_fld["subtype"] = string(translateType(*rpt_type));
+    }
+    else {
+      if (const auto type_def_entry = type_defs_.find(inner_type);
+          type_defs_.end() != type_def_entry) {
+        // replace declared safe types with their underlying types
+        const auto& type_def = value_of(*type_def_entry);
+        const auto type_def_type = jmg::get<Type>(type_def);
+        if (kEnum != type_def_type) {
+          j2_fld["type"] = string(translateType(type_def_type));
+        }
+      }
     }
   }
   {
