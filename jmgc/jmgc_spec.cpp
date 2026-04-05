@@ -234,7 +234,7 @@ void JmgYamlSpec::processType(const Node& jmg_type) {
       const auto ul_type = jmg::try_get<EnumUlType>(type_def);
       JMG_ENFORCE(pred(ul_type),
                   "no underlying type specified for enum named [", name, "]");
-      values["underlying_type"] = translateType(*ul_type);
+      values["underlying_type"] = string(translateType(*ul_type));
     }
     {
       const auto enumerations = [&] {
@@ -266,7 +266,7 @@ void JmgYamlSpec::processType(const Node& jmg_type) {
     JMG_ENFORCE(!pred(jmg::try_get<EnumValues>(type_def)),
                 "enumeration values are not valid for safe type named [", name,
                 "]");
-    values["type"] = translateType(inner_type);
+    values["type"] = string(translateType(inner_type));
     const auto safe_concept = jmg::try_get<Concept>(type_def);
     if (safe_concept) {
       const auto& traits = kJ2ConceptTranslations.find_required(*safe_concept);
