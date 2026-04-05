@@ -521,7 +521,7 @@ private:
       Itr() = default;
       ~Itr() = default;
       JMG_DEFAULT_COPYABLE(Itr);
-      JMG_DEFAULT_MOVEABLE(Itr);
+      JMG_DEFAULT_MOVABLE(Itr);
 
       // TODO(bd) remove?
       explicit Itr(const ProtoMsg& msg)

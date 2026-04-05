@@ -44,7 +44,7 @@ namespace jmg
 class ReactorBasedServer : public Server {
 public:
   JMG_NON_COPYABLE(ReactorBasedServer);
-  JMG_NON_MOVEABLE(ReactorBasedServer);
+  JMG_NON_MOVABLE(ReactorBasedServer);
   ReactorBasedServer();
   virtual ~ReactorBasedServer() = default;
 

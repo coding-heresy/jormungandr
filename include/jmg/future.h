@@ -60,7 +60,7 @@ template<typename T>
 class Future {
 public:
   Future() = default;
-  JMG_DEFAULT_MOVEABLE(Future);
+  JMG_DEFAULT_MOVABLE(Future);
   JMG_NON_COPYABLE(Future);
 
   Future(std::future<T>&& ftr) : ftr_(std::move(ftr)) {}
@@ -97,7 +97,7 @@ template<>
 class Future<void> {
 public:
   Future() = default;
-  JMG_DEFAULT_MOVEABLE(Future);
+  JMG_DEFAULT_MOVABLE(Future);
   JMG_NON_COPYABLE(Future);
 
   Future(std::future<void>&& ftr) : ftr_(std::move(ftr)) {}
@@ -136,7 +136,7 @@ class Promise {
 public:
   Promise() = default;
   ~Promise() = default;
-  JMG_DEFAULT_MOVEABLE(Promise);
+  JMG_DEFAULT_MOVABLE(Promise);
   JMG_NON_COPYABLE(Promise);
 
   auto get_future() { return Future(prm_.get_future()); }
@@ -184,7 +184,7 @@ class Promise<void> {
 public:
   Promise() = default;
   ~Promise() = default;
-  JMG_DEFAULT_MOVEABLE(Promise);
+  JMG_DEFAULT_MOVABLE(Promise);
   JMG_NON_COPYABLE(Promise);
 
   auto get_future() { return Future(prm_.get_future()); }

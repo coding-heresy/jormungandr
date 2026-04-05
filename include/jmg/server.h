@@ -45,7 +45,7 @@ namespace jmg
 class Server {
 public:
   JMG_NON_COPYABLE(Server);
-  JMG_NON_MOVEABLE(Server);
+  JMG_NON_MOVABLE(Server);
   Server() = default;
   virtual ~Server();
 

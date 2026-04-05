@@ -57,7 +57,7 @@ public:
   Reactor(size_t thread_pool_worker_count = 1);
   ~Reactor();
   JMG_NON_COPYABLE(Reactor);
-  JMG_NON_MOVEABLE(Reactor);
+  JMG_NON_MOVABLE(Reactor);
 
   /**
    * start the reactor, takes control of the thread that calls it

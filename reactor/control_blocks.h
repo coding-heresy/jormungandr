@@ -223,7 +223,7 @@ public:
   using Block = typename ControlBlocks<T>::ControlBlock;
   CtrlBlockQueue() = delete;
   JMG_NON_COPYABLE(CtrlBlockQueue);
-  JMG_NON_MOVEABLE(CtrlBlockQueue);
+  JMG_NON_MOVABLE(CtrlBlockQueue);
 
   CtrlBlockQueue(ControlBlocks<T>& ctrl_blocks) : ctrl_blocks_(ctrl_blocks) {}
 

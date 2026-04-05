@@ -60,7 +60,7 @@ class RpcSvc : SimpleTcpSvc {
 public:
   virtual ~RpcSvc() = default;
   JMG_NON_COPYABLE(RpcSvc);
-  JMG_NON_MOVEABLE(RpcSvc);
+  JMG_NON_MOVABLE(RpcSvc);
   RpcSvc(const IpEndpoint& endpoint, const ShutdownFlag& is_shutdown)
     : endpoint_(endpoint), is_shutdown_(is_shutdown) {}
 

@@ -51,7 +51,7 @@ class RpcClient {
 public:
   virtual ~RpcClient() = default;
   JMG_NON_COPYABLE(RpcClient);
-  JMG_NON_MOVEABLE(RpcClient);
+  JMG_NON_MOVABLE(RpcClient);
   RpcClient(Fiber& fbr, const IpEndpoint& tgt_endpoint)
     : fbr_(fbr), cnxn_(SimpleTcpSvc::connectTo(fbr, tgt_endpoint)) {}
 
