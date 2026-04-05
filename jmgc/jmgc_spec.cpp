@@ -315,6 +315,16 @@ void JmgYamlSpec::processObjFld(const string_view obj_name,
     {
       j2::ValuesMap j2_fld;
       j2_fld["name"] = snakeCaseToCamelCase(fld_name);
+      // check for invalid use of safe string type in a field
+      if (const auto entry = type_defs_.find(type_name);
+          type_defs_.end() != entry) {
+        const auto& type_def = value_of(*entry);
+        JMG_ENFORCE(
+          "str"sv != jmg::get<Type>(type_def), "invalid use of safe type [",
+          type_name, "] with underlying string as the type of field [",
+          fld_name,
+          "], safe string types are not currently allowed to be field types");
+      }
       j2_fld["type"] = (("str"sv == type_name) || ("array"sv == type_name))
                          ? string(type_name)
                          : string(translateType(type_name));
@@ -342,12 +352,18 @@ void JmgYamlSpec::processObjFld(const string_view obj_name,
       }
       j2_fld["field_name"] = camelCaseToSnakeCase(fld_name);
       enrichJ2Fld(j2_fld, *ptr);
+      {
+        const auto& enriched_fld_name = j2_fld["field_name"].asString();
+        JMG_ENFORCE(!type_defs_.contains(enriched_fld_name),
+                    "duplication detected, enriched/modified field name [",
+                    enriched_fld_name, "] matches an existing type name");
+      }
       j2_obj["fields"].asList().push_back(std::move(j2_fld));
     }
   }
 }
 
-void JmgYamlSpec::emit(ostream& strm) {
+void JmgYamlSpec::emit(ostream& strm) const {
   j2::ValuesMap all_values = pkg_values_;
   all_values["type_defs"] = type_def_values_;
   {
