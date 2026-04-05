@@ -45,12 +45,10 @@ public:
   std::string_view encodingHeaderFileName() const override;
 
 private:
-  std::string_view encodingNamespace() const override;
+  std::string_view encodingName() const override;
 
-  std::string_view encodingFieldDef() const override;
-
-  void enrichFld(std::ostream& strm,
-                 const jmg::ObjGrpFld& fld_def) const override;
+  void enrichJ2Fld(jinja2::ValuesMap& j2_fld,
+                   const jmg::ObjGrpFld& fld_def) const override;
 };
 
 } // namespace jmgc

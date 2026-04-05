@@ -36,6 +36,10 @@
 #include <string_view>
 #include <vector>
 
+#include <jinja2cpp/filesystem_handler.h>
+#include <jinja2cpp/template.h>
+#include <jinja2cpp/template_env.h>
+#include <jinja2cpp/value.h>
 #include <yaml-cpp/yaml.h>
 
 #include "jmg/types.h"
@@ -66,12 +70,12 @@ using RequiredFlag = FieldDef<bool, "required", Optional>;
 using EnumValue = FieldDef<int64_t, "value", Required>;
 using EnumUlType = StringField<"underlying_type", Optional>;
 using Enumeration = yaml::Object<Name, EnumValue>;
-using Enumerations = yaml::Array<Enumeration>;
+using Enumerations = yaml::ArrayField<Enumeration>;
 using EnumValues = FieldDef<Enumerations, "values", Optional>;
 
 // attributes of a package
 using ImportFile = yaml::Object<File>;
-using ImportFiles = yaml::Array<ImportFile>;
+using ImportFiles = yaml::ArrayField<ImportFile>;
 using Imports = FieldDef<ImportFiles, "imports", Optional>;
 using ProtobufImports = FieldDef<ImportFiles, "protobuf_imports", Optional>;
 using PkgDef = yaml::Object<Name, Imports, ProtobufPackage, ProtobufImports>;
@@ -88,6 +92,26 @@ using ObjGrpFld =
 
 namespace jmgc
 {
+
+////////////////////////////////////////////////////////////////////////////////
+// support code
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * function template that simplifies very annoying non/std::expected value
+ * retrieval
+ */
+template<template<typename...> typename Expected,
+         typename T,
+         typename E,
+         typename... DescParts>
+decltype(auto) getJ2ValueFrom(Expected<T, E>&& expected,
+                              DescParts... desc_parts) {
+  JMG_ENFORCE(expected.has_value(),
+              jmg::str_cat(std::forward<DescParts>(desc_parts)...),
+              " failed: ", expected.error().ToString());
+  return expected.value();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // spec builder
@@ -122,8 +146,10 @@ public:
 
   /**
    * no more definitions to process, emit output
+   *
+   * TODO(bd) replace const with && to allow emission to be destructive?
    */
-  virtual void emit(std::ostream& strm) const = 0;
+  virtual void emit(std::ostream& strm) = 0;
 };
 
 using JmgcYamlSpecPtr = std::unique_ptr<JmgcYamlSpecIfc>;
@@ -135,6 +161,7 @@ class JmgYamlSpec : public JmgcYamlSpecIfc {
 protected:
   using JmgObjGrpFldPtr = std::shared_ptr<jmg::ObjGrpFld>;
   using JmgObjGrpFlds = std::vector<JmgObjGrpFldPtr>;
+  using J2TmplPtr = std::unique_ptr<jinja2::Template>;
 
 public:
   void processPkg(const YAML::Node& jmg_pkg) override;
@@ -148,7 +175,7 @@ public:
 
   virtual std::string_view encodingHeaderFileName() const { return ""; }
 
-  void emit(std::ostream& strm) const override;
+  void emit(std::ostream& strm) override;
 
 protected:
   static constexpr auto kEnum = std::string_view("enum");
@@ -171,60 +198,81 @@ protected:
 
   static const PrimitiveTypeTranslations kPrimitiveTypeTranslations;
 
+  jinja2::Template& pkgTmpl();
+
   bool isPrimitiveTypeValid(std::string_view type_name);
 
   bool isTypeValid(const jmg::ObjGrpFld& fld);
 
-  virtual std::string_view encodingNamespace() const {
-    return std::string_view("jmg");
-  }
+  virtual std::string_view encodingName() const { return ""; }
 
-  virtual std::string_view encodingFieldDef() const {
-    return std::string_view("FieldDef");
-  }
+  virtual std::string pkgTmplData() const;
 
-  virtual std::string encodingObjDef() const {
-    return jmg::str_cat(encodingNamespace(), "::Object");
-  }
+  virtual std::string typeTmplData() const;
 
-  virtual void emitPkg(std::ostream& strm, const jmg::PkgDef& pkg_def) const;
-
-  virtual void emitType(std::ostream& strm, const jmg::TypeDef& type_def) const;
-
-  virtual void emitEnum(std::ostream& strm,
-                        std::string_view name,
-                        std::optional<std::string_view> ul_type,
-                        const jmg::Enumerations& enumerations) const;
-
-  virtual void emitSafeType(std::ostream& strm,
-                            std::string_view name,
-                            std::string_view inner_type,
-                            std::optional<std::string_view> safe_concept) const;
-
-  virtual void emitFld(std::ostream& strm, const jmg::ObjGrpFld& fld_def) const;
+  virtual std::string objTmplData() const;
 
   /**
-   * member function enriches a field definition by adding extra type
-   * arguments to the end of its specialization
+   * member function that enriches a package definition
    */
-  virtual void enrichFld(std::ostream& strm,
-                         const jmg::ObjGrpFld& fld_def) const {
+  virtual void enrichJ2Pkg(jinja2::ValuesMap& j2_pkg,
+                           const jmg::PkgDef& pkg_def) const {
     // no enrichment by default
   }
 
-  virtual void emitObj(std::ostream& strm,
-                       const std::string_view name,
-                       const JmgObjGrpFlds& flds) const;
+  /**
+   * member function that enriches an object definition
+   */
+  virtual void enrichJ2Obj(jinja2::ValuesMap& j2_obj,
+                           std::string_view obj_name) const {
+    // no enrichment by default
+  }
+
+  /**
+   * member function that enriches a field definition
+   */
+  virtual void enrichJ2Fld(jinja2::ValuesMap& j2_fld,
+                           const jmg::ObjGrpFld& fld_def) const {
+    // no enrichment by default
+  }
+
+  /**
+   * member function that enriches a type definition
+   */
+  virtual void enrichJ2Type(jinja2::ValuesMap& j2_type,
+                            const jmg::TypeDef& type_def) const {
+    // no enrichment by default
+  }
 
   virtual std::string_view translateType(std::string_view jmg_idl_type) const;
 
   std::unique_ptr<jmg::PkgDef> pkg_;
+  // TODO(bd) review this block of fields to see which ones can be removed
   TypeNames type_names_;
   std::vector<jmg::TypeDef> types_;
   std::vector<std::string> obj_names_;
   DeclaredFields flds_dict_;
   DeclaredObjects declared_objs_;
   mutable ExtraTranslations extraTranslations_;
+
+  // jinja2
+  jinja2::MemoryFileSystem tmpl_store_;
+  // jinja2::TemplateEnv contains a mutex and cannot be copied or moved
+  std::unique_ptr<jinja2::TemplateEnv> tmpl_env_;
+  // TODO(bd) why is jinja2::Template::RenderAsString not marked as const?
+  std::unique_ptr<jinja2::Template> pkg_tmpl_;
+  jinja2::ValuesMap pkg_values_;
+  jinja2::ValuesList type_def_values_;
+  jmg::Dict<std::string,
+            jinja2::ValuesMap,
+            "JMG object name",
+            "jinja2 values for object">
+    obj_def_values_;
+
+private:
+  static const std::string kPkgTmpl;
+  static const std::string kTypeTmpl;
+  static const std::string kObjTmpl;
 };
 
 /**
@@ -251,9 +299,9 @@ public:
       "attempted to call tgtFileName() member function on spec manager object");
   }
 
-  void emit(std::ostream& strm) const override;
+  void emit(std::ostream& strm) override;
 
-  void emit(const std::filesystem::path& tgt_directory) const;
+  void emit(const std::filesystem::path& tgt_directory);
 
 private:
   std::vector<JmgcYamlSpecPtr> specs_;

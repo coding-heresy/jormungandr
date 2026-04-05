@@ -54,27 +54,27 @@ enum class Active : uint8_t {
 
 using Id32 = SafeId32<>;
 
-using InnerField = FieldDef<int, "inner", Required>;
+using InnerField = yaml::Field<int, "inner", Required>;
 using InnerObject = yaml::Object<InnerField>;
-using ComplexArrayProxy = yaml::Array<InnerObject>;
+using ComplexArrayProxy = yaml::ArrayField<InnerObject>;
 
-using StrField = StringField<"str", Required>;
-using IntField = FieldDef<int, "int", Required>;
-using OptField = FieldDef<double, "opt", Optional>;
-using Id32Field = FieldDef<Id32, "id32", Required>;
+using StrField = yaml::StringField<"str", Required>;
+using IntField = yaml::Field<int, "int", Required>;
+using OptField = yaml::Field<double, "opt", Optional>;
+using Id32Field = yaml::Field<Id32, "id32", Required>;
 
 // InnerObj is a single InnerObject
-using InnerObj = FieldDef<InnerObject, "object", Required>;
+using InnerObj = yaml::Field<InnerObject, "object", Required>;
 // PrimitiveArray is an array of primitive (i.e. non-object) elements
-using PrimitiveArray = FieldDef<vector<int>, "primitive", Required>;
+using PrimitiveArray = yaml::Field<vector<int>, "primitive", Required>;
 // ComplexArray is an array of non-primitive (i.e. object) elements
-using ComplexArray = FieldDef<ComplexArrayProxy, "complex", Required>;
+using ComplexArray = yaml::Field<ComplexArrayProxy, "complex", Required>;
 // OptComplexArray is an optional array of non-primitive elements
-using OptComplexArray = FieldDef<ComplexArrayProxy, "opt_complex", Optional>;
+using OptComplexArray = yaml::Field<ComplexArrayProxy, "opt_complex", Optional>;
 
-using GroupStringField = StringField<"group_string_field", Required>;
-using GroupDblField = FieldDef<double, "group_dbl_field", Required>;
-using GroupOptionalField = FieldDef<int, "group_optional_field", Optional>;
+using GroupStringField = yaml::StringField<"group_string_field", Required>;
+using GroupDblField = yaml::Field<double, "group_dbl_field", Required>;
+using GroupOptionalField = yaml::Field<int, "group_optional_field", Optional>;
 using TestFieldGroup =
   FieldGroupDef<GroupStringField, GroupDblField, GroupOptionalField>;
 
@@ -84,8 +84,8 @@ using TestObj = yaml::Object<StrField, IntField, OptField, Id32Field, InnerObj,
                              TestFieldGroup>;
 // clang-format on
 
-using ActiveField = FieldDef<Active, "active", Required>;
-using MaybeActiveField = FieldDef<Active, "maybe_active", Optional>;
+using ActiveField = yaml::Field<Active, "active", Required>;
+using MaybeActiveField = yaml::Field<Active, "maybe_active", Optional>;
 using ActiveObj = yaml::Object<ActiveField>;
 using MaybeActiveObj = yaml::Object<MaybeActiveField>;
 

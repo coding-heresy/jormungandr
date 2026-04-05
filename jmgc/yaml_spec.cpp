@@ -50,8 +50,6 @@ string_view YamlYamlSpec::encodingHeaderFileName() const {
   return "jmg/yaml/yaml.h"sv;
 }
 
-std::string YamlYamlSpec::encodingObjDef() const {
-  return "jmg::yaml::Object"s;
-}
+string_view YamlYamlSpec::encodingName() const { return "yaml"sv; }
 
 } // namespace jmgc

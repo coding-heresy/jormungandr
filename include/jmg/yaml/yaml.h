@@ -51,6 +51,24 @@ JMG_TAG_TYPE(Object);
 JMG_FIELD_CONCEPT();
 JMG_OBJECT_CONCEPT();
 
+/**
+ * class template for field definitions that are specific to YAML
+ * objects
+ */
+template<typename T, StrLiteral kName, TypeFlagT IsRequired>
+struct Field : FieldDef<T, kName, IsRequired>, public detail::FieldTag {};
+
+/**
+ * class template for string field definitions that are specific to
+ * YAML objects
+ */
+template<StrLiteral kName, TypeFlagT IsRequired>
+struct StringField : public yaml::Field<std::string, kName, IsRequired>,
+                     public jmg::detail::StringFieldTag {
+  using view_type = std::string_view;
+  using const_view_type = std::string_view;
+};
+
 // TODO(bd) constrain the types of fields with the correct concept
 template<typename... Fields>
 class Object : public ObjectDef<Fields...>, public detail::ObjectTag {
@@ -149,6 +167,6 @@ struct ArrayTypeFactory {
 };
 } // namespace detail
 template<yaml::ObjectT Obj>
-using Array = meta::_t<detail::ArrayTypeFactory<Obj>>;
+using ArrayField = meta::_t<detail::ArrayTypeFactory<Obj>>;
 
 } // namespace jmg::yaml
