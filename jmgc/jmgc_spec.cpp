@@ -140,11 +140,15 @@ namespace {{ pkg_namespace }}
 const string JmgYamlSpec::kTypeTmpl = R"(
 {% macro render_type_def(type_def) -%}
 {% if type_def.type == 'enum' -%}
+{% if type_def.alias is defined -%}
+{{ type_def.alias }}
+{% else -%}
 enum class {{ type_def.name }} : {{ type_def.underlying_type }} {
 {% for enumeration in type_def.values -%}
   {{ enumeration.name }} = {{ enumeration.value }}{% if not loop.last %},{% endif %}
 {% endfor -%}
 };
+{% endif -%}
 {% else -%}
 {# if JMG_SAFETYPE_ALIAS_TEMPLATE_WORKS -#}
 {# using {{ type_def.name }} = jmg::SafeType< -#}
