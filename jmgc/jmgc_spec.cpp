@@ -391,6 +391,13 @@ jinja2::Template& JmgYamlSpec::pkgTmpl() {
   return *pkg_tmpl_;
 }
 
+// TODO(bd) why is jinja2::Template::RenderAsString not marked as const?
+jinja2::Template& JmgYamlSpec::pkgTmpl() const {
+  // deal with the jinja2::Template::RenderAsString not being marked const
+  auto& self = const_cast<JmgYamlSpec&>(*this);
+  return self.pkgTmpl();
+}
+
 bool JmgYamlSpec::isPrimitiveTypeValid(const string_view type_name) {
   return kPrimitiveTypeTranslations.contains(type_name);
 }
