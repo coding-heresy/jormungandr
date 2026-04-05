@@ -149,7 +149,7 @@ public:
    *
    * TODO(bd) replace const with && to allow emission to be destructive?
    */
-  virtual void emit(std::ostream& strm) = 0;
+  virtual void emit(std::ostream& strm) const = 0;
 };
 
 using JmgcYamlSpecPtr = std::unique_ptr<JmgcYamlSpecIfc>;
@@ -175,7 +175,7 @@ public:
 
   virtual std::string_view encodingHeaderFileName() const { return ""; }
 
-  void emit(std::ostream& strm) override;
+  void emit(std::ostream& strm) const override;
 
 protected:
   static constexpr auto kEnum = std::string_view("enum");
@@ -296,9 +296,9 @@ public:
       "attempted to call tgtFileName() member function on spec manager object");
   }
 
-  void emit(std::ostream& strm) override;
+  void emit(std::ostream& strm) const override;
 
-  void emit(const std::filesystem::path& tgt_directory);
+  void emit(const std::filesystem::path& tgt_directory) const;
 
 private:
   std::vector<JmgcYamlSpecPtr> specs_;

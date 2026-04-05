@@ -45,8 +45,6 @@ public:
 
   std::string_view encodingHeaderFileName() const override;
 
-  void emit(std::ostream& strm) override;
-
 private:
   std::string_view encodingName() const override;
 
