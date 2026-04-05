@@ -72,7 +72,7 @@ objects:
           type: "i64"
           protobuf_id: 8
           cbe_id: 8
-      - fixed64:
+      - fixed_64:
           # actual protobuf type: fixed64
           type: "u64"
           protobuf_id: 9
@@ -148,7 +148,7 @@ objects:
           required: false
           protobuf_id: 8
           cbe_id: 8
-      - opt_fixed64:
+      - opt_fixed_64:
           # actual protobuf type: fixed64
           type: "u64"
           required: false
@@ -175,6 +175,7 @@ objects:
           required: false
           protobuf_id: 13
           cbe_id: 13
+      # NOTE: field ID 14 was skipped intentionally
       - opt_inner_msg:
           type: "InnerMsg"
           required: false
@@ -188,5 +189,8 @@ objects:
   - MaybeActiveMsg:
       - active_state:
           type: "Active"
+          # TODO(bd) multiple definitions of the 'Active' field
+          # without the same settings does not work
+          #required: false
           protobuf_id: 1
           cbe_id: 1
