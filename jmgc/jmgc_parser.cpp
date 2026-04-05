@@ -155,22 +155,22 @@ Node makeObjNode(const Node& node, DescParts&&... desc_parts) {
 template<typename... DescParts>
 Node maybeRewriteEnumValues(const Node& node, DescParts&&... desc_parts) {
   auto [type_name, type_fields] = unpackSingleEntryMap(node, JMG_FWD_DESC());
-  JMG_ENFORCE(pred(type_fields["type"]), JMG_STR_DESC(), "has no 'type' field");
+  JMG_ENFORCE(pred(type_fields["type"]), JMG_STR_DESC(), "has no [type] field");
   if ("enum" == type_fields["type"].template as<string>()) {
     JMG_ENFORCE(pred(type_fields["values"]), JMG_STR_DESC(),
-                "has no 'values' field");
+                "has no [values] field");
     Node rewritten_enumerations;
     auto enumerations = type_fields["values"];
     enforceType(enumerations, NodeType::Sequence, JMG_STR_DESC(),
-                "'values' section");
+                "[values] section");
     for (auto [idx, entry] : vws::enumerate(enumerations)) {
-      JMG_ENFORCE(1 == entry.size(), JMG_STR_DESC(), "'values' section entry [",
+      JMG_ENFORCE(1 == entry.size(), JMG_STR_DESC(), "[values] section entry [",
                   idx, "] has size [", entry.size(),
                   "] instead of required size [1]");
       auto itr = entry.begin();
       const auto body = itr->second;
       enforceType(body, NodeType::Scalar, JMG_STR_DESC(),
-                  "'values' section entry [", idx, "]");
+                  "[values] section entry [", idx, "]");
       Node rewritten_enumeration;
       rewritten_enumeration["name"] = itr->first.template as<string>();
       rewritten_enumeration["value"] = body.template as<uint64_t>();
@@ -205,10 +205,10 @@ void processYamlFile(const string_view file_path, jmgc::JmgcYamlSpecIfc& spec) {
   // process optional 'types' section, if present
   if (contents["types"]) {
     const auto& types = contents["types"];
-    enforceType(types, NodeType::Sequence, "available 'types' section");
+    enforceType(types, NodeType::Sequence, "available [types] section");
     for (auto [idx, entry] : vws::enumerate(types)) {
-      maybeRewriteEnumValues(entry, "'types' section entry [", idx, "]");
-      auto type_node = makeObjNode(entry, "'types' section entry [", idx, "]");
+      maybeRewriteEnumValues(entry, "[types] section entry [", idx, "]");
+      auto type_node = makeObjNode(entry, "[types] section entry [", idx, "]");
       spec.processType(type_node);
     }
   }
@@ -221,9 +221,9 @@ void processYamlFile(const string_view file_path, jmgc::JmgcYamlSpecIfc& spec) {
   // process optional 'objects' section, if present
   if (contents["objects"]) {
     const auto& objs = contents["objects"];
-    enforceType(objs, NodeType::Sequence, "available 'objects' section");
+    enforceType(objs, NodeType::Sequence, "available [objects] section");
 
-#define JMG_OBJS_ENTRY() "'objects' section entry [", obj_idx, "]"
+#define JMG_OBJS_ENTRY() "[objects] section entry [", obj_idx, "]"
     for (auto [obj_idx, obj_entry] : vws::enumerate(objs)) {
       // each object has a name and a sequence of fields
       auto [obj_name, obj_flds] =
