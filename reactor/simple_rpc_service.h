@@ -40,7 +40,8 @@
 #include "jmg/reactor/fiber.h"
 #include "jmg/reactor/simple_tcp_service.h"
 
-#include "simple_rpc_common.h"
+// TODO(bd) should be encoding-agnostic
+#include "rpc_common.cbe.h"
 
 namespace jmg
 {
@@ -65,8 +66,10 @@ public:
     : endpoint_(endpoint), is_shutdown_(is_shutdown) {}
 
   void handleRequests(Fiber& fbr, HandlerFcn fcn) {
+    using namespace jmg::rpc_common;
     using namespace std::string_literals;
     using namespace std::string_view_literals;
+
     auto listener = SimpleTcpSvc::listenAt(fbr, endpoint_, is_shutdown_);
     listener_sd_ = listener.listener();
     while (!is_shutdown_) {
