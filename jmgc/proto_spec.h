@@ -48,6 +48,8 @@ public:
 private:
   std::string_view encodingName() const override;
 
+  void processPkg(const YAML::Node& jmg_pkg) override;
+
   void enrichJ2Pkg(jinja2::ValuesMap& j2_pkg,
                    const jmg::PkgDef& pkg_def) const override;
 
@@ -57,7 +59,10 @@ private:
   void enrichJ2Fld(jinja2::ValuesMap& j2_fld,
                    const jmg::ObjGrpFld& fld_def) const override;
 
-  mutable std::string proto_ns = "";
+  void enrichJ2Type(jinja2::ValuesMap& j2_type,
+                    const jmg::TypeDef& type_def) const override;
+
+  std::string proto_ns = "";
 };
 
 } // namespace jmgc
