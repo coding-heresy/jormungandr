@@ -251,9 +251,6 @@ protected:
   TypeNames type_names_;
   std::vector<jmg::TypeDef> types_;
   std::vector<std::string> obj_names_;
-  DeclaredFields flds_dict_;
-  DeclaredObjects declared_objs_;
-  mutable ExtraTranslations extraTranslations_;
 
   // jinja2
   jinja2::MemoryFileSystem tmpl_store_;

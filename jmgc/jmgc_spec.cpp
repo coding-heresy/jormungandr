@@ -195,10 +195,6 @@ string_view JmgYamlSpec::translateType(const string_view jmg_idl_type) const {
       kPrimitiveTypeTranslations.end() != entry) {
     return value_of(*entry);
   }
-  if (const auto entry = extraTranslations_.find(jmg_idl_type);
-      extraTranslations_.end() != entry) {
-    return value_of(*entry);
-  }
   // no translation
   return jmg_idl_type;
 }
