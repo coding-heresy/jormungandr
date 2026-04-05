@@ -276,7 +276,7 @@ void JmgYamlSpec::processType(const Node& jmg_type) {
     }
   }
   enrichJ2Type(values, type_def);
-  type_names_.insert_uniq(string(type_name));
+  type_defs_.emplace_uniq(string(type_name), std::move(type_def));
   type_def_values_.push_back(std::move(values));
 }
 
@@ -296,11 +296,6 @@ void JmgYamlSpec::processObjFld(const string_view obj_name,
     auto& j2_obj = [&] -> j2::ValuesMap& {
       auto entry = obj_def_values_.find(obj_name);
       if (obj_def_values_.end() == entry) {
-        JMG_ENFORCE_USING(logic_error, !type_names_.contains(obj_name),
-                          "internal error: object [", obj_name,
-                          "] was in the dictionary of object definitions but "
-                          "not in the set of declared type names");
-        type_names_.insert_uniq(string(obj_name));
         obj_names_.push_back(string(obj_name));
         auto& new_entry =
           obj_def_values_.emplace_uniq(string(obj_name), j2::ValuesMap());
@@ -427,7 +422,8 @@ bool JmgYamlSpec::isTypeValid(const ObjGrpFld& fld) {
     type_name = *sub_type;
   }
   return kPrimitiveTypeTranslations.contains(type_name)
-         || type_names_.contains(type_name);
+         || obj_def_values_.contains(type_name)
+         || type_defs_.contains(type_name);
 }
 
 string JmgYamlSpec::pkgTmplData() const { return string(kPkgTmpl); }

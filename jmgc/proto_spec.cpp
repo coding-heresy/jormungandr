@@ -104,10 +104,6 @@ void ProtoYamlSpec::enrichJ2Fld(jinja2::ValuesMap& j2_fld,
         // protobuf messages declared in the .proto file
         j2_fld["type"] = str_cat(type_name, "Obj");
       }
-      else if (type_names_.contains(type_name)) {
-        // this should be enums declared in the .proto file
-        j2_fld["type"] = str_cat(proto_ns, "::"sv, type_name);
-      }
     }
   }
   {
