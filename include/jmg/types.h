@@ -144,14 +144,15 @@ struct DictBase : detail::AssocContainerBase<kDictDescription, kKeyDescription>,
   DictBase(Initializer&& vals) : dict_type(std::forward<Initializer>(vals)) {}
 
   /**
-   * emplace a new item in the dictionary or throw an exception if the key
-   * already exists
+   * emplace a new item in the dictionary and return a reference to it or throw
+   * an exception if the key already exists
    *
    * NOTE: Key is left as an explicit type parameter in order to
    * correctly support transparent hashing of e.g. std::string_view
    */
   template<typename... Args>
   decltype(auto) emplace_uniq(const KeyType& key, Args&&... args) {
+    // TODO(bd) automatically convert std::string_view key to std::string if required
     auto [entry, inserted] =
       this->try_emplace(key, std::forward<Args>(args)...);
     JMG_ENFORCE(inserted, "attempted to insert duplicate ",
@@ -213,6 +214,8 @@ struct SetBase
    */
   template<typename... Vals>
   decltype(auto) insert_uniq(Vals&&... vals) {
+    // TODO(bd) automatically convert std::string_view value to std::string if
+    // required
     const auto [entry, inserted] = this->insert(std::forward<Vals>(vals)...);
     JMG_ENFORCE(inserted, "attempted to insert duplicate ",
                 Base::kKeyOrElementDescription, " [", vals..., "] into ",
