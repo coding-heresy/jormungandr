@@ -83,13 +83,18 @@ string_view yamlTypeOf(const Node& node) {
 // code generation is the best tool
 
 /**
- * macro that that emits text for forwarding a specific parameter pack
+ * macro that that generates text for forwarding a parameter pack named
+ * desc_parts to a function call
  */
 #define JMG_FWD_DESC() std::forward<DescParts>(desc_parts)...
 
 /**
- * macro that that emits text for converting a specific parameter pack into a
- * string
+ * macro that that generates text for converting a parameter pack named
+ * desc_parts into a string
+ *
+ * NOTE: this macro should be used to simplify the application of other macros
+ * such as JMG_ENFORCE since it generates a call to a function that produces
+ * runtime code rather than compile time type system effects
  */
 #define JMG_STR_DESC() str_cat(JMG_FWD_DESC(), " ")
 
