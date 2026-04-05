@@ -1,9 +1,10 @@
-####################
-# control blocks
-
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//bazel:jmgc.bzl", "cc_jmg_library", "proto_jmg_library")
+
+####################
+# control blocks
 
 cc_library(
     name = "control_blocks",
@@ -97,6 +98,8 @@ cc_test(
 ####################
 # support libraries
 
+# reactor-based client and server
+
 cc_library(
     name = "reactor_based_client",
     srcs = ["reactor_based_client.cpp"],
@@ -115,6 +118,8 @@ cc_library(
     deps = [":reactor"],
 )
 
+# simple TCP service
+
 cc_library(
     name = "simple_tcp_service",
     srcs = ["simple_tcp_service.cpp"],
@@ -124,14 +129,31 @@ cc_library(
     deps = [":reactor"],
 )
 
+# simple RPC service
+
+filegroup(
+    name = "rpc_common_objects_idl",
+    srcs = ["rpc_common.yaml"],
+    visibility = ["//visibility:private"],
+)
+
+cc_jmg_library(
+    name = "rpc_common_objects_cbe_cc",
+    src = ":rpc_common_objects_idl",
+    encoding = "cbe",
+    visibility = ["//visibility:private"],
+)
+
 cc_library(
     name = "simple_rpc_service",
     hdrs = [
         "simple_rpc_client.h",
-        "simple_rpc_common.h",
         "simple_rpc_service.h",
     ],
     include_prefix = "jmg/reactor",
     visibility = ["//visibility:public"],
-    deps = [":simple_tcp_service"],
+    deps = [
+        ":rpc_common_objects_cbe_cc",
+        ":simple_tcp_service",
+    ],
 )

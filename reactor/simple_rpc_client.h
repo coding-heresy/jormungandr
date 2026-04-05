@@ -36,7 +36,8 @@
 #include "jmg/reactor/fiber.h"
 #include "jmg/reactor/simple_tcp_service.h"
 
-#include "simple_rpc_common.h"
+// TODO(bd) should be encoding-agnostic
+#include "rpc_common.cbe.h"
 
 namespace jmg
 {
@@ -56,6 +57,7 @@ public:
     : fbr_(fbr), cnxn_(SimpleTcpSvc::connectTo(fbr, tgt_endpoint)) {}
 
   RspMsg query(ReqMsg&& req) {
+    using namespace jmg::rpc_common;
     using namespace std::string_literals;
 
     ////////////////////
