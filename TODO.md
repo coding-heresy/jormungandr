@@ -35,37 +35,54 @@
 
 ## jmgc
 
-* The internals are currently a hot mess with a bunch of hacks for
-  corner cases and it needs another round of rewriting.
-  * The basic approach of using dynamic polymorphism appears to be
+* ~~The internals are currently a hot mess with a bunch of hacks for
+  corner cases and it needs another round of rewriting.~~
+  * ~~The basic approach of using dynamic polymorphism appears to be
     sound but the results would probably be improved if subclasses of
     the main `JmgYamlSpec` were overriding `processing` member
     functions as well as `emit` member functions, and carrying more
-    internal data.
-    * As usual, the presence of `mutable` data members is a smell.
-  * Be particularly careful and intentional with handling of
-    namespaces in protobuf encoding wrapper.
-  * Consider using `std::unique_ptr` for various field types along
+    internal data.~~
+    * ~~As usual, the presence of `mutable` data members is a smell.~~
+  * ~~Be particularly careful and intentional with handling of
+    namespaces in protobuf encoding wrapper.~~
+  * ~~Consider using `std::unique_ptr` for various field types along
     with some mechanism for subclasses to specify which type is
     actually created (i.e. the protobuf encoding wrapper generator
     would specify a subclass that provides access to protobuf-specific
     fields in the encoding and would then `dynamic_cast` the field
-    types internally to get access to such fields
+    types internally to get access to such fields~~
+* The internals were rewritten using the C++ version of jinja2
+  templates with a vague plan to start working on services. This has
+  improved the code substantially, although another round of cleanup
+  is in order.
+  * The random bag of data members that serves as an excuse for a
+    symbol table needs to be cleaned up, and there are probably a few
+    vestigial bits from the earlier implementation lying around. Maybe
+    think a bit more about how to handle `import` before working on
+    this?
 * The approach of having a single test file with support for different
   encoding wrappers (e.g. to construct objects using the encoding's
   API that will then be wrapped in JMG objects) controlled by
   conditional compilation but otherwise having the actual test cases
   always be the same is very encouraging.
   * Fold in the YAML test case file that is currently separate.
-* JMG IDL implementations in jmgc should temporarily explicitly not
-  allow `union` types at this point
-* Support `import` section for JMG IDL
+* Support and `import` subsection for JMG IDL in the `package` section.
   * Field definitions exist but `processYamlFile()` will probably need
     to be modified to allow it to be recursively called in a mode that
     should mostly populate the symbol table (such as it is)
-* Fix parsing of `values` field for `enum` types so that the name of
+* JMG IDL implementations in jmgc should temporarily explicitly not
+  allow `union` types at this point.
+
+* Think more about how to cleanly handle fields in protobuf, the
+  current implementation does not support duplicate field names in
+  different objects/messages unless the details of the fields are all
+  the same.
+  * Not sure if this is a reasonable constraint or if some work should
+    go into supporting the case. Seems like it will complicate things
+    substantially or introduce other undesirable requirements.
+* ~~Fix parsing of `values` field for `enum` types so that the name of
   the enumeration doesn't require a separate `name` field, similar to
-  how lists are handled in `types` and `objects`
+  how lists are handled in `types` and `objects`~~
 * ~~Presence of `protobuf_imports` should trigger an appropriate
   `#include` in proto encoding headers~~
 * ~~Generation of encoding wrappers is broken because all fields are
@@ -209,6 +226,8 @@ concepts and type metafunctions:
 ## YAML objects
 
 * Correctly support StringField instead of allowing FieldDef<string...>
+  * Is this done?
+* Harmonize handling of arrays
 * Support unions?
   * Tough question: how to figure out what field a union holds
     * Seems like a job for a fold expression...
