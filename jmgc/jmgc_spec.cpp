@@ -113,7 +113,7 @@ const string JmgYamlSpec::kPkgTmpl = R"(
 {% endfor -%}
 
 {% endif -%}
-namespace {{ pkg_namespace }}
+namespace jmg::{{ pkg_namespace }}
 {
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -134,7 +134,7 @@ namespace {{ pkg_namespace }}
 {% for obj_def in obj_defs -%}
 {{ obj_tmpl.render_obj(obj_def, tgt_encoding) }}
 {% endfor -%}
-} // namespace {{ pkg_namespace }}
+} // namespace jmg::{{ pkg_namespace }}
 )"s;
 
 const string JmgYamlSpec::kTypeTmpl = R"(
