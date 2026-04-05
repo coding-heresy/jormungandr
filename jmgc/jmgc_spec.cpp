@@ -254,7 +254,9 @@ void JmgYamlSpec::processType(const Node& jmg_type) {
       j2::ValuesList enums;
       for (const auto& enumeration : *enumerations) {
         j2::ValuesMap j2_enum;
-        j2_enum["name"] = jmg::get<Name>(enumeration);
+        j2_enum["name"] =
+          str_cat("k"sv, snakeCaseToCamelCase(jmg::get<Name>(enumeration),
+                                              true /* captialize_leading */));
         j2_enum["value"] =
           static_cast<string>(from(jmg::get<EnumValue>(enumeration)));
         enums.push_back(std::move(j2_enum));
