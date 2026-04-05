@@ -74,7 +74,7 @@ public:
             "]");
   }
 
-  void emit(ostream& strm) override {}
+  void emit(ostream& strm) const override {}
 };
 
 const auto kExperimentalFilePath = "_main/jmgc/experimental.yaml"s;

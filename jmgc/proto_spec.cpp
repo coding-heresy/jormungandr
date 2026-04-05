@@ -56,12 +56,6 @@ string_view ProtoYamlSpec::encodingHeaderFileName() const {
   return "jmg/protobuf/protobuf.h"sv;
 }
 
-void ProtoYamlSpec::emit(ostream& strm) {
-  // no types should be declared in the header file
-  type_def_values_.clear();
-  JmgYamlSpec::emit(strm);
-}
-
 string_view ProtoYamlSpec::encodingName() const { return "protobuf"sv; }
 
 void ProtoYamlSpec::enrichJ2Pkg(jinja2::ValuesMap& j2_pkg,

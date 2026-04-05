@@ -434,7 +434,7 @@ void JmgcYamlSpecMgr::processObjFld(const string_view obj_name,
   for (auto& spec : specs_) { spec->processObjFld(obj_name, jmg_fld); }
 }
 
-void JmgcYamlSpecMgr::emit(ostream& strm) {
+void JmgcYamlSpecMgr::emit(ostream& strm) const {
   for (auto& spec : specs_) {
     cerr << "base target output file would be [" << spec->tgtFileName()
          << "]\n";
@@ -442,7 +442,7 @@ void JmgcYamlSpecMgr::emit(ostream& strm) {
   }
 }
 
-void JmgcYamlSpecMgr::emit(const fs::path& tgt_directory) {
+void JmgcYamlSpecMgr::emit(const fs::path& tgt_directory) const {
   const auto tgt_dir_str = tgt_directory.native();
   JMG_ENFORCE(fs::is_directory(tgt_directory),
               "attempted to write output to non-directory [", tgt_dir_str, "]");
