@@ -200,6 +200,8 @@ protected:
 
   jinja2::Template& pkgTmpl();
 
+  jinja2::Template& pkgTmpl() const;
+
   bool isPrimitiveTypeValid(std::string_view type_name);
 
   bool isTypeValid(const jmg::ObjGrpFld& fld);
@@ -256,7 +258,8 @@ protected:
   jinja2::MemoryFileSystem tmpl_store_;
   // jinja2::TemplateEnv contains a mutex and cannot be copied or moved
   std::unique_ptr<jinja2::TemplateEnv> tmpl_env_;
-  // TODO(bd) why is jinja2::Template::RenderAsString not marked as const?
+  // jinja2 template for main package is constructed lazily to facilitate
+  // runtime polymorphic override of the string contents of the templates
   std::unique_ptr<jinja2::Template> pkg_tmpl_;
   jinja2::ValuesMap pkg_values_;
   jinja2::ValuesList type_def_values_;
