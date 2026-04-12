@@ -66,6 +66,8 @@ thread awaitShutdown(Server& srvr) {
   };
   return thread([&]() {
     try {
+      setThreadName("wait_shutdown");
+
       const auto sig_set = makeSigSet(kSignals);
       int rcvd_signal;
       ////////////////////////////////////////

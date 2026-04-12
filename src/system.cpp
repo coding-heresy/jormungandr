@@ -30,6 +30,8 @@
  *
  */
 
+#include <pthread.h>
+
 #include <array>
 
 #include "jmg/system.h"
@@ -45,6 +47,29 @@ void blockAllSignals() {
   const auto sig_set = makeSigSet(kSignals);
   JMG_SYSTEM_ERRNO_RETURN(pthread_sigmask(SIG_BLOCK, &sig_set, nullptr),
                           "failed to block signals");
+}
+
+NativeThreadHandle getNativeThreadHandle(std::thread* thr) {
+  if (thr) { return thr->native_handle(); }
+  return ::pthread_self();
+}
+
+void setThreadName(const c_string_view name, std::thread* thr) {
+  JMG_ENFORCE(name.size() < 16, "thread name [", name, "] has length [",
+              name.size(), "] but length is limited to [15]");
+  JMG_SYSTEM_ERRNO_RETURN(::pthread_setname_np(getNativeThreadHandle(thr),
+                                               name.data()),
+                          "unable to set thread name to [", name, "]");
+}
+
+string getThreadName(std::thread* thr) {
+  auto buf = array<char, 16>();
+  JMG_SYSTEM_ERRNO_RETURN(::pthread_getname_np(getNativeThreadHandle(thr),
+                                               buf.data(), 16),
+                          "unable to get thread name");
+  // ensure proper termination
+  buf[15] = '\0';
+  return string(buf.data(), strlen(buf.data()));
 }
 
 tuple<PipeReadFd, PipeWriteFd> make_pipe() {

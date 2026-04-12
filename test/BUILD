@@ -171,6 +171,18 @@ cc_test(
     ],
 )
 
+
+cc_test(
+    name = "test_system",
+    size = "small",
+    srcs = ["test_system.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
 cc_test(
     name = "test_types",
     size = "small",

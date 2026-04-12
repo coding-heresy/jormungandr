@@ -184,6 +184,8 @@ Reactor::~Reactor() {
 }
 
 void Reactor::start() {
+  const auto old_thread_name = getThreadName();
+  setThreadName("jmg_reactor");
   auto initiator = WorkerFcn([this] mutable {
     // NOTE: uring must be created inside the worker function because only one
     // thread can submit requests to it
@@ -232,6 +234,8 @@ void Reactor::start() {
 
   // TODO(bd) sanity check the final state to ensure that all fibers are
   // inactive?
+
+  setThreadName(old_thread_name);
 
   // return control to the thread that started the reactor
 }
