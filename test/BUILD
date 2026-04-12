@@ -171,6 +171,16 @@ cc_test(
     ],
 )
 
+cc_test(
+    name = "test_stream_io",
+    size = "small",
+    srcs = ["test_stream_io.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 
 cc_test(
     name = "test_system",
