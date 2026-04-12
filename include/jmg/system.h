@@ -40,6 +40,10 @@
 
 #include <csignal>
 
+#include <optional>
+#include <thread>
+#include <type_traits>
+
 #include "jmg/preprocessor.h"
 #include "jmg/types.h"
 
@@ -78,6 +82,31 @@ void blockAllSignals();
 inline void send_shutdown_signal() {
   JMG_SYSTEM(kill(getpid(), SIGTERM), "failed to send shutdown signal");
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// threads
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * native handle of a thread
+ */
+using NativeThreadHandle =
+  std::invoke_result_t<decltype(&std::thread::native_handle), std::thread>;
+
+/**
+ * get the native handle of a thread (defaults to current thread)
+ */
+NativeThreadHandle getNativeThreadHandle(std::thread* thr = nullptr);
+
+/**
+ * set the name of a system thread (defaults to current thread)
+ */
+void setThreadName(c_string_view name, std::thread* thr = nullptr);
+
+/**
+ * get the name of a system thread (defaults to current thread)
+ */
+std::string getThreadName(std::thread* thr = nullptr);
 
 ////////////////////////////////////////////////////////////////////////////////
 // read/write data to descriptor
