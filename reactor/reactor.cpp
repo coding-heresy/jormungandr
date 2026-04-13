@@ -297,8 +297,7 @@ void Reactor::schedule() {
                           active_fbr_state, "]");
   }
 
-  auto is_shutdown = false;
-  while (!is_shutdown) {
+  while (!is_shutdown_) {
     JMG_URING_LOG_DEBUG(uring_, "fiber [", active_fbr_id,
                         "] is starting new iteration of scheduler loop");
     // TODO(bd) tune the rates at which the ring and the run queue are
@@ -333,7 +332,7 @@ void Reactor::schedule() {
         else if (isNotification(user_data)) {
           if (isShutdownNotified()) {
             JMG_URING_LOG_DEBUG(uring_, "shutdown signal received");
-            is_shutdown = true;
+            is_shutdown_ = true;
           }
           else {
             auto reseter = Cleanup([&]() { resetNotifier(); });
@@ -394,7 +393,7 @@ void Reactor::schedule() {
     }
 
     // finished servicing the ring, now service the run queue
-    if (!is_shutdown) {
+    if (!is_shutdown_) {
       if (FiberState::kYielding == active_fbr_state) {
         // a yielding fiber should now be added to the run queue
         active_fbr_fcb.body.state = FiberState::kRunnable;

@@ -117,7 +117,7 @@ public:
     requires std::invocable<Fcn, Args...>
   auto compute(Fcn&& fcn, Args&&... args) {
     using Rslt = std::invoke_result_t<Fcn, Args...>;
-    Rslt rslt;
+    Rslt rslt{};
     std::exception_ptr exc_ptr;
     execute([&rslt, &exc_ptr, notify_fbr = makeFbrNotifier(getId()),
              fcn = std::forward<Fcn>(fcn),
