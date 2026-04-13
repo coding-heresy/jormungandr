@@ -85,13 +85,25 @@ TEST(GeneralUtilitiesTest, TestStreamOctetOut) {
     EXPECT_EQ(strm.str(), string(expected.data()));
     value <<= 1;
   }
-
-  const auto raw_octets = array<uint8_t, 5>{0, 1, 2, 3, 4};
-  const auto bitwise_octets_str =
-    str_join(raw_octets
-               | vws::transform([](const uint8_t arg) { return Octet(arg); }),
-             " "sv, kOctetFmt);
-  EXPECT_EQ("00000000 00000001 00000010 00000011 00000100"s, bitwise_octets_str);
+  {
+    const auto raw_octets = array<uint8_t, 5>{0, 1, 2, 3, 4};
+    const auto bitwise_octets_str =
+      str_join(octet_buffer_from(raw_octets), " "sv, kOctetFmt);
+    EXPECT_EQ("00000000 00000001 00000010 00000011 00000100"s,
+              bitwise_octets_str);
+  }
+  {
+    const auto raw_int32 = uint32_t(0);
+    const auto bitwise_octets_str =
+      str_join(octet_buffer_from(raw_int32), " "sv, kOctetFmt);
+    EXPECT_EQ("00000000 00000000 00000000 00000000"s, bitwise_octets_str);
+  }
+  {
+    const auto raw_int16 = numeric_limits<uint16_t>::max();
+    const auto bitwise_octets_str =
+      str_join(octet_buffer_from(raw_int16), " "sv, kOctetFmt);
+    EXPECT_EQ("11111111 11111111"s, bitwise_octets_str);
+  }
 }
 
 TEST(GeneralUtilitiesTest, TestUniqers) {

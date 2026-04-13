@@ -104,7 +104,39 @@ struct OctetFmt {
 
 static constexpr auto kOctetFmt = OctetFmt();
 
+////////////////////
+// convert 8 bit values to Octet
+
 inline Octet octetify(const uint8_t arg) { return Octet(arg); }
+
+inline Octet octetify(const char arg) {
+  return Octet(static_cast<uint8_t>(arg));
+}
+
+/**
+ * function template that constructs an Octet buffer (AKA
+ * std::span<Octet>) from some other object
+ */
+template<typename T>
+decltype(auto) octet_buffer_from(T& src) {
+  if constexpr (ArrayT<T> || SpanT<T> || VectorT<T>) {
+    // explicitly convert sequence containers of 8 bit values to Octet buffers
+    // of equal size
+    using ValueType = typename T::value_type;
+    static_assert(1 == sizeof(ValueType), "bad collection element size");
+    if constexpr (std::is_const_v<ValueType>) {
+      return std::span<const Octet>((const Octet*)src.data(), src.size());
+    }
+    else { return std::span<Octet>((Octet*)src.data(), src.size()); }
+  }
+  else {
+    // treat objects that are not sequence containers of 8 bit values
+    // (including, somewhat paradoxically, string-like types) as buffer of
+    // uint8_t, which are then converted to buffers of Octets of the same size
+    auto buf = buffer_from(src);
+    return octet_buffer_from<decltype(buf)>(buf);
+  }
+}
 
 // TODO(bd) create a utility to print buffer contents as bitwise octets
 
