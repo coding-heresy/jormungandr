@@ -48,12 +48,13 @@ void ReactorBasedServer::startImpl(const int argc, const char** argv) {
   cout << "starting up with PID [" << getpid() << "]...\n";
 
   // start reactor
+  reactor_ = make_unique<Reactor>();
   auto [reactor_start_signal, reactor_start_rcvr] = makeSignaller();
   auto reactor_worker = thread([&] {
     try {
       reactor_start_signal.set_value();
       is_started_ = true;
-      reactor_.start();
+      reactor_->start();
     }
     JMG_SINK_ALL_EXCEPTIONS("reactor worker thread top level")
   });
@@ -65,7 +66,7 @@ void ReactorBasedServer::startImpl(const int argc, const char** argv) {
 
   ////////////////////
   // execute subclass-specific server behavior
-  reactor_.execute([this](Fiber& fbr) { this->startSrvr(fbr); });
+  reactor_->execute([this](Fiber& fbr) { this->startSrvr(fbr); });
 }
 
 void ReactorBasedServer::shutdownImpl() {
@@ -75,7 +76,8 @@ void ReactorBasedServer::shutdownImpl() {
     // only need to shut down the server if it was actually started (i.e. there
     // was no failure before the reactor was started
     shutdownSrvr();
-    reactor_.shutdown();
+    reactor_->shutdown();
+    reactor_.reset(nullptr);
   }
 }
 
