@@ -82,7 +82,7 @@ public:
 protected:
   std::atomic<bool> is_started_;
   std::atomic<bool> is_shutdown_;
-  Reactor reactor_;
+  std::unique_ptr<Reactor> reactor_;
 };
 
 } // namespace jmg
