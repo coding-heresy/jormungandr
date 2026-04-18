@@ -171,7 +171,7 @@ struct ConvertImpl {
       else if constexpr (std::same_as<Tgt, TimePoint>) {
         return str2TimePoint(src, std::forward<Extras>(extras)...);
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "string conversion target"); }
     }
     ////////////////////////////////////////////////////////////
     // this section converts from std::thread::id to string
@@ -183,7 +183,7 @@ struct ConvertImpl {
         strm << src;
         return strm.str();
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "thread ID conversion target"); }
     }
     ////////////////////////////////////////////////////////////
     // this section converts from char to string
@@ -192,7 +192,7 @@ struct ConvertImpl {
       if constexpr (std::same_as<std::string, Tgt>) {
         return std::string(1, src);
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "character conversion target"); }
     }
     ////////////////////////////////////////////////////////////
     // this section converts from number to string
@@ -210,7 +210,7 @@ struct ConvertImpl {
         const auto sz = ptr - buffer.data();
         return std::string(buffer.data(), sz);
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "integer conversion target"); }
     }
     else if constexpr (FloatingPointT<Src>) {
       if constexpr (std::same_as<std::string, Tgt>) {
@@ -228,7 +228,7 @@ struct ConvertImpl {
         const auto sz = ptr - buffer.data();
         return std::string(buffer.data(), sz);
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "floating point conversion target"); }
     }
     ////////////////////////////////////////////////////////////
     // this section converts from struct sockaddr_in to string
@@ -248,7 +248,7 @@ struct ConvertImpl {
         if (port > 0) { return str_cat(buf, ":", port); }
         return std::string(buf);
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "raw socket address conversion target"); }
     }
     ////////////////////////////////////////////////////////////
     // this section converts from TimePoint to other types
@@ -302,7 +302,7 @@ struct ConvertImpl {
         using google::protobuf::util::TimeUtil;
         return TimeUtil::NanosecondsToTimestamp(src.time_since_epoch().count());
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "time point conversion target"); }
     }
     ////////////////////////////////////////////////////////////
     // this section converts from Duration to other types
@@ -320,7 +320,7 @@ struct ConvertImpl {
         rslt.tv_nsec = nanos - (rslt.tv_sec * kNanosecPerSec);
         return rslt;
       }
-      else { JMG_NOT_EXHAUSTIVE(Tgt); }
+      else { JMG_NOT_EXHAUSTIVE(Tgt, "time duration conversion target"); }
     }
     ////////////////////////////////////////////////////////////
     // this section converts from external types to TimePoint
@@ -392,7 +392,7 @@ struct ConvertImpl {
     ////////////////////////////////////////////////////////////
     // unable to perform conversion
     ////////////////////////////////////////////////////////////
-    else { JMG_NOT_EXHAUSTIVE(Src); }
+    else { JMG_NOT_EXHAUSTIVE(Src, "conversion source"); }
   }
 
 private:
@@ -433,7 +433,7 @@ private:
                       "between string and time point");
           opt_zone = arg;
         }
-        else { JMG_NOT_EXHAUSTIVE(T); }
+        else { JMG_NOT_EXHAUSTIVE(T, "time point conversion parameter"); }
       };
       (processArg(extras), ...);
       JMG_ENFORCE(opt_fmt.has_value(),

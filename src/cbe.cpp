@@ -398,7 +398,7 @@ size_t encodePrimitive(BufferProxy tgt, T src) {
     return encodeStr(tgt, string(reinterpret_cast<const char*>(src.data()),
                                  src.size()));
   }
-  else { JMG_NOT_EXHAUSTIVE(T); }
+  else { JMG_NOT_EXHAUSTIVE(T, "encodable primitive"); }
 }
 template<typename T>
 std::tuple<T, size_t> decodePrimitive(BufferView src) {
@@ -414,7 +414,7 @@ std::tuple<T, size_t> decodePrimitive(BufferView src) {
   else if constexpr (FloatingPointT<T>) { return decodeFlt<T>(src); }
   // NOTE: decode must produce an owning string
   else if constexpr (SameAsDecayedT<string, T>) { return decodeStr(src); }
-  else { JMG_NOT_EXHAUSTIVE(T); }
+  else { JMG_NOT_EXHAUSTIVE(T, "decodable primitive"); }
 }
 } // namespace detail
 

@@ -104,7 +104,7 @@ constexpr auto unwrap(const T& wrapped) {
     return static_cast<UnwrapT<T>>(wrapped);
   }
   else if constexpr (OptionalT<T>) { return wrapped.get(); }
-  else { JMG_NOT_EXHAUSTIVE(T); }
+  else { JMG_NOT_EXHAUSTIVE(T, "unwrap source"); }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

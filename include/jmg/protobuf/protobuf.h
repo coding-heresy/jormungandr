@@ -471,7 +471,7 @@ public:
       setByType<Fld>(field_des, std::string(arg));
     }
     // TODO(bd) handle array types
-    else { JMG_NOT_EXHAUSTIVE(Fld); }
+    else { JMG_NOT_EXHAUSTIVE(Fld, "viewable field"); }
   }
 
 private:
@@ -762,7 +762,7 @@ private:
 
     // TODO(bd) handle repeated enums and objects
 
-    else { JMG_NOT_EXHAUSTIVE(Type); }
+    else { JMG_NOT_EXHAUSTIVE(Type, "protobuf field"); }
   }
 
   /**
@@ -827,7 +827,7 @@ private:
 
     // TODO(bd) handle objects and repeated fields
 
-    else { JMG_NOT_EXHAUSTIVE(Type); }
+    else { JMG_NOT_EXHAUSTIVE(Type, "protobuf field"); }
   }
 
   /**
@@ -850,7 +850,7 @@ private:
     // TODO(bd) add other cases here if perfect forwarding can't be
     // fixed for the other override
 
-    else { JMG_NOT_EXHAUSTIVE(Type); }
+    else { JMG_NOT_EXHAUSTIVE(Type, "protobuf field"); }
   }
 
   const Msg& msg_;
