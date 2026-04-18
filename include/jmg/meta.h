@@ -92,18 +92,88 @@ template<typename T>
 concept TypeListT = TemplateSpecializationOfT<T, meta::list>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// concepts for numeric types
+// concepts and metafunctions for numeric types
 ////////////////////////////////////////////////////////////////////////////////
 
-// NOTE: explicitly excluding bool from the set of integral types
+/**
+ * concept for integer types
+ *
+ * NOTE: explicitly excluding bool from the set of integral types
+ */
 template<typename T>
 concept IntegralT = std::integral<DecayT<T>> && !std::same_as<bool, DecayT<T>>;
 
+/**
+ * concept for signed integer types
+ */
+template<typename T>
+concept SignedT = SameAsDecayedT<int8_t, T> || SameAsDecayedT<int16_t, T>
+                  || SameAsDecayedT<int32_t, T> || SameAsDecayedT<int64_t, T>;
+
+/**
+ * concept for unsigned integer types
+ */
+template<typename T>
+concept UnsignedT =
+  SameAsDecayedT<uint8_t, T> || SameAsDecayedT<uint16_t, T>
+  || SameAsDecayedT<uint32_t, T> || SameAsDecayedT<uint64_t, T>;
+
+/**
+ * concept for floating point types
+ */
 template<typename T>
 concept FloatingPointT = std::floating_point<DecayT<T>>;
 
+/**
+ * concept for arithmetic/numeric types
+ */
 template<typename T>
 concept ArithmeticT = IntegralT<T> || std::floating_point<DecayT<T>>;
+
+namespace detail
+{
+
+template<IntegralT T>
+struct UnsignifyT {
+  using type = T;
+};
+
+template<IntegralT T>
+struct SignifyT {
+  using type = T;
+};
+
+#define JMG_SIGNAGE(sz)            \
+  template<>                       \
+  struct UnsignifyT<int##sz##_t> { \
+    using type = uint##sz##_t;     \
+  };                               \
+  template<>                       \
+  struct SignifyT<uint##sz##_t> {  \
+    using type = int##sz##_t;      \
+  }
+
+JMG_SIGNAGE(8);
+JMG_SIGNAGE(16);
+JMG_SIGNAGE(32);
+JMG_SIGNAGE(64);
+
+#undef JMG_SIGNAGE
+} // namespace detail
+
+/**
+ * type metafunction that converts signed integer types to the unsigned type of
+ * the equivalent size
+ */
+template<SignedT T>
+using UnsignifyT = detail::UnsignifyT<T>::type;
+
+/**
+ * type metafunction that converts unsigned integer types to the signed type of
+ * the equivalent size
+ */
+template<UnsignedT T>
+using SignifyT = detail::SignifyT<T>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept for optional types
