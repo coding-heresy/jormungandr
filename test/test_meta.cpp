@@ -90,7 +90,14 @@ TEST(MetaprogrammingTests, TestSameAsDecayed) {
   EXPECT_FALSE((SameAsDecayedT<ConstRefT, ConstRefT>));
 }
 
-TEST(MetaprogrammingTests, TestNumericConcepts) {
+#define JMG_MATCHED_CHECK(sz)                                  \
+  EXPECT_TRUE((same_as<int##sz##_t, SignifyT<uint##sz##_t>>)); \
+  EXPECT_TRUE((same_as<uint##sz##_t, UnsignifyT<int##sz##_t>>))
+
+TEST(MetaprogrammingTests, TestNumericConceptsAndMetaFunctions) {
+  ////////////////////
+  // concepts
+
   // integer types
   EXPECT_FALSE(IntegralT<bool>);
   EXPECT_FALSE(IntegralT<float>);
@@ -103,7 +110,16 @@ TEST(MetaprogrammingTests, TestNumericConcepts) {
   EXPECT_FALSE(ArithmeticT<bool>);
   EXPECT_TRUE(ArithmeticT<float>);
   EXPECT_TRUE(ArithmeticT<int>);
+
+  ////////////////////
+  // metafunctions
+  JMG_MATCHED_CHECK(8);
+  JMG_MATCHED_CHECK(16);
+  JMG_MATCHED_CHECK(32);
+  JMG_MATCHED_CHECK(64);
 }
+
+#undef JMG_MATCHED_CHECK
 
 TEST(MetaprogrammingTests, TestSpanAndVectorAndArrayConcepts) {
   EXPECT_FALSE(VectorT<int>);
