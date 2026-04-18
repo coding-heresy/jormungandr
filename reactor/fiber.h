@@ -294,7 +294,7 @@ public:
       if constexpr (NullTerminatedStringT<Arg>) { svc = c_string_view(arg); }
       // TODO(bd) handle multiple protocols along with flags and
       // timeouts
-      else { JMG_NOT_EXHAUSTIVE(Arg); }
+      else { JMG_NOT_EXHAUSTIVE(Arg, "endpoint lookup parameter"); }
     };
     (processArg(args), ...);
     // delegate to the reactor thread pool because there doesn't seem

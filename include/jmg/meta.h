@@ -721,9 +721,10 @@ using DeVariantizeT = DeWrapifyT<T>;
 // helper macro for final 'else' case of 'if constexpr' case analysis
 // over a type
 ////////////////////////////////////////////////////////////////////////////////
-#define JMG_NOT_EXHAUSTIVE(type)                                          \
-  do {                                                                    \
-    static_assert(always_false<type>, "case analysis is not exhaustive"); \
+#define JMG_NOT_EXHAUSTIVE(type, description)                  \
+  do {                                                         \
+    static_assert(always_false<type>,                          \
+                  "unknown/unsupported " description " type"); \
   } while (0)
 
 } // namespace jmg
