@@ -90,7 +90,31 @@ TEST(TypesTest, TestNullTerminatedStringConcept) {
   EXPECT_TRUE(NullTerminatedStringT<const char*>);
 }
 
+#define JMG_BUF_SZ_CHECK(type)                                 \
+  do {                                                         \
+    type val = 0;                                              \
+    type& val_ref = val;                                       \
+    const auto val_buf = buffer_from(val);                     \
+    EXPECT_EQ(sizeof(type), val_buf.size());                   \
+    const auto val_ref_buf = buffer_from(val_ref);             \
+    EXPECT_EQ(sizeof(type), val_ref_buf.size());               \
+    const type const_val = 0;                                  \
+    const type& const_val_ref = const_val;                     \
+    const auto const_val_buf = buffer_from(const_val);         \
+    EXPECT_EQ(sizeof(type), const_val_buf.size());             \
+    const auto const_val_ref_buf = buffer_from(const_val_ref); \
+    EXPECT_EQ(sizeof(type), const_val_ref_buf.size());         \
+  } while (0)
+
 TEST(TypesTest, TestBufferView) {
+  JMG_BUF_SZ_CHECK(int8_t);
+  JMG_BUF_SZ_CHECK(int16_t);
+  JMG_BUF_SZ_CHECK(int32_t);
+  JMG_BUF_SZ_CHECK(int64_t);
+  JMG_BUF_SZ_CHECK(uint8_t);
+  JMG_BUF_SZ_CHECK(uint16_t);
+  JMG_BUF_SZ_CHECK(uint32_t);
+  JMG_BUF_SZ_CHECK(uint64_t);
   const auto uint64 = uint64_t(20010911);
   const auto str = "test string"s;
 
@@ -104,6 +128,8 @@ TEST(TypesTest, TestBufferView) {
   const auto str_view_buf = buffer_from(str_view);
   EXPECT_EQ(str_view.size(), str_view_buf.size());
 }
+
+#undef JMG_BUF_SZ_CHECK
 
 // TODO(bd) rework these checks as code that will fail to compile once
 // cc_build_error is working correctly

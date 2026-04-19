@@ -445,6 +445,8 @@ concept WritableDescriptorT =
 ////////////////////
 // buffers
 
+// unsafe buffer
+
 /**
  * read-only buffer
  */
@@ -471,6 +473,12 @@ BufferView buffer_from(const T& ref) {
   if constexpr (StdStringLikeT<T>) {
     return BufferView(reinterpret_cast<const uint8_t*>(ref.data()), ref.size());
   }
+  else if constexpr (SpanT<T>) {
+    using ValueType = typename T::value_type;
+    static_assert(1 == sizeof(ValueType),
+                  "only single byte/octet values are supported in buffers");
+    return BufferView(reinterpret_cast<const uint8_t*>(ref.data()), ref.size());
+  }
   else {
     return BufferView(reinterpret_cast<const uint8_t*>(&ref), sizeof(ref));
   }
@@ -485,7 +493,16 @@ BufferProxy buffer_from(T& ref) {
   if constexpr (DecayedSameAsT<std::string, T>) {
     return BufferProxy(reinterpret_cast<uint8_t*>(ref.data()), ref.size());
   }
-  else { return BufferProxy(reinterpret_cast<uint8_t*>(&ref), sizeof(ref)); }
+  else if constexpr (SpanT<T>) {
+    using ValueType = typename T::value_type;
+    static_assert(1 == sizeof(ValueType),
+                  "only single byte/octet values are supported in buffers");
+    return BufferProxy(reinterpret_cast<uint8_t*>(ref.data()), ref.size());
+  }
+  else {
+    return BufferProxy(reinterpret_cast<uint8_t*>(&ref),
+                       sizeof(DecayT<decltype(ref)>));
+  }
 }
 
 using SingleIoBuf = std::array<struct iovec, 1>;
