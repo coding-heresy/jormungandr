@@ -239,10 +239,8 @@ namespace detail
 // NOTE: this is required due to limitations of TemplateSpecializationOfT
 template<typename T>
 struct IsSpanT : std::false_type {};
-template<typename T>
-struct IsSpanT<std::span<T>> : std::true_type {};
-template<typename T, std::size_t kSz>
-struct IsSpanT<std::span<T, kSz>> : std::true_type {};
+template<typename T, std::size_t kExtent>
+struct IsSpanT<std::span<T, kExtent>> : std::true_type {};
 } // namespace detail
 
 /**
