@@ -81,6 +81,9 @@ std::ostream& operator<<(std::ostream& strm, const std::optional<T> val) {
 // stream octet to output
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * stream a single octet out
+ */
 inline std::ostream& operator<<(std::ostream& strm, Octet arg) {
   const auto old_fill = strm.fill('0');
   const auto old_width = strm.width(8);
@@ -91,18 +94,29 @@ inline std::ostream& operator<<(std::ostream& strm, Octet arg) {
 }
 
 /**
+ * stream the contents of an octet buffer out
+ */
+template<OctetBufferT Buf>
+std::ostream& operator<<(std::ostream& strm, const Buf buf) {
+  bool first = true;
+  for (auto octet : buf) {
+    static_assert(SameAsDecayedT<Octet, decltype(octet)>);
+    if (first) { first = false; }
+    else { strm << " "; }
+    strm << octet;
+  }
+  return strm;
+}
+
+/**
  * formatter to use with str_join
  */
-struct OctetFmt {
-  void operator()(std::string* out, Octet arg) const {
-    // TODO(bd) probably could be much better than this but good enough for now...
-    std::ostringstream strm;
-    strm << arg;
-    out->append(strm.str());
-  }
+inline auto octet_fmt = [](std::string* out, Octet arg) {
+  uint8_t val = unsafe(arg);
+  for (int i = 7; i >= 0; --i) { out->push_back((val & (1 << i)) ? '1' : '0'); }
 };
 
-static constexpr auto kOctetFmt = OctetFmt();
+static constexpr auto kOctetFmt = octet_fmt;
 
 ////////////////////
 // convert 8 bit values to Octet
@@ -348,7 +362,15 @@ std::string camelCaseToSnakeCase(std::string_view str, bool all_caps = false);
  */
 template<typename T>
 std::string strAddrOf(const T* ptr) {
-  return str_cat(static_cast<uintptr_t>(ptr));
+  return str_cat(reinterpret_cast<uintptr_t>(ptr));
+}
+
+/**
+ * generate a sign bit mask for a signed integer type
+ */
+template<SignedT T>
+consteval T signBitMaskOf() {
+  return static_cast<T>(1) << ((sizeof(T) * 8) - 1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
