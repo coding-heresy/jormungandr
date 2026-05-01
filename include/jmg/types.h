@@ -505,6 +505,27 @@ BufferProxy buffer_from(T& ref) {
   }
 }
 
+// safe buffer
+
+/**
+ * read-only buffer
+ */
+using OctetBufferView = std::span<const Octet, std::dynamic_extent>;
+
+/**
+ * buffer that can be read from or written to
+ */
+using OctetBufferProxy = std::span<Octet, std::dynamic_extent>;
+
+/**
+ * concept for any buffer type
+ */
+template<typename T>
+concept OctetBufferT =
+  SameAsDecayedT<OctetBufferView, T> || SameAsDecayedT<OctetBufferProxy, T>;
+
+// iovec utilities
+
 using SingleIoBuf = std::array<struct iovec, 1>;
 
 template<typename T>
