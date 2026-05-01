@@ -18,6 +18,7 @@ cc_library(
         "include/jmg/conversion.h",
         "include/jmg/field.h",
         "include/jmg/file_util.h",
+        "include/jmg/fp_util.h",
         "include/jmg/future.h",
         "include/jmg/ip_endpoint.h",
         "include/jmg/meta.h",
