@@ -105,7 +105,7 @@ cc_test(
 proto_library(
     name = "test_proto",
     srcs = ["data/test.proto"],
-    deps = ["@com_google_protobuf//:timestamp_proto"],
+    deps = ["@protobuf//:timestamp_proto"],
 )
 
 cc_proto_library(
@@ -122,7 +122,7 @@ cc_test(
         ":test_proto_cc",
         "//:jmg",
         "@com_google_googletest//:gtest_main",
-        "@protobuf",
+        "@protobuf//:protobuf_nowkt",
     ],
 )
 
