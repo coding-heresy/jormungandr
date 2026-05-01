@@ -40,6 +40,17 @@
 namespace jmg
 {
 
+////////////////////////////////////////////////////////////////////////////////
+// OutputStreamBuffer
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * class that provides a stream of buffers to which data can be
+ * written
+ *
+ * somewhat inspired by the implementation that the protobuf C++
+ * interface uses to implement serialization
+ */
 class OutputStreamBuffer {
 public:
   explicit OutputStreamBuffer(std::span<Octet> buf);
@@ -69,5 +80,85 @@ concept ChunkedOutputStreamT =
     // T::consume takes an optional size and returns void
     { strm.consume(opt_sz) } -> std::same_as<void>;
   };
+
+////////////////////////////////////////////////////////////////////////////////
+// OutputStrmItr
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * sentinel type for OutputStrmItr
+ */
+struct OutputEnd {};
+
+/**
+ * class that wraps an octet buffer and provides an iterator to write to
+ */
+class OutputStrmItr {
+public:
+  // output iterator requirements
+  using iterator_concept = std::output_iterator_tag;
+  using difference_type = std::ptrdiff_t;
+  using value_type = Octet;
+  using pointer = Octet*;
+  using reference = Octet&;
+
+  explicit OutputStrmItr(OctetBufferProxy buf);
+
+  reference operator*() const;
+
+  pointer operator->() const;
+
+  OutputStrmItr& operator++();
+
+  bool operator==(const OutputStrmItr& other) const = default;
+
+  bool operator==(OutputEnd) const;
+
+  size_t remaining() const;
+
+private:
+  Octet* ptr_;
+  Octet* end_;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+// InputStrmItr
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * sentinel type for InputStrmItr
+ */
+struct InputEnd {};
+
+/**
+ * class that wraps an octet buffer and provides an iterator to write to
+ */
+class InputStrmItr {
+public:
+  // input iterator requirements
+  using iterator_concept = std::input_iterator_tag;
+  using difference_type = std::ptrdiff_t;
+  using value_type = Octet;
+  using pointer = const Octet*;
+  using reference = const Octet&;
+
+  explicit InputStrmItr(OctetBufferView buf);
+
+  reference operator*() const;
+
+  pointer operator->() const;
+
+  InputStrmItr& operator++();
+
+  bool operator==(const InputStrmItr& other) const = default;
+
+  bool operator==(InputEnd) const;
+
+  size_t remaining() const;
+
+private:
+  const Octet* ptr_;
+  const Octet* end_;
+};
 
 } // namespace jmg
