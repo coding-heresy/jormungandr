@@ -41,6 +41,10 @@ using namespace std;
 namespace jmg
 {
 
+////////////////////////////////////////////////////////////////////////////////
+// OutputStreamBuffer
+////////////////////////////////////////////////////////////////////////////////
+
 OutputStreamBuffer::OutputStreamBuffer(span<Octet> buf)
   : idx_(0), consumed_(0), buf_(buf) {}
 
@@ -79,5 +83,67 @@ void OutputStreamBuffer::consume(const optional<size_t> sz) {
 size_t OutputStreamBuffer::remaining() const { return buf_.size() - idx_; }
 
 size_t OutputStreamBuffer::consumed() const { return consumed_; }
+
+////////////////////////////////////////////////////////////////////////////////
+// OutputStrmItr
+////////////////////////////////////////////////////////////////////////////////
+
+OutputStrmItr::OutputStrmItr(OctetBufferProxy buf)
+  : ptr_(buf.data()), end_(buf.data() + buf.size()) {
+  JMG_ENFORCE(
+    ptr_,
+    "attempted to create an output stream iterator using an invalid buffer");
+}
+
+OutputStrmItr::reference OutputStrmItr::operator*() const {
+  JMG_ENFORCE(ptr_ != end_, "attempted to dereference buffer end");
+  return *ptr_;
+}
+
+OutputStrmItr::pointer OutputStrmItr::operator->() const {
+  JMG_ENFORCE(ptr_ != end_, "attempted to dereference buffer end");
+  return ptr_;
+}
+
+OutputStrmItr& OutputStrmItr::operator++() {
+  JMG_ENFORCE(ptr_ != end_, "attempted to increment past buffer end");
+  ++ptr_;
+  return *this;
+}
+
+bool OutputStrmItr::operator==(OutputEnd) const { return ptr_ == end_; }
+
+size_t OutputStrmItr::remaining() const { return distance(ptr_, end_); }
+
+////////////////////////////////////////////////////////////////////////////////
+// InputStrmItr
+////////////////////////////////////////////////////////////////////////////////
+
+InputStrmItr::InputStrmItr(OctetBufferView buf)
+  : ptr_(buf.data()), end_(buf.data() + buf.size()) {
+  JMG_ENFORCE(
+    ptr_,
+    "attempted to create an input stream iterator using an invalid buffer");
+}
+
+InputStrmItr::reference InputStrmItr::operator*() const {
+  JMG_ENFORCE(ptr_ != end_, "attempted to dereference buffer end");
+  return *ptr_;
+}
+
+InputStrmItr::pointer InputStrmItr::operator->() const {
+  JMG_ENFORCE(ptr_ != end_, "attempted to dereference buffer end");
+  return ptr_;
+}
+
+InputStrmItr& InputStrmItr::operator++() {
+  JMG_ENFORCE(ptr_ != end_, "attempted to increment past buffer end");
+  ++ptr_;
+  return *this;
+}
+
+bool InputStrmItr::operator==(InputEnd) const { return ptr_ == end_; }
+
+size_t InputStrmItr::remaining() const { return distance(ptr_, end_); }
 
 } // namespace jmg
