@@ -71,6 +71,17 @@ cc_test(
 )
 
 cc_test(
+    name = "test_fp_util",
+    size = "small",
+    srcs = ["test_fp_util.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "test_future",
     size = "small",
     srcs = ["test_future.cpp"],
@@ -329,6 +340,22 @@ cc_test(
     ],
 )
 
+####################
+# experimental
+
+cc_test(
+    name = "test_serialization_encoding",
+    size = "small",
+    srcs = [
+        "test_serialization_encoding.cpp",
+        ":jmg_cbe_example_header",
+    ],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
 ################################################################################
 # test of jmg_server_main intended to be run manually
 ################################################################################
