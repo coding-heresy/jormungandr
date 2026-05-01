@@ -26,6 +26,11 @@ build --cxxopt='-Werror'
 build --cxxopt='-Wno-deprecated-declarations'
 build --cxxopt='-Wno-unused-parameter'
 build --cxxopt='-Wno-missing-field-initializers'
+# TODO(bd) the following warning suppressions are required to get
+# grpc to build correctly
+build --cxxopt='-Wno-redundant-move'
+build --cxxopt='-Wno-class-memaccess'
+build --cxxopt='-Wno-unused-function'
 
 # use hermetic binary toolchain for protoc instead of building it from
 # source out of the protobuf module
@@ -117,3 +122,9 @@ coverage --nocache_test_results
 #build:linux --incompatible_strict_action_env=true
 # Enable the CC toolchain resolution based on platforms.
 #build:linux --incompatible_enable_cc_toolchain_resolution
+
+# Enable the modern proto toolchain resolution (Default in Bazel 9+)
+build --incompatible_enable_proto_toolchain_resolution
+
+# Instruct the protobuf module to use prebuilt binaries
+build --@protobuf//bazel/toolchains:prefer_prebuilt_protoc
