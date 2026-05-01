@@ -456,3 +456,13 @@ TEST(MetaprogrammingTests, TestExceptionTypeName) {
     EXPECT_EQ("int"s, current_exception_type_name());
   }
 }
+
+template<typename T>
+struct Ident {
+  using type = T;
+};
+
+TEST(MetaprogrammingTests, TestTrait) {
+  EXPECT_TRUE((SameAsDecayedT<int, meta::_t<Ident<int>>>));
+  EXPECT_TRUE((SameAsDecayedT<int, _T<Ident<int>>>));
+}
