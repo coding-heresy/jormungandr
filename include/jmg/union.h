@@ -53,8 +53,18 @@ class Union {
 public:
   using fields = meta::list<Flds...>;
   using members = meta::transform<fields, meta::quote<meta::_t>>;
-  using return_type =
-    VariantizeT<meta::transform<DecayAllT<members>, meta::quote<ReturnTypeForT>>>;
+  using return_type_list =
+    meta::transform<DecayAllT<members>, meta::quote<ReturnTypeForT>>;
+  using return_type = VariantizeT<meta::transform<
+    meta::transform<return_type_list, meta::quote<VariantMemberForT>>,
+    meta::quote<VariantMemberForT>>>;
+
+  template<FieldDefT MemberFld>
+  static bool fieldIdxMatches(const size_t idx)
+    requires(MemberOfListT<MemberFld, fields>)
+  {
+    return entryIdx<MemberFld, fields>() == idx;
+  }
 
   Union() = delete;
 };
@@ -103,7 +113,7 @@ concept UnionT = detail::IsUnion<T>::value;
 #if !defined(JMG_USE_BACKWARDS_COMPATIBLE_UNION)
 
 ////////////////////////////////////////////////////////////////////////////////
-// concept for member of union
+// concept for type that is a member of a jmg::Union
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename U, typename T>
