@@ -1182,16 +1182,3 @@ try to create another unit system for boost.units.
 Is there an efficient way to tag the currency value (i.e. price) with
 currency it is being expressed in? Would it make sense to use safe
 types to encode the currency for a price into the type system?
-
-# Other Overall TODO Items
-
-All items here have been moved to TODO.md, this section will be
-removed at some point...
-
-* ~~Add test cases for code that should fail to compile using
-  `cc_build_error` rules from `rules_build_error`~~
-  * ~~There appear to be some bugs in `rules_build_error` that need to
-    be worked out, an initial attemp at adding this functionality
-    failed.~~
-* ~~Standardize naming of all concepts and type metafunctions~~
-* ~~Document coding standards for concepts and type metafunctions~~
