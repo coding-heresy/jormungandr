@@ -63,6 +63,31 @@ concept TypeFlagT =
   std::same_as<T, std::true_type> || std::same_as<T, std::false_type>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// concept for reference types
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept ReferenceT = std::is_reference_v<T>;
+
+namespace detail
+{
+template<typename T>
+struct IsRefWrapped : std::false_type {};
+template<typename T>
+struct IsRefWrapped<std::reference_wrapper<T>> : std::true_type {};
+} // namespace detail
+
+template<typename T>
+concept RefWrappedT = detail::IsRefWrapped<T>::value;
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for const types
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept ConstT = std::is_const_v<T>;
+
+////////////////////////////////////////////////////////////////////////////////
 // helpers for decaying types (i.e. removing const, volatile and reference
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -775,10 +800,25 @@ using DeTuplizeT = DeWrapifyT<T>;
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
- * concept for a specialization of std::tuple
+ * concept for a specialization of std::variant
  */
 template<typename T>
 concept VariantT = TemplateSpecializationOfT<T, std::variant>;
+
+namespace detail
+{
+template<typename T>
+struct VariantMemberFor {
+  using type = T;
+};
+template<ReferenceT T>
+struct VariantMemberFor<T> {
+  using type = std::reference_wrapper<DecayT<T>>;
+};
+} // namespace detail
+
+template<typename T>
+using VariantMemberForT = _T<detail::VariantMemberFor<T>>;
 
 /**
  * specialize std::variant using a typelist

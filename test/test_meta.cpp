@@ -121,6 +121,19 @@ TEST(MetaprogrammingTests, TestNumericConceptsAndMetaFunctions) {
 
 #undef JMG_MATCHED_CHECK
 
+TEST(MetaprogrammingTests, TestReferenceConcepts) {
+  EXPECT_FALSE(ReferenceT<int>);
+  EXPECT_TRUE(ReferenceT<int&>);
+  int val;
+  auto& val_ref = val;
+  EXPECT_FALSE(ReferenceT<decltype(val)>);
+  EXPECT_TRUE(ReferenceT<decltype(val_ref)>);
+  auto val_ref_wrapped = std::ref(val_ref);
+  EXPECT_FALSE(RefWrappedT<decltype(val)>);
+  EXPECT_FALSE(RefWrappedT<decltype(val_ref)>);
+  EXPECT_TRUE(RefWrappedT<decltype(val_ref_wrapped)>);
+}
+
 TEST(MetaprogrammingTests, TestSpanAndVectorAndArrayConcepts) {
   EXPECT_FALSE(VectorT<int>);
   EXPECT_FALSE(SpanT<int>);
@@ -437,6 +450,27 @@ TEST(MetaprogrammingTests, TestVariantHandling) {
   using TestTypeList = meta::list<int, float>;
   EXPECT_TRUE((same_as<TestTypeList, DeVariantizeT<TestVariant>>));
   EXPECT_TRUE((same_as<TestVariant, VariantizeT<TestTypeList>>));
+
+  struct NonPrimitive {
+    int int_fld;
+    float flt_fld;
+  };
+  EXPECT_TRUE((same_as<int, VariantMemberForT<ReturnTypeForT<int>>>));
+  EXPECT_FALSE(
+    (same_as<NonPrimitive, VariantMemberForT<ReturnTypeForT<NonPrimitive>>>));
+  using NonPrimitiveTestTypeList = meta::list<int, float, NonPrimitive>;
+  using ReturnTypes =
+    meta::transform<NonPrimitiveTestTypeList, meta::quote<ReturnTypeForT>>;
+  using VariantMemberTypes =
+    meta::transform<ReturnTypes, meta::quote<VariantMemberForT>>;
+  using NonPrimitiveTestVariant = VariantizeT<VariantMemberTypes>;
+  EXPECT_FALSE((MemberOfListT<NonPrimitive, VariantMemberTypes>));
+  EXPECT_FALSE((MemberOfListT<NonPrimitive&, VariantMemberTypes>));
+  EXPECT_TRUE(
+    (MemberOfListT<reference_wrapper<NonPrimitive>, VariantMemberTypes>));
+  using TestNonPrimitiveVariant =
+    variant<int, float, reference_wrapper<NonPrimitive>>;
+  EXPECT_TRUE((same_as<TestNonPrimitiveVariant, NonPrimitiveTestVariant>));
 }
 
 using namespace std::literals::string_literals;
