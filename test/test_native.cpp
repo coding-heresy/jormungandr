@@ -44,6 +44,8 @@ using namespace std;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 using ::testing::ElementsAreArray;
+using ::testing::HasSubstr;
+using ::testing::ThrowsMessage;
 
 namespace rng = std::ranges;
 
@@ -61,9 +63,9 @@ using ArrayFld = ArrayField<int, "int_array", Required>;
 using OptArrayFld = ArrayField<double, "int_array", Optional>;
 
 // object fields
-using SubObject = native::Object<IntFld, DblFld>;
-using SubObjFld = FieldDef<SubObject, "sub_obj", Required>;
-using OptSubObjFld = FieldDef<SubObject, "opt_sub_obj", Optional>;
+using SubObj = native::Object<IntFld, DblFld>;
+using SubObjFld = FieldDef<SubObj, "sub_obj", Required>;
+using OptSubObjFld = FieldDef<SubObj, "opt_sub_obj", Optional>;
 
 // safe type fields
 using Id32 = SafeId32<>;
@@ -119,7 +121,7 @@ TEST(NativeObjectTests, TestReturnTypes) {
 
   // object types return const ref
   using SubObjGetReturn = decltype(jmg::get<SubObjFld>(declval<TestObject>()));
-  EXPECT_TRUE((SameAsDecayedT<SubObject, SubObjGetReturn>));
+  EXPECT_TRUE((SameAsDecayedT<SubObj, SubObjGetReturn>));
   EXPECT_TRUE(is_reference_v<SubObjGetReturn>);
   // TODO(bd) result should be ref to const
   // EXPECT_TRUE(is_const_v<remove_cvref_t<SubObjGetReturn>>);
@@ -129,7 +131,7 @@ TEST(NativeObjectTests, TestReturnTypes) {
   EXPECT_TRUE(is_pointer_v<OptSubObjGetReturn>);
   {
     using Deref = decltype(*declval<OptSubObjGetReturn>());
-    EXPECT_TRUE((DecayedSameAsT<SubObject, Deref>));
+    EXPECT_TRUE((DecayedSameAsT<SubObj, Deref>));
     // TODO(bd) result should be pointer to const
     // EXPECT_TRUE(is_const_v<Deref>);
   }
@@ -160,9 +162,9 @@ TEST(NativeObjectTests, TestGet) {
     native::Object<IntFld, DblFld, StrFld, SubObjFld, SafeIdFld, ArrayFld>;
   {
     const auto vec = vector{2, 4, 6, 8};
-    auto obj = TestObject(make_tuple(20010911, 42.0, "foo"s,
-                                     SubObject(make_tuple(20070625, -1.0)),
-                                     Id32(0), vec));
+    auto obj =
+      TestObject(make_tuple(20010911, 42.0, "foo"s,
+                            SubObj(make_tuple(20070625, -1.0)), Id32(0), vec));
     EXPECT_EQ(jmg::get<IntFld>(obj), 20010911);
     EXPECT_DOUBLE_EQ(jmg::get<DblFld>(obj), 42.0);
     EXPECT_EQ(jmg::get<StrFld>(obj), "foo"sv);
@@ -194,14 +196,6 @@ TEST(NativeObjectTests, TestGet) {
     EXPECT_TRUE(pred(val));
     EXPECT_EQ(Active::kUnknown, *val);
   }
-  {
-    using RawUnionData = UnionObj::adapted_type;
-    auto union_obj = UnionObj(RawUnionData(-1.0, {20010911}));
-    EXPECT_TRUE(holds_alternative<int>(jmg::get<UnionFld>(union_obj)));
-
-    jmg::set<UnionFld>(union_obj, "foo"s);
-    EXPECT_TRUE(holds_alternative<string>(jmg::get<UnionFld>(union_obj)));
-  }
 }
 
 #define VALIDATE_TRY_GET_OPTIONAL(field, obj, expected) \
@@ -215,9 +209,9 @@ TEST(NativeObjectTests, TestTryGet) {
   using TestObject = native::Object<IntFld, DblFld, OptDblFld, OptStrFld,
                                     OptSubObjFld, OptSafeIdFld, OptArrayFld>;
   const auto vec = vector{2.0, 4.0, 6.0, 8.0};
-  const auto obj = TestObject(make_tuple(20010911, 42.0, nullopt, "bar"s,
-                                         SubObject(make_tuple(20070625, -1.0)),
-                                         Id64(64), vec));
+  const auto obj =
+    TestObject(make_tuple(20010911, 42.0, nullopt, "bar"s,
+                          SubObj(make_tuple(20070625, -1.0)), Id64(64), vec));
   {
     const auto& opt_dbl = jmg::try_get<OptDblFld>(obj);
     EXPECT_FALSE(pred(opt_dbl));
@@ -263,7 +257,7 @@ TEST(NativeObjectTests, TestSet) {
     auto sub_obj = jmg::try_get<OptSubObjFld>(obj);
     EXPECT_FALSE(pred(sub_obj));
   }
-  jmg::set<OptSubObjFld>(obj, SubObject(make_tuple(20070625, -1.0)));
+  jmg::set<OptSubObjFld>(obj, SubObj(make_tuple(20070625, -1.0)));
   {
     auto sub_obj = jmg::try_get<OptSubObjFld>(obj);
     EXPECT_TRUE(pred(sub_obj));
@@ -350,3 +344,64 @@ TEST(NativeObjectTests, TestConstructionFromRaw) {
 }
 
 #undef VALIDATE_TRY_GET_OPTIONAL
+
+using RetCodeFld = FieldDef<uint16_t, "return_code", Required>;
+using ErrMsgFld = StringField<"desc", Required>;
+using PayloadUnion = Union<SubObjFld, ErrMsgFld>;
+using PayloadFld = FieldDef<PayloadUnion, "payload", Required>;
+using RsltObj = native::Object<RetCodeFld, PayloadFld>;
+
+TEST(NativeObjectTests, TestUnionWithSubObject) {
+  // check some concepts related to unions
+  EXPECT_TRUE((ObjectMemberT<UnionFld, UnionObj>));
+  EXPECT_TRUE((UnionMemberFieldT<UnionFld, IntFld>));
+  EXPECT_TRUE((UnionMemberFieldT<UnionFld, StrFld>));
+  EXPECT_FALSE((UnionMemberFieldT<UnionFld, DblFld>));
+
+  const auto kErrMsg = "something went wrong"s;
+  constexpr auto kIntVal = 20010911;
+  constexpr auto kDblVal = 42.0;
+  const auto success_rslt = [&] -> RsltObj {
+    RsltObj rslt;
+    jmg::set<RetCodeFld>(rslt, 0);
+    {
+      SubObj sub_obj;
+      jmg::set<IntFld>(sub_obj, kIntVal);
+      jmg::set<DblFld>(sub_obj, kDblVal);
+      jmg::union_set<PayloadFld, SubObjFld>(rslt, std::move(sub_obj));
+    }
+    return rslt;
+  }();
+  EXPECT_TRUE((jmg::union_has<PayloadFld, SubObjFld>(success_rslt)));
+  {
+    const auto& sub_obj = jmg::union_get<PayloadFld, SubObjFld>(success_rslt);
+    EXPECT_EQ(kIntVal, jmg::get<IntFld>(sub_obj));
+    EXPECT_EQ(kDblVal, jmg::get<DblFld>(sub_obj));
+  }
+
+  const auto failure_rslt = [&] -> RsltObj {
+    RsltObj rslt;
+    jmg::set<RetCodeFld>(rslt, 1);
+    jmg::union_set<PayloadFld, ErrMsgFld>(rslt, string_view(kErrMsg));
+    return rslt;
+  }();
+  EXPECT_TRUE((jmg::union_has<PayloadFld, ErrMsgFld>(failure_rslt)));
+  EXPECT_EQ(kErrMsg, (jmg::union_get<PayloadFld, ErrMsgFld>(failure_rslt)));
+
+  jmg::union_visit<PayloadFld>(
+    [&](const size_t idx, const auto& payload) {
+      using PayloadType = decltype(payload);
+      if constexpr (SameAsDecayedT<string_view, PayloadType>) {
+        EXPECT_TRUE(PayloadFld::type::fieldIdxMatches<ErrMsgFld>(idx));
+        EXPECT_EQ(string_view(kErrMsg), payload);
+      }
+      else if constexpr (SameAsDecayedT<SubObj, PayloadType>) {
+        FAIL() << "received SubObj but should have received string";
+      }
+      else {
+        FAIL() << "unknown/unexpected type [" << type_name_for<PayloadType>()
+               << "]\n";
+      }
+    },
+    failure_rslt);
+}
