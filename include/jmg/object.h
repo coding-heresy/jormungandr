@@ -76,7 +76,15 @@ concept FieldGroupOrUnionT = FieldDefT<T> || FieldGroupDefT<T> || UnionT<T>;
 ////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-concept UnionFieldT = RequiredFieldT<T> && UnionT<typename T::type>;
+concept UnionFieldT = FieldDefT<T> && UnionT<typename T::type>;
+
+////////////////////////////////////////////////////////////////////////////////
+// concept for field that is a member of a jmg::Union referenced by a union field
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename U, typename T>
+concept UnionMemberFieldT =
+  UnionFieldT<U> && FieldDefT<T> && MemberOfListT<T, typename U::type::fields>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concept that constrains the Fields typelist associated with an
@@ -178,8 +186,6 @@ concept ObjectMemberT =
 // definitions of get() and try_get()
 ////////////////////////////////////////////////////////////////////////////////
 
-// TODO(bd) figure out how to return string_view instead of string
-
 /**
  * get the value associated with a required field
  */
@@ -256,24 +262,6 @@ void set(Obj& obj, const char* arg)
   obj.template set<Fld>(arg);
 }
 
-#if !defined(JMG_USE_BACKWARDS_COMPATIBLE_UNION)
-
-/**
- * special case of set() for union fields
- */
-template<UnionFieldT Fld, ObjectDefT Obj, typename Arg>
-void set(Obj& obj, Arg&& arg)
-  requires(ObjectMemberT<Fld, Obj>
-           && UnionMemberT<typename Fld::type, DecayT<Arg>>)
-{
-  obj.template set<Fld>(std::forward<Arg>(arg));
-}
-
-#endif
-
-// TODO(bd) add further specialization of set() for union members that are
-// viewable types?
-
 /**
  * version of set() that will move
  */
@@ -297,6 +285,61 @@ void clear(Obj& obj)
 {
   obj.template clear<Fld>();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// special definitions for unions
+////////////////////////////////////////////////////////////////////////////////
+
+#if !defined(JMG_USE_BACKWARDS_COMPATIBLE_UNION)
+
+/**
+ * short-cut that determines whether the object referenced by a union field
+ * currently holds a specific alternative field
+ */
+template<UnionFieldT UnionFld, FieldDefT MemberFld, ObjectDefT Obj>
+bool union_has(const Obj& obj)
+  requires(ObjectMemberT<UnionFld, Obj>
+           && UnionMemberFieldT<UnionFld, MemberFld>)
+{
+  return obj.template union_has<UnionFld, MemberFld>();
+}
+
+/**
+ * short-cut that retrieves the value of a specific alternative field of a union
+ * field if that field is being held, or else throws exception
+ */
+template<UnionFieldT UnionFld, FieldDefT MemberFld, ObjectDefT Obj>
+decltype(auto) union_get(const Obj& obj)
+  requires(ObjectMemberT<UnionFld, Obj>
+           && UnionMemberFieldT<UnionFld, MemberFld>)
+{
+  return obj.template union_get<UnionFld, MemberFld>();
+}
+
+/**
+ * short-cut that avoids exposing internal implementation details when executing
+ * std::visit on union fields
+ */
+template<UnionFieldT UnionFld, ObjectDefT Obj, typename Fcn>
+void union_visit(Fcn&& fcn, const Obj& obj)
+  requires(ObjectMemberT<UnionFld, Obj>)
+{
+  obj.template union_visit<UnionFld>(std::forward<Fcn>(fcn));
+}
+
+/**
+ * short-cut that sets the value of a specific alternative field of a union
+ * field
+ */
+template<UnionFieldT UnionFld, FieldDefT MemberFld, ObjectDefT Obj, typename Arg>
+void union_set(Obj& obj, Arg&& arg)
+  requires(ObjectMemberT<UnionFld, Obj> && UnionMemberFieldT<UnionFld, MemberFld>
+           && DecayedSameAsT<ArgTypeForFieldT<MemberFld>, Arg>)
+{
+  obj.template union_set<UnionFld, MemberFld>(std::forward<Arg>(arg));
+}
+
+#endif
 
 } // namespace jmg
 

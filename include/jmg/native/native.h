@@ -134,7 +134,7 @@ struct Nativize {
  */
 template<UnionT T>
 struct Nativize<T, Required> {
-  using type = VariantizeT<typename T::members>;
+  using type = std::optional<VariantizeT<typename T::members>>;
 };
 
 /**
@@ -193,7 +193,14 @@ public:
   template<RequiredFieldT Fld>
   decltype(auto) get() const {
     constexpr auto kIdx = entryIdx<Fld, typename base::Fields>();
-    if constexpr (UnionFieldT<Fld>) { return std::get<kIdx>(obj_); }
+    if constexpr (UnionFieldT<Fld>) {
+      using UnionObj = typename Fld::type;
+      const auto& union_owner = std::get<kIdx>(obj_);
+      JMG_ENFORCE(union_owner, "attempting to get a value for union field [",
+                  Fld::name, "] whose value has not been set");
+      // TODO(bd) disallow jmg::get for union fields, require union_get?
+      return *union_owner;
+    }
     else {
       using Rslt = ReturnTypeForFieldT<Fld>;
       if constexpr (ViewableFieldT<Fld>) { return Rslt(std::get<kIdx>(obj_)); }
@@ -330,7 +337,102 @@ public:
     entry = std::nullopt;
   }
 
+  ////////////////////
+  // delegate for union_has()
+
+  template<UnionFieldT UnionFld, FieldDefT MemberFld>
+  bool union_has() const
+    requires(UnionMemberFieldT<UnionFld, MemberFld>)
+  {
+    const auto& union_owner = getUnionOwner<UnionFld>();
+    JMG_ENFORCE(union_owner, "union field [", UnionFld::name,
+                "] currently holds no value");
+    constexpr size_t kMemberFldIdx =
+      entryIdx<MemberFld, typename UnionFld::type::fields>();
+    return (kMemberFldIdx == union_owner->index());
+  }
+
+  ////////////////////
+  // delegate for union_get()
+
+  template<UnionFieldT UnionFld, FieldDefT MemberFld>
+  decltype(auto) union_get() const
+    requires(UnionMemberFieldT<UnionFld, MemberFld>)
+  {
+    const auto& union_owner = getUnionOwner<UnionFld>();
+    JMG_ENFORCE(union_owner, "union field [", UnionFld::name,
+                "] currently holds no value");
+    constexpr size_t kMemberFldIdx =
+      entryIdx<MemberFld, typename UnionFld::type::fields>();
+    JMG_ENFORCE(kMemberFldIdx == union_owner->index(), "union field [",
+                UnionFld::name,
+                "] currently holds a value for some member field other than [",
+                MemberFld::name, "]");
+    return ReturnTypeForFieldT<MemberFld>(std::get<kMemberFldIdx>(*union_owner));
+  }
+
+  ////////////////////
+  // delegate for union_visit()
+
+  template<UnionFieldT UnionFld, typename Fcn>
+  void union_visit(Fcn&& fcn) const
+  // TODO(bd) find some way to constrain the callback function appropriately
+  {
+    const auto& union_owner = getUnionOwner<UnionFld>();
+    JMG_ENFORCE(union_owner, "union field [", UnionFld::name,
+                "] currently holds no value");
+    std::visit(
+      [&](const auto& union_member) {
+        using MemberType = decltype(union_member);
+        using MemberReturnType = ReturnTypeForT<MemberType>;
+        // TODO(bd) passing the index here to ensure that unions with multiple
+        // elements of the same type can be differentiated
+        fcn(union_owner->index(), MemberReturnType(union_member));
+      },
+      *union_owner);
+  }
+
+  ////////////////////
+  // delegate for union_set()
+
+  template<UnionFieldT UnionFld, FieldDefT MemberFld, typename Arg>
+  decltype(auto) union_set(Arg&& arg)
+    requires(UnionMemberFieldT<UnionFld, MemberFld>
+             && DecayedSameAsT<ArgTypeForFieldT<MemberFld>, Arg>)
+  {
+    auto& union_owner = getUnionOwner<UnionFld>();
+    static_assert(!std::is_const_v<decltype(union_owner)>);
+    constexpr size_t kMemberFldIdx =
+      entryIdx<MemberFld, typename UnionFld::type::fields>();
+    union_owner = typename MemberFld::type(std::forward<Arg>(arg));
+  }
+
 private:
+  // TODO(bd) consolidate the const and non-const versions of getUnionOwner()
+  /**
+   * return a const reference to the optional variant that owns the data
+   * associated with a union field
+   */
+  template<UnionFieldT UnionFld>
+  decltype(auto) getUnionOwner() const {
+    constexpr size_t kUnionFldIdx = entryIdx<UnionFld, Fields>();
+    using UnionDataOwner =
+      decltype(std::get<kUnionFldIdx>(std::declval<adapted_type>()));
+    return std::get<kUnionFldIdx>(obj_);
+  }
+
+  /**
+   * return a reference to the optional variant that owns the data associated
+   * with a union field
+   */
+  template<UnionFieldT UnionFld>
+  decltype(auto) getUnionOwner() {
+    constexpr size_t kUnionFldIdx = entryIdx<UnionFld, Fields>();
+    using UnionDataOwner =
+      decltype(std::get<kUnionFldIdx>(std::declval<adapted_type>()));
+    return std::get<kUnionFldIdx>(obj_);
+  }
+
   adapted_type obj_;
 };
 
