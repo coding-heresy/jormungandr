@@ -33,6 +33,7 @@
 #include <gtest/gtest.h>
 
 #include "jmg/field.h"
+#include "jmg/object.h"
 #include "jmg/union.h"
 
 using namespace jmg;
@@ -41,14 +42,18 @@ using namespace std;
 TEST(UnionTests, TestMetafunctionsAndConcepts) {
   using IntFld = FieldDef<int, "int", Required>;
   using DblFld = FieldDef<double, "dbl", Required>;
+  using Obj = ObjectDef<IntFld, DblFld>;
+  using ObjFld = FieldDef<Obj, "obj", Required>;
 
-  using TestUnion = Union<IntFld, DblFld>;
+  using TestUnion = Union<IntFld, DblFld, ObjFld>;
   using Members = TestUnion::members;
-  EXPECT_TRUE((
-    SameAsDecayedT<int, decltype(std::get<0>(declval<VariantizeT<Members>>()))>));
-  EXPECT_TRUE((SameAsDecayedT<double, decltype(std::get<1>(
-                                        declval<VariantizeT<Members>>()))>));
+  using ReturnType = VariantizeT<Members>;
+  EXPECT_TRUE(
+    (SameAsDecayedT<int, decltype(std::get<0>(declval<ReturnType>()))>));
+  EXPECT_TRUE(
+    (SameAsDecayedT<double, decltype(std::get<1>(declval<ReturnType>()))>));
 
-  EXPECT_TRUE((UnionMemberT<TestUnion, int>));
-  EXPECT_FALSE((UnionMemberT<TestUnion, float>));
+  using NonMemberFld = StringField<"str", Required>;
+  EXPECT_TRUE((UnionMemberT<TestUnion, IntFld::type>));
+  EXPECT_FALSE((UnionMemberT<TestUnion, NonMemberFld::type>));
 }
