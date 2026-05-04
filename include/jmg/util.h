@@ -373,6 +373,12 @@ consteval T signBitMaskOf() {
   return static_cast<T>(1) << ((sizeof(T) * 8) - 1);
 }
 
+/**
+ * work-in-progress function for eliminating some of the excess verbiage
+ * associated with the names of some common standard library types
+ */
+std::string translateTypeNames(std::string&& content);
+
 ////////////////////////////////////////////////////////////////////////////////
 // retrieve a specific type from a parameter pack
 //

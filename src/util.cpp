@@ -34,6 +34,8 @@
 #include <cctype>
 #include <ranges>
 
+#include "absl/strings/str_replace.h"
+
 #include "jmg/conversion.h"
 #include "jmg/util.h"
 
@@ -72,6 +74,20 @@ string camelCaseToSnakeCase(const string_view str, const bool all_caps) {
             }) | vws::join,
             inserterator(rslt));
   return rslt;
+}
+
+std::string translateTypeNames(std::string&& content) {
+  using namespace std::string_view_literals;
+  using TypeStrTranslation =
+    std::vector<std::pair<std::string_view, std::string_view>>;
+  static const auto kReplacements = TypeStrTranslation{
+    {"std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >"sv,
+     "std::string"sv},
+    {"std::basic_string_view<char, std::char_traits<char> >"sv,
+     "std::string_view"sv},
+    {" >"sv, ">"sv}};
+
+  return absl::StrReplaceAll(content, kReplacements);
 }
 
 } // namespace jmg
