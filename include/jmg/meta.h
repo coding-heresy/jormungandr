@@ -771,7 +771,7 @@ struct DeWrapify<Wrapper<Ts...>> {
 } // namespace detail
 
 template<typename T>
-using DeWrapifyT = typename detail::DeWrapify<T>::type;
+using DeWrapifyT = typename detail::DeWrapify<DecayT<T>>::type;
 
 ////////////////////////////////////////////////////////////////////////////////
 // concepts and metafunctions related to std::tuple
