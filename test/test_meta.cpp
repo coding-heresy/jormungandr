@@ -473,6 +473,11 @@ TEST(MetaprogrammingTests, TestVariantHandling) {
   EXPECT_TRUE((same_as<TestNonPrimitiveVariant, NonPrimitiveTestVariant>));
 }
 
+TEST(MetaprogrammingTests, TestReserableConcept) {
+  EXPECT_TRUE((ReservableT<std::unordered_map<int, int>>));
+  EXPECT_FALSE((ReservableT<std::map<int, int>>));
+}
+
 using namespace std::literals::string_literals;
 
 TEST(MetaprogrammingTests, TestTypeNameDemangler) {
