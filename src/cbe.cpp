@@ -38,6 +38,7 @@
 #include "jmg/cbe/cbe.h"
 #include "jmg/meta.h"
 #include "jmg/preprocessor.h"
+#include "jmg/util.h"
 
 using namespace std;
 
@@ -367,8 +368,7 @@ size_t encodeStr(BufferProxy tgt, const string_view src) {
 
 tuple<string, size_t> decodeStr(BufferView src) {
   const auto [sz, consumed, _] = decodeInt<size_t>(src);
-  string rslt;
-  rslt.reserve(sz);
+  auto rslt = make_reserved<string>(sz);
   rng::copy(src.subspan(consumed), back_inserter(rslt));
   rslt.push_back('\0');
   rslt.resize(sz);

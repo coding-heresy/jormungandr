@@ -221,3 +221,23 @@ TEST(GeneralUtilitiesTest, TestUnsafeIfier) {
   EXPECT_EQ(int32, unsafe_ify(int32));
   EXPECT_EQ(int32, unsafe_ify(id32));
 }
+
+TEST(GeneralUtilitiesTest, TestMakeReserved) {
+  // make_reserved creates a vector with the expect capacity
+  auto vec = make_reserved<std::vector<int>>(42UL);
+  EXPECT_EQ(42UL, vec.capacity());
+
+  // make_reserved creates a Dict with more buckets than a
+  // default-constructed Dict
+  using RandomDict = Dict<int, int, "random dict", "nobody cares">;
+  const auto empty_dict_buckets_sz = []() -> size_t {
+    RandomDict dict;
+    return dict.bucket_count();
+  }();
+  auto dict = make_reserved<RandomDict>(42UL);
+  EXPECT_GT(dict.bucket_count(), empty_dict_buckets_sz);
+
+  // make_reserved works for std::string
+  auto str = make_reserved<string>(1024UL);
+  EXPECT_EQ(1024UL, str.capacity());
+}
