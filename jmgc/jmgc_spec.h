@@ -70,14 +70,13 @@ using RequiredFlag = FieldDef<bool, "required", Optional>;
 using EnumValue = FieldDef<int64_t, "value", Required>;
 using EnumUlType = StringField<"underlying_type", Optional>;
 using Enumeration = yaml::Object<Name, EnumValue>;
-using Enumerations = yaml::ArrayField<Enumeration>;
-using EnumValues = FieldDef<Enumerations, "values", Optional>;
+using EnumValues = yaml::ArrayField<Enumeration, "values", Optional>;
 
 // attributes of a package
 using ImportFile = yaml::Object<File>;
-using ImportFiles = yaml::ArrayField<ImportFile>;
-using Imports = FieldDef<ImportFiles, "imports", Optional>;
-using ProtobufImports = FieldDef<ImportFiles, "protobuf_imports", Optional>;
+using Imports = yaml::ArrayField<ImportFile, "imports", Optional>;
+using ProtobufImports =
+  yaml::ArrayField<ImportFile, "protobuf_imports", Optional>;
 using PkgDef = yaml::Object<Name, Imports, ProtobufPackage, ProtobufImports>;
 
 // objects in the 'types' section

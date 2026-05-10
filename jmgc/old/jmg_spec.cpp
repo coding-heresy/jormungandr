@@ -69,7 +69,7 @@ using RequiredFlag = FieldDef<bool, "required", Optional>;
 using EnumValue = FieldDef<int64_t, "value", Required>;
 using EnumUlType = StringField<"underlying_type", Optional>;
 using Enumeration = yaml::Object<Name, EnumValue>;
-using EnumValues = FieldDef<yaml::ArrayField<Enumeration>, "values", Optional>;
+using EnumValues = yaml::ArrayField<Enumeration, "values", Optional>;
 
 // attributes of a package
 using PkgDef = yaml::Object<Name, ProtobufPackage>;
@@ -81,8 +81,7 @@ using TypeDef =
 // objects in the 'groups' and 'objects' sections
 using ObjGrpField =
   yaml::Object<Name, Type, SubType, CbeId, ProtobufId, RequiredFlag>;
-using ObjGrpFields =
-  FieldDef<yaml::ArrayField<ObjGrpField>, "fields", Required>;
+using ObjGrpFields = yaml::ArrayField<ObjGrpField, "fields", Required>;
 
 // objects in the 'groups' and 'objects' sections have a name and a
 // list of fields
@@ -90,9 +89,9 @@ using ObjGrp = yaml::Object<Name, ObjGrpFields>;
 
 // top-level fields
 using Package = FieldDef<PkgDef, "package", Required>;
-using Types = FieldDef<yaml::ArrayField<TypeDef>, "types", Optional>;
-using Groups = FieldDef<yaml::ArrayField<ObjGrp>, "groups", Optional>;
-using Objects = FieldDef<yaml::ArrayField<ObjGrp>, "objects", Required>;
+using Types = yaml::ArrayField<TypeDef, "types", Optional>;
+using Groups = yaml::ArrayField<ObjGrp, "groups", Optional>;
+using Objects = yaml::ArrayField<ObjGrp, "objects", Required>;
 
 using Spec = yaml::Object<Package, Types, Groups, Objects>;
 
@@ -543,9 +542,9 @@ private:
    *
    * NOTE: the format is the same for both
    */
-  template<typename Rslt>
+  template<typename Rslt, typename ObjGrpSpecArray>
   Rslt processGroupsOrObjects(const string_view description,
-                              const yaml::ArrayField<ObjGrp>& spec) {
+                              const ObjGrpSpecArray& spec) {
     Rslt rslt;
     for (const auto& sub_spec : spec) {
       const auto spec_name = get<Name>(sub_spec);
