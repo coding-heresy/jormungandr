@@ -41,6 +41,7 @@
 using namespace jmg;
 using namespace std;
 using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 namespace vws = std::views;
 
@@ -56,7 +57,6 @@ using Id32 = SafeId32<>;
 
 using InnerField = yaml::Field<int, "inner", Required>;
 using InnerObject = yaml::Object<InnerField>;
-using ComplexArrayProxy = yaml::ArrayField<InnerObject>;
 
 using StrField = yaml::StringField<"str", Required>;
 using IntField = yaml::Field<int, "int", Required>;
@@ -66,12 +66,13 @@ using Id32Field = yaml::Field<Id32, "id32", Required>;
 // InnerObj is a single InnerObject
 using InnerObj = yaml::Field<InnerObject, "object", Required>;
 // PrimitiveArray is an array of primitive (i.e. non-object) elements
-using PrimitiveArray = yaml::Field<vector<int>, "primitive", Required>;
+using PrimitiveArray = yaml::ArrayField<int, "primitive", Required>;
 // ComplexArray is an array of non-primitive (i.e. object) elements
-using ComplexArray = yaml::Field<ComplexArrayProxy, "complex", Required>;
+using ComplexArray = yaml::ArrayField<InnerObject, "complex", Required>;
 // OptComplexArray is an optional array of non-primitive elements
-using OptComplexArray = yaml::Field<ComplexArrayProxy, "opt_complex", Optional>;
+using OptComplexArray = yaml::ArrayField<InnerObject, "opt_complex", Optional>;
 
+// TODO(bd) remove field group support?
 using GroupStringField = yaml::StringField<"group_string_field", Required>;
 using GroupDblField = yaml::Field<double, "group_dbl_field", Required>;
 using GroupOptionalField = yaml::Field<int, "group_optional_field", Optional>;
@@ -139,7 +140,10 @@ TEST(YamlTests, TestFieldRetrieval) {
   {
     const auto& primitive = jmg::get<PrimitiveArray>(obj);
     EXPECT_EQ(2, primitive.size());
-    EXPECT_THAT(primitive, ElementsAre(42, 20010911));
+    constexpr auto expected = array{42, 20010911};
+    for (const auto [idx, entry] : vws::enumerate(primitive)) {
+      EXPECT_EQ(expected[idx], entry);
+    }
   }
   {
     const auto complex = jmg::get<ComplexArray>(obj);
@@ -220,4 +224,31 @@ TEST(YamlTests, TestFieldRetrieval) {
     EXPECT_TRUE(pred(val));
     EXPECT_EQ(Active::kDeactivated, *val);
   }
+}
+
+TEST(YamlTests, TestFieldSetting) {
+  using SimpleObj = yaml::Object<IntField, StrField, OptField, Id32Field>;
+  SimpleObj simpleObj;
+
+  EXPECT_THROW(jmg::get<IntField>(simpleObj), std::runtime_error);
+  EXPECT_THROW(jmg::get<StrField>(simpleObj), std::runtime_error);
+  EXPECT_FALSE(jmg::try_get<OptField>(simpleObj));
+  EXPECT_THROW(jmg::get<Id32Field>(simpleObj), std::runtime_error);
+
+  jmg::set<IntField>(simpleObj, 20010911);
+  jmg::set<StrField>(simpleObj, "foo"sv);
+  const auto id = Id32(0);
+  jmg::set<Id32Field>(simpleObj, id);
+
+  EXPECT_EQ(20010911, jmg::get<IntField>(simpleObj));
+  EXPECT_EQ("foo"sv, jmg::get<StrField>(simpleObj));
+  EXPECT_EQ(id, jmg::get<Id32Field>(simpleObj));
+  // optional field has not been set and will still return an unengaged object
+  // for try_get
+  EXPECT_FALSE(jmg::try_get<OptField>(simpleObj));
+
+  jmg::set<OptField>(simpleObj, 42.0);
+  const auto opt_val = jmg::try_get<OptField>(simpleObj);
+  ASSERT_TRUE(opt_val);
+  EXPECT_EQ(42.0, *opt_val);
 }
