@@ -81,7 +81,10 @@ constexpr char kTgtProto[] = "protoc";
 constexpr auto kTgtTypes = array{kTgtProto};
 
 using OutputDir = NamedStringParam<"o", "output directory", Optional>;
-using SrcIdl = NamedStringParam<"idl", "source IDL type to parse", Required>;
+using SrcIdl =
+  NamedStringParam<"idl",
+                   "source IDL type to parse, must be one of (jmg, quickfix)",
+                   Required>;
 using WrapCbeFlag = NamedFlag<kWrapCbe, "generate CBE wrapper(s)">;
 using WrapYamlFlag = NamedFlag<kWrapYaml, "generate YAML wrapper(s)">;
 using WrapProtoFlag = NamedFlag<kWrapProto, "generate protobuf wrapper(s)">;
