@@ -43,12 +43,15 @@ namespace vws = std::views;
 namespace jmgc
 {
 
+// TODO(bd) only import timestamp.proto if the type is used
 const string ProtocYamlSpec::kProtocPkgTmpl = R"(
 {% import "type.tmpl" as type_tmpl -%}
 {% import "object.tmpl" as obj_tmpl -%}
 syntax = "proto2";
 
 package {{ proto_pkg }};
+
+import "google/protobuf/timestamp.proto";
 
 {% for type_def in type_defs -%}
 {{ type_tmpl.render_type_def(type_def) -}}
