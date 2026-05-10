@@ -32,6 +32,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <exception>
 #include <memory>
 #include <optional>
@@ -631,6 +632,8 @@ using PolicyResolverT =
  * return the demangled name of a type specified by std::type_info
  *
  * Intended for use in development and debugging.
+ *
+ * TODO(bd) use the abseil demangler instead of __cxa_demangle
  */
 inline std::string demangle(const std::type_info& id) {
   // c.f.
@@ -689,6 +692,11 @@ std::string type_name_for() {
   else if constexpr (SameAsDecayedT<std::optional<std::string_view>, T>) {
     return "std::optional<std::string_view>";
   }
+  else if constexpr (
+    SameAsDecayedT<std::chrono::sys_time<std::chrono::nanoseconds>, T>) {
+    return "jmg::TimePoint";
+  }
+  // TODO(bd) fix up the names of other annoying types
   return demangle(typeid(T));
 }
 
