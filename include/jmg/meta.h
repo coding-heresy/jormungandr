@@ -841,9 +841,20 @@ template<VariantT T>
 using DeVariantizeT = DeWrapifyT<T>;
 
 ////////////////////////////////////////////////////////////////////////////////
+// concept for container types that support reserving memory to avoid extraneous
+// allocations when the size is known a priori
+////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept ReservableT = requires(T container, std::size_t sz) {
+  { container.reserve(sz) } -> std::same_as<void>;
+};
+
+////////////////////////////////////////////////////////////////////////////////
 // helper macro for final 'else' case of 'if constexpr' case analysis
 // over a type
 ////////////////////////////////////////////////////////////////////////////////
+
 #define JMG_NOT_EXHAUSTIVE(type, description)                  \
   do {                                                         \
     static_assert(always_false<type>,                          \
