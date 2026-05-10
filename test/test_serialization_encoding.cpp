@@ -215,8 +215,7 @@ void serializeTo(OutputStrmItr& itr, const T val) {
 template<StringLikeT T>
 std::string deserializeFrom(InputStrmItr& itr) {
   const auto sz = deserializeFrom<size_t>(itr);
-  std::string rslt;
-  rslt.reserve(sz);
+  auto rslt = make_reserved<string>(sz);
   for (size_t counter = 0; counter < sz; ++counter) {
     rslt.push_back(unsafe(*itr));
     ++itr;

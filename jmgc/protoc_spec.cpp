@@ -116,8 +116,7 @@ void ProtocYamlSpec::enrichJ2Type(jinja2::ValuesMap& j2_type,
     }
     {
       auto& enumerations = j2_type["values"].asList();
-      j2::ValuesList rewritten;
-      rewritten.reserve(enumerations.size());
+      auto rewritten = make_reserved<j2::ValuesList>(enumerations.size());
       for (const auto& enumeration : enumerations) {
         auto clone = enumeration.asMap();
         // rewrite the enumeration name to all caps snake case to conform to

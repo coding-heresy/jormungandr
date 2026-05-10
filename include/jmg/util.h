@@ -379,6 +379,16 @@ consteval T signBitMaskOf() {
  */
 std::string translateTypeNames(std::string&& content);
 
+/**
+ * construct a container and reserve memory in it
+ */
+template<ReservableT Container>
+decltype(auto) make_reserved(const size_t sz) {
+  Container rslt;
+  rslt.reserve(sz);
+  return rslt;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // retrieve a specific type from a parameter pack
 //
