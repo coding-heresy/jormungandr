@@ -162,6 +162,9 @@ struct ArrayField
  *
  * NOTE: these objects are backed by the native (i.e. tuple-based)
  * encoding
+ *
+ * TODO(bd) ensure that all fields have a cbe field ID and that all
+ * IDs are unique
  */
 template<cbe::FieldT... Flds>
 class Object : public native::Object<Flds...>, public cbe::detail::ObjectTag {

@@ -346,6 +346,9 @@ inline char to_lower(char chr) { return static_cast<char>(std::tolower(chr)); }
  */
 inline char to_upper(char chr) { return static_cast<char>(std::toupper(chr)); }
 
+// TODO(bd) maybe fix the names of the functions that convert identifiers
+// between cases, the target case should probably be sufficien
+
 /**
  * convert a string from snake_case to CamelCase or camelCase
  */
@@ -376,6 +379,9 @@ consteval T signBitMaskOf() {
 /**
  * work-in-progress function for eliminating some of the excess verbiage
  * associated with the names of some common standard library types
+ *
+ * TODO(bd) review this, seems to duplicate functionality that already exists in
+ * meta.h
  */
 std::string translateTypeNames(std::string&& content);
 
