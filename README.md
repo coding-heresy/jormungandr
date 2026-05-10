@@ -54,6 +54,9 @@ documentation whose meaning may not be immediately obvious.
   * C-style array
   * `std::vector`
   * `std::array`
+* _member field_ - a specific field type that can be held by a JMG API
+  `Union` object, equivalent to a type specified as part of the
+  declaration of an instance of `std::variant`
 * _string type_ - any type that can be viewed with `std::string_view`,
   can also be viewed conceptually as a subset of _array types_:
   * C-style string
@@ -412,6 +415,88 @@ processing the following formats:
   binary encodings.
 * Google protocol buffers - the first commonly used _encoding_ format
   to be supported
+
+### The interface API
+
+The interface consists of a set of free function templates in the
+`jmg` namespace that implement working with objects and fields. These
+functions all take an object as the first parameter. Generally, I
+strongly prefer the object-oriented styling of the
+`object.operation(arguments...)` syntax, but there is a quirk in the
+C++ language affecting member function templates of class templates in
+which it is (sometimes? often?) necessary to use the syntax
+`object.template operation(arguments...)`, which I strongly do not
+prefer. Maybe I will investigate further to understand the actual
+rules of where this is required, but even having one instance of this
+being required in code the uses the library is a 100% non-starter so I
+haven't really bothered to look into it. This is not to say that the
+API does not have unique characteristics, the calls to its functions
+are __always__ explicitly specialized, with one (and sometimes more)
+type parameters specializations being used to denote fields of the
+object.
+
+As an example, retrieving a timestamp field from a protobuf might look
+like
+```
+   const auto timestamp = some_object.timestamp();
+```
+while in the JMG API it might look like
+```
+   const auto timestamp = jmg::get<Timestamp>(some_object);
+```
+
+This unusual choice has a number of benefits:
+* The calling code is very regular, without the sort of 'personality'
+  that afflicts some interfaces (e.g. protobuf).
+* It is very amenable to use in generic programming.
+* The parameter used in the specialization is more than just a tag
+  type and it carries enough information for very simplistic-seeming
+  functions with names like `get` and `set` to know the types of their
+  return types or arguments at compile time.
+
+The basic structure is very simple: there are a series of 'fields',
+which are declared individually, where each field has a type that it
+carries, a string name and a flag indicating whether it is required to
+be present in an object it is associated with. There are then
+'objects' which are simply collections of fields, of which some may
+carry other objects. As one might expect, there are also special
+'array' and 'union' fields. Very predictable stuff.
+
+#### The API funtions
+
+* `jmg::get<Field>(object)` - retrieve the value of a required field
+  from an object
+  * Primitive (numeric) types return by value.
+  * Sub-objects return by `const` ref
+  * _Viewable_ types (arrays and strings) return by view
+    * i.e. strings return `std::string_view` and arrays return _view_
+      types that are generally customized to the underlying encoding
+* `jmg::try_get<Field>(object)` - retrieve the value of an optional
+  field from an object
+  * Primitive and _view_ types `T` return `std::optional<T>`, with
+    `std::nullopt` indicating no presence
+  * Objects types T return by `const T*`, with `nullptr` indicating no
+    presence
+* `jmg::set<Field>(object, value)` - store a value in an object
+* `jmg::union_has<UnionField, MemberField>(object)` - determine
+  presence of a _member field_ of a `Union` field
+  * Returns `true`/`false`
+  * JMG `Union` equivalent of `std::holds_alternative` for
+    `std::variant`
+* `jmg::union_get<UnionField, MemberField>(object)` - retrieve the
+  value of a _member field_ of a required `Union` field
+  * Equivalent to `jmg::get` for `Union` fields
+  * Throws `std::runtime_error` if the `Union` field doesn't currently
+    hold the specified _member field_
+* `jmg::union_try_get<UnionField, MemberField>(object)` - retrieve the
+  value of a _member field_ from an optional `Union` field
+  * Equivalent to `jmg::try_get` for `Union` fields
+* `jmg::union_visit<UnionField>(object)`
+  * Equivalent to `std::visit` for unions
+
+#### The design of the `Union` functions
+
+**TODO**
 
 ### (Aspirational) List of Transports and Encoding Formats to Support
 
