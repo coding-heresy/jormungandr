@@ -68,6 +68,7 @@ proto_jmg_library(
     name = "test_jmgc_src_proto",
     src = ":test_jmgc_src",
     visibility = ["//visibility:private"],
+    deps = ["@protobuf//:timestamp_proto"],
 )
 
 # c++ bindings for .proto
@@ -85,15 +86,53 @@ cc_jmg_library(
     visibility = ["//visibility:private"],
 )
 
+cc_library(
+    name = "test_jmgc_any_hdr",
+    hdrs = ["test_jmgc_any.h"],
+    visibility = ["//visibility:private"],
+)
+
 cc_test(
     name = "test_jmgc_proto",
     size = "small",
-    srcs = ["test_jmgc_any.cpp"],
-    defines = ["TEST_PROTOBUF"],
+    srcs = [
+        "test_jmgc_any.cpp",
+        "test_jmgc_proto.cpp",
+    ],
+    defines = ["JMG_TEST_PROTOBUF"],
     visibility = ["//visibility:public"],
     deps = [
+        ":test_jmgc_any_hdr",
         ":test_jmgc_proto_cc",
         ":test_jmgc_proto_wrap_cc",
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+####################
+# test generating and using CBE wrapper
+
+# c++ JMG wrapper from IDL spec
+cc_jmg_library(
+    name = "test_jmgc_cbe_wrap_cc",
+    src = ":test_jmgc_src",
+    encoding = "cbe",
+    visibility = ["//visibility:private"],
+)
+
+cc_test(
+    name = "test_jmgc_cbe",
+    size = "small",
+    srcs = [
+        "test_jmgc_any.cpp",
+        "test_jmgc_cbe.cpp",
+    ],
+    defines = ["JMG_TEST_CBE"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":test_jmgc_any_hdr",
+        ":test_jmgc_cbe_wrap_cc",
         "//:jmg",
         "@com_google_googletest//:gtest_main",
     ],
