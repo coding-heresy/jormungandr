@@ -47,15 +47,20 @@ cc_jmg_library(
     visibility = ["//visibility:private"],
 )
 
-# TODO(bd) this test is currently failing due to incompatibiities in handling array fields in the YAML encoding vs other encodings
 cc_test(
     name = "test_jmgc_yaml",
     size = "small",
-    srcs = ["test_jmgc_yaml.cpp"],
-    tags = ["manual"],
+    srcs = [
+        "test_jmgc_any.cpp",
+        "test_jmgc_yaml.cpp",
+        "test_jmgc_yaml.h",
+    ],
+    defines = ["JMG_TEST_YAML"],
     visibility = ["//visibility:public"],
     deps = [
+        ":test_jmgc_any_hdr",
         ":test_jmgc_yaml_wrap_cc",
+        "//:jmg",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -98,6 +103,7 @@ cc_test(
     srcs = [
         "test_jmgc_any.cpp",
         "test_jmgc_proto.cpp",
+        "test_jmgc_proto.h",
     ],
     defines = ["JMG_TEST_PROTOBUF"],
     visibility = ["//visibility:public"],
@@ -127,6 +133,7 @@ cc_test(
     srcs = [
         "test_jmgc_any.cpp",
         "test_jmgc_cbe.cpp",
+        "test_jmgc_cbe.h",
     ],
     defines = ["JMG_TEST_CBE"],
     visibility = ["//visibility:public"],

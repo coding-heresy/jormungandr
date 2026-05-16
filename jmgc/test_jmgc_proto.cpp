@@ -33,7 +33,6 @@
 #include "test_jmgc_any.h"
 
 #include "jmg/protobuf/protobuf.h"
-#include "test_jmgc.proto.h"
 
 /**
  * test code specific to protobuf test

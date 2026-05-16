@@ -30,24 +30,111 @@
  *
  */
 
-#include "test_jmgc.yaml.h"
+#include "test_jmgc_any.h"
 
-#include <gmock/gmock.h>
+#include <sstream>
 
-using namespace YAML;
-using namespace jmg::yaml;
-using namespace test_jmgc;
+#include <yaml-cpp/yaml.h>
 
-TEST(TestJmgcYaml, SmokeTest) {
-  {
-    Node empty;
-    const auto test_opt_msg = TestOptMsg(empty);
-    EXPECT_FALSE(jmg::try_get<OptBool>(test_opt_msg));
-  }
-  {
-    Node active;
-    active["active_state"] = 2;
-    const auto active_msg = ActiveMsg(active);
-    EXPECT_EQ(Active::kDeactivated, jmg::get<ActiveState>(active_msg));
-  }
+#include "jmg/util.h"
+#include "jmg/yaml/yaml.h"
+
+/**
+ * test code specific to CBE test
+ */
+
+using namespace jmg;
+using namespace std;
+using namespace std::string_literals;
+
+namespace jmg::test_jmgc
+{
+
+namespace
+{
+
+const auto boolVal = []() -> string {
+  ostringstream strm;
+  strm << boolalpha << TestValues::kBoolean;
+  return strm.str();
+}();
+
+const auto kYamlStr = str_cat("boolean: ",
+                              boolVal,
+                              "\n",
+                              // 32 bit integers
+                              "int_32: ",
+                              TestValues::kInt32,
+                              "\n",
+                              "uint_32: ",
+                              TestValues::kUInt32,
+                              "\n",
+                              "sfixed_32: ",
+                              TestValues::kSFixed32,
+                              "\n",
+                              "fixed_32: ",
+                              TestValues::kFixed32,
+                              "\n",
+                              // 64 bit integers
+                              "int_64: ",
+                              TestValues::kInt64,
+                              "\n",
+                              "uint_64: ",
+                              TestValues::kUInt64,
+                              "\n",
+                              "sfixed_64: ",
+                              TestValues::kSFixed64,
+                              "\n",
+                              "fixed_64: ",
+                              TestValues::kFixed64,
+                              "\n",
+                              // floating point
+                              "flt: ",
+                              TestValues::kFlt,
+                              "\n",
+                              "dbl: ",
+                              TestValues::kDbl,
+                              "\n",
+                              // strings
+                              "str: \"",
+                              TestValues::kStr,
+                              "\"\n",
+                              "bytes_str: \"",
+                              TestValues::kBytesStr,
+                              "\"\n",
+                              // safe type
+                              "int_id_fld: ",
+                              unsafe(TestValues::kIntId),
+                              "\n",
+                              // enum
+                              "active_state: ",
+                              TestValues::kActiveState,
+                              "\n",
+                              // int array
+                              "ints:\n- ",
+                              str_join(TestValues::kInts, "\n- ]"),
+                              "\n",
+                              // str array
+                              "strs:\n- \"",
+                              str_join(TestValues::kStrs, "\"\n- \""),
+                              "\"\n",
+                              // inner message array
+                              "inner_msgs:\n",
+                              "- inner_int_32: ",
+                              str_cat(TestValues::kInnerInts[0]),
+                              "\n- inner_int_32: ",
+                              str_cat(TestValues::kInnerInts[1]),
+                              "\n  opt_inner_str: \"",
+                              *(TestValues::kInnerOptStrs[1]),
+                              "\"\n");
+
+} // namespace
+
+NonJmgTestMsg makeNonJmgTestMsg(const jmg::TimePoint tp) {
+  // add the argument time point to the end of the YAML data
+  const auto yaml_str =
+    str_cat(kYamlStr, "time_stamp: ", epoch_duration_from(tp).count(), "\n");
+  return YAML::Load(yaml_str);
 }
+
+} // namespace jmg::test_jmgc
