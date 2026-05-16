@@ -187,6 +187,12 @@ public:
       using UnsafeType = UnsafeTypeFromT<Rslt>;
       return Rslt(node_[name].as<UnsafeType>());
     }
+    // NOTE: TimePointT would be too generic, this is specifically for
+    // jmg::TimePoint with further conversion being the responsibility of the
+    // caller
+    else if constexpr (SameAsDecayedT<TimePoint, Rslt>) {
+      return Rslt(Duration(node_[name].as<int64_t>()));
+    }
     else if constexpr (OwningArrayProxyT<Rslt>) {
       return Rslt(YAML::Node(node_[name]));
     }
@@ -211,22 +217,23 @@ public:
         using UnsafeType = UnsafeTypeFromT<SafeT>;
         return Rslt(entry.as<UnsafeType>());
       }
-      else if constexpr (AnyEnumT<Type>) {
-        using Rslt = std::optional<Type>;
-        return Rslt(Type(node_[name].as<std::underlying_type_t<DecayT<Type>>>()));
-      }
-      else if constexpr (OwningArrayProxyT<Type>) {
-        using Rslt = std::optional<Type>;
-        return Rslt(YAML::Node(entry));
-      }
-      else if constexpr (yaml::ObjectT<Type>) {
-        using Rslt = std::optional<Type>;
-        return Rslt(node_[name]);
-      }
       else {
-        using EffT = typename Fld::type;
-        using Rslt = std::optional<EffT>;
-        return Rslt(entry.as<EffT>());
+        using Rslt = std::optional<Type>;
+        if constexpr (AnyEnumT<Type>) {
+          return Rslt(
+            Type(node_[name].as<std::underlying_type_t<DecayT<Type>>>()));
+        }
+        // NOTE: TimePointT would be too generic, this is specifically for
+        // jmg::TimePoint with further conversion being the responsibility of
+        // the caller
+        else if constexpr (SameAsDecayedT<TimePoint, Type>) {
+          return Rslt(Duration(node_[name].as<int64_t>()));
+        }
+        else if constexpr (OwningArrayProxyT<Type>) {
+          return Rslt(YAML::Node(entry));
+        }
+        else if constexpr (yaml::ObjectT<Type>) { return Rslt(node_[name]); }
+        else { return Rslt(entry.as<Type>()); }
       }
     }
     else { return std::nullopt; }
@@ -237,9 +244,19 @@ public:
    */
   template<yaml::FieldT Fld, typename T>
   void set(T val) {
+    using Type = typename Fld::type;
     if constexpr (SafeT<T>) { node_[Fld::name] = unsafe(val); }
     else if constexpr (StringFieldT<Fld>) {
       node_[Fld::name] = static_cast<std::string>(from(val));
+    }
+    else if constexpr (AnyEnumT<Type>) {
+      node_[Fld::name] = static_cast<int>(val);
+    }
+    // NOTE: TimePointT would be too generic, this is specifically for
+    // jmg::TimePoint with further conversion being the responsibility of the
+    // caller
+    else if constexpr (SameAsDecayedT<TimePoint, Type>) {
+      node_[Fld::name] = static_cast<int64_t>(epoch_duration_from(val).count());
     }
     else if constexpr (ArrayFieldT<Fld>) { node_[Fld::name] = val; }
     else { node_[Fld::name] = val; }
@@ -283,11 +300,5 @@ public:
 private:
   adapted_type node_;
 };
-
-} // namespace jmg::yaml
-};
-} // namespace detail
-template<yaml::ObjectT Obj>
-using ArrayField = meta::_t<detail::ArrayTypeFactory<Obj>>;
 
 } // namespace jmg::yaml
