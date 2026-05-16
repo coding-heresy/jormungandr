@@ -40,6 +40,7 @@
 #include "jmg/util.h"
 
 using namespace std;
+using namespace std::chrono;
 namespace rng = std::ranges;
 namespace vws = std::views;
 
@@ -88,6 +89,10 @@ std::string translateTypeNames(std::string&& content) {
     {" >"sv, ">"sv}};
 
   return absl::StrReplaceAll(content, kReplacements);
+}
+
+Duration epoch_duration_from(const TimePoint tp) {
+  return duration_cast<nanoseconds>(tp.time_since_epoch());
 }
 
 } // namespace jmg

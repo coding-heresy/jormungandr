@@ -395,6 +395,11 @@ decltype(auto) make_reserved(const size_t sz) {
   return rslt;
 }
 
+/**
+ * convert a time point to a duration since UNIX epoch
+ */
+Duration epoch_duration_from(const TimePoint tp);
+
 ////////////////////////////////////////////////////////////////////////////////
 // retrieve a specific type from a parameter pack
 //
