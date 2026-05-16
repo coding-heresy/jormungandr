@@ -39,26 +39,28 @@
 #include <string_view>
 
 ////////////////////
+// yaml
+
+#if defined(JMG_TEST_YAML)
+#include "test_jmgc_yaml.h"
+#endif
+
+////////////////////
 // protobuf
 
 #if defined(JMG_TEST_PROTOBUF)
-#if defined(JMG_TEST_CBE)
-#error "attempting to test both protobuf and cbe"
-#endif
-
-#include "test_jmgc.proto.h"
+#include "test_jmgc_proto.h"
 #endif
 
 ////////////////////
 // CBE
 
 #if defined(JMG_TEST_CBE)
-#if defined(JMG_TEST_PROTOBUF)
-#error "attempting to test both cbe and protobuf"
+#include "test_jmgc_cbe.h"
 #endif
 
-#include "test_jmgc.cbe.h"
-#endif
+////////////////////
+// TODO(bd) add more encodings here
 
 namespace jmg::test_jmgc
 {
@@ -97,76 +99,3 @@ struct TestValues {
 };
 
 } // namespace jmg::test_jmgc
-
-////////////////////////////////////////////////////////////////////////////////
-// sections specific to each encoding type go below here
-////////////////////////////////////////////////////////////////////////////////
-
-////////////////////
-// protobuf
-
-#if defined(JMG_TEST_PROTOBUF)
-
-namespace jmg::test_jmgc
-{
-
-template<typename T, jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
-using FldDefType = jmg::protobuf::Field<T, kName, IsRequired, kFldId>;
-
-template<jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
-using StrFldDefType = jmg::protobuf::StringField<kName, IsRequired, kFldId>;
-
-template<typename T, jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
-using ArrayDefType = jmg::protobuf::ArrayField<T, kName, IsRequired, kFldId>;
-
-template<typename T, typename... Ts>
-using ObjDefType = jmg::protobuf::Object<T, Ts...>;
-
-using NonJmgTestMsg = jmgc::test::TestMsg;
-using JmgTestMsg = TestMsgObj;
-
-NonJmgTestMsg makeNonJmgTestMsg(const jmg::TimePoint tp);
-
-using NonJmgTestOptMsg = jmgc::test::TestOptMsg;
-using JmgTestOptMsg = TestOptMsgObj;
-
-} // namespace jmg::test_jmgc
-
-using namespace jmg::protobuf;
-using namespace jmgc::test;
-#endif
-
-////////////////////
-// CBE
-
-#if defined(JMG_TEST_CBE)
-namespace jmg::test_jmgc
-{
-
-template<typename T, jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
-using FldDefType = jmg::cbe::Field<T, kName, IsRequired, kFldId>;
-
-template<jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
-using StrFldDefType = jmg::cbe::StringField<kName, IsRequired, kFldId>;
-
-template<typename T, jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
-using ArrayDefType = jmg::cbe::ArrayField<T, kName, IsRequired, kFldId>;
-
-template<typename T, typename... Ts>
-using ObjDefType = jmg::cbe::Object<T, Ts...>;
-
-using NonJmgTestMsg = TestMsg::adapted_type;
-using JmgTestMsg = TestMsg;
-
-NonJmgTestMsg makeNonJmgTestMsg(const jmg::TimePoint tp);
-
-using NonJmgTestOptMsg = TestOptMsg::adapted_type;
-using JmgTestOptMsg = TestOptMsg;
-
-} // namespace jmg::test_jmgc
-
-using namespace jmg::cbe;
-
-// TODO(bd)
-
-#endif

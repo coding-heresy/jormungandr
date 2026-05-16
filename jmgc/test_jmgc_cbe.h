@@ -29,35 +29,40 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
+#pragma once
 
-#include "test_jmgc_any.h"
+#if defined(JMG_TEST_PROTOBUF)
+#error "attempting to test both cbe and protobuf"
+#endif
+#if defined(JMG_TEST_YAML)
+#error "attempting to test both cbe and yaml"
+#endif
 
-#include "jmg/cbe/cbe.h"
-
-/**
- * test code specific to CBE test
- */
+#include "test_jmgc.cbe.h"
 
 namespace jmg::test_jmgc
 {
 
-NonJmgTestMsg makeNonJmgTestMsg(const jmg::TimePoint tp) {
-  using namespace std::string_literals;
-  auto ints = std::vector<int32_t>{2011};
-  auto strs = std::vector<std::string>{"foo"s, "bar"s, "blub"s};
-  using OptStr = std::optional<std::string>;
-  auto inner_msgs =
-    std::vector<InnerMsg>{InnerMsg(std::make_tuple(1, OptStr(std::nullopt))),
-                          InnerMsg(std::make_tuple(2, OptStr("blub"s)))};
-  return std::make_tuple(TestValues::kBoolean, TestValues::kInt32,
-                         TestValues::kUInt32, TestValues::kSFixed32,
-                         TestValues::kFixed32, TestValues::kInt64,
-                         TestValues::kUInt64, TestValues::kSFixed64,
-                         TestValues::kFixed64, TestValues::kFlt,
-                         TestValues::kDbl, TestValues::kStr,
-                         TestValues::kBytesStr, tp, TestValues::kIntId,
-                         TestValues::kActiveState, std::move(ints),
-                         std::move(strs), std::move(inner_msgs));
-}
+template<typename T, jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
+using FldDefType = jmg::cbe::Field<T, kName, IsRequired, kFldId>;
+
+template<jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
+using StrFldDefType = jmg::cbe::StringField<kName, IsRequired, kFldId>;
+
+template<typename T, jmg::StrLiteral kName, jmg::TypeFlagT IsRequired, uint32_t kFldId>
+using ArrayDefType = jmg::cbe::ArrayField<T, kName, IsRequired, kFldId>;
+
+template<typename T, typename... Ts>
+using ObjDefType = jmg::cbe::Object<T, Ts...>;
+
+using NonJmgTestMsg = TestMsg::adapted_type;
+using JmgTestMsg = TestMsg;
+
+NonJmgTestMsg makeNonJmgTestMsg(const jmg::TimePoint tp);
+
+using NonJmgTestOptMsg = TestOptMsg::adapted_type;
+using JmgTestOptMsg = TestOptMsg;
 
 } // namespace jmg::test_jmgc
+
+using namespace jmg::cbe;

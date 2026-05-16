@@ -52,18 +52,18 @@
 namespace jmg::test_jmgc
 {
 
-// static variables for TestValues
+// constants used for TestValues
 
+// strings
 const std::string TestValues::kStr = std::string("foo");
 const std::string TestValues::kBytesStr = std::string("bar");
-
+// safe int
 const IntId TestValues::kIntId = IntId(static_cast<uint32_t>(1337));
-
 // NOTE: using integer value here because the symbol names of the
 // enumerations are different between encoding implementations, but
 // the enumeration values are all the same
 const Active TestValues::kActiveState = Active(static_cast<uint8_t>(2));
-
+// arrays
 const std::array<std::string, 3> TestValues::kStrs = {std::string("foo"),
                                                       std::string("bar"),
                                                       std::string("blub")};
@@ -84,7 +84,7 @@ namespace vws = std::views;
 
 class TestJmgcAny : public ::testing::Test, public TestValues {
 protected:
-  void SetUp() override {
+  static void SetUpTestSuite() {
     tp_ = getCurrentTime();
 
     ////////////////////
@@ -92,10 +92,12 @@ protected:
     non_jmg_test_msg_ = makeNonJmgTestMsg(tp_);
   }
 
-  TimePoint tp_;
-
-  NonJmgTestMsg non_jmg_test_msg_;
+  static TimePoint tp_;
+  static NonJmgTestMsg non_jmg_test_msg_;
 };
+
+TimePoint TestJmgcAny::tp_;
+NonJmgTestMsg TestJmgcAny::non_jmg_test_msg_;
 
 TEST_F(TestJmgcAny, TestGet) {
   const auto obj = JmgTestMsg(non_jmg_test_msg_);
@@ -130,15 +132,17 @@ TEST_F(TestJmgcAny, TestGet) {
 
   // primitive array
   const auto ints = jmg::get<Ints>(obj);
-  EXPECT_TRUE(SpanT<decltype(ints)>);
+  EXPECT_TRUE(rng::range<decltype(ints)>);
   EXPECT_EQ(kInts.size(), ints.size());
-  EXPECT_EQ(kInts.at(0), ints[0]);
+  for (const auto [idx, entry] : vws::enumerate(ints)) {
+    EXPECT_EQ(kInts.at(idx), entry);
+  }
   // string array
   const auto strs = jmg::get<Strs>(obj);
   EXPECT_EQ(3, strs.size());
   EXPECT_TRUE(rng::range<decltype(strs)>);
   for (const auto [expected, actual] : vws::zip(kStrs, strs)) {
-    EXPECT_EQ(string_view(expected), actual);
+    EXPECT_EQ(string_view(expected), static_cast<string>(actual));
   }
   // object array
   const auto inner_msgs = jmg::get<InnerMsgs>(obj);
@@ -146,9 +150,11 @@ TEST_F(TestJmgcAny, TestGet) {
   EXPECT_TRUE(rng::range<decltype(inner_msgs)>);
   for (const auto& [idx, inner_msg] : vws::enumerate(inner_msgs)) {
     EXPECT_EQ(kInnerInts[idx], jmg::get<InnerInt32>(inner_msg));
-
     const auto opt_str = jmg::try_get<OptInnerStr>(inner_msg);
-    EXPECT_TRUE((SameAsDecayedT<optional<string_view>, decltype(opt_str)>));
+    // TODO(bd) should this check have the YAML case explicitly separated?
+    // NOTE: yaml-cpp is stingy with its internal representation and strings are
+    // returned by value
+    EXPECT_TRUE(StdStringLikeT<RemoveOptionalT<decltype(opt_str)>>);
     EXPECT_EQ(pred(kInnerOptStrs[idx]), pred(opt_str));
     if (opt_str) { EXPECT_EQ(*(kInnerOptStrs[idx]), *opt_str); }
   }
@@ -188,6 +194,8 @@ TEST_F(TestJmgcAny, TestSetAndTryGet) {
   // time point
   JMG_VALIDATE_OPT_FLD(obj, OptTimeStamp, tp_);
   // safe integer ID
+  JMG_VALIDATE_OPT_FLD(obj, OptIntIdFld, kIntId);
+  // enum
   JMG_VALIDATE_OPT_FLD(obj, OptActiveState, kActiveState);
 }
 
