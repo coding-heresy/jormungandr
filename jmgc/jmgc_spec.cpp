@@ -363,6 +363,11 @@ void JmgYamlSpec::processObjFld(const string_view obj_name,
     }
   }
 }
+void JmgYamlSpec::processUnionFld(const string_view union_name,
+                                  const Node& jmg_fld) {
+  cerr << "ignoring union field [" << union_name << "]\n";
+  ignore = jmg_fld;
+}
 
 void JmgYamlSpec::emit(ostream& strm) const {
   j2::ValuesMap all_values = pkg_values_;
@@ -457,6 +462,11 @@ void JmgcYamlSpecMgr::processType(const Node& jmg_type) {
 void JmgcYamlSpecMgr::processObjFld(const string_view obj_name,
                                     const Node& jmg_fld) {
   for (auto& spec : specs_) { spec->processObjFld(obj_name, jmg_fld); }
+}
+
+void JmgcYamlSpecMgr::processUnionFld(const string_view union_name,
+                                      const Node& jmg_fld) {
+  for (auto& spec : specs_) { spec->processUnionFld(union_name, jmg_fld); }
 }
 
 void JmgcYamlSpecMgr::emit(ostream& strm) const {

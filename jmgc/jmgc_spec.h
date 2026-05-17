@@ -139,6 +139,12 @@ public:
                              const YAML::Node& jmg_fld) = 0;
 
   /**
+   * process union field definition
+   */
+  virtual void processUnionFld(const std::string_view union_name,
+                               const YAML::Node& jmg_fld) = 0;
+
+  /**
    * base file name to emit output to
    */
   virtual std::string tgtFileName() const = 0;
@@ -169,6 +175,9 @@ public:
 
   void processObjFld(const std::string_view obj_name,
                      const YAML::Node& jmg_fld) override;
+
+  void processUnionFld(const std::string_view union_name,
+                       const YAML::Node& jmg_fld) override;
 
   virtual std::string tgtFileName() const;
 
@@ -293,6 +302,9 @@ public:
 
   void processObjFld(const std::string_view obj_name,
                      const YAML::Node& jmg_fld) override;
+
+  void processUnionFld(const std::string_view union_name,
+                       const YAML::Node& jmg_fld) override;
 
   std::string tgtFileName() const override {
     throw std::logic_error(
