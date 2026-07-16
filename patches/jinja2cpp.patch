@@ -1,0 +1,69 @@
+diff --git a/include/jinja2cpp/polymorphic_value/polymorphic_cxx14.h b/include/jinja2cpp/polymorphic_value/polymorphic_cxx14.h
+index 0849204..00086a3 100644
+--- a/include/jinja2cpp/polymorphic_value/polymorphic_cxx14.h
++++ b/include/jinja2cpp/polymorphic_value/polymorphic_cxx14.h
+@@ -314,6 +314,13 @@ class polymorphic : private detail::empty_base_optimization<A> {
+                         typename std::remove_reference<U>::type>::type>{},
+                     std::forward<U>(u)) {}
+ 
++#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && __GNUC__ >= 16
++  // gcc 16 has known optimization regression related to inline object
++  // tracking which causes a spurious 'maybe-uninitialized' warning in
++  // the call to clone()
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
++#endif
+   polymorphic(std::allocator_arg_t, const A& alloc, const polymorphic& other)
+       : alloc_base(alloc) {
+     if (!other.valueless_after_move()) {
+@@ -322,6 +329,9 @@ class polymorphic : private detail::empty_base_optimization<A> {
+       cb_ = nullptr;
+     }
+   }
++#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && __GNUC__ >= 16
++#pragma GCC diagnostic pop
++#endif
+ 
+   polymorphic(const polymorphic& other)
+       : polymorphic(std::allocator_arg,
+diff --git a/include/jinja2cpp/value_ptr.h b/include/jinja2cpp/value_ptr.h
+index 650759a..5b331ff 100644
+--- a/include/jinja2cpp/value_ptr.h
++++ b/include/jinja2cpp/value_ptr.h
+@@ -1,8 +1,13 @@
+ #ifndef JINJA2CPP_VALUE_PTR_H
+ #define JINJA2CPP_VALUE_PTR_H
+ 
+-#include "jinja2cpp/polymorphic_value/polymorphic_cxx14.h"
+-#if __cplusplus == 201402L
++// seems like polymorphic_cxx14.h should actually be used for any c++
++// standard version from c++14 onwards based on thi code and the
++// result of experiments with trying to get the compilation to work
++// when only including polymorphic.h
++
++// #include "jinja2cpp/polymorphic_value/polymorphic_cxx14.h"
++#if __cplusplus >= 201402L
+ #include "polymorphic_value/polymorphic_cxx14.h"
+ #else
+ #include "polymorphic_value/polymorphic.h"
+diff --git a/src/internal_value.cpp b/src/internal_value.cpp
+index 19698fe..f391b99 100644
+--- a/src/internal_value.cpp
++++ b/src/internal_value.cpp
+@@ -725,7 +725,16 @@ ListAdapter ListAdapter::ToSubscriptedList(const InternalValue& subscript, bool
+ InternalValueList ListAdapter::ToValueList() const
+ {
+     InternalValueList result;
++#if defined(__GNUC__) && !defined(__clang__) && !defined(__INTEL_COMPILER) && __GNUC__ >= 16
++    // gcc 16 detects self referential is_constructible_v constraint
++    // related to IListAccessorEnumerator for some reason when using
++    // the std::copy version of this
++    for (const auto &entry : *this) {
++      result.push_back(entry);
++    }
++#else
+     std::copy(begin(), end(), std::back_inserter(result));
++#endif
+     return result;
+ }
+ 

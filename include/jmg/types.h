@@ -37,6 +37,7 @@
 #include <ctime>
 
 #include <initializer_list>
+#include <source_location>
 #include <string>
 #include <string_view>
 
@@ -168,20 +169,24 @@ struct DictBase : detail::AssocContainerBase<kDictDescription, kKeyDescription>,
    * NOTE: Key is left as an explicit type parameter in order to
    * correctly support transparent hashing of e.g. std::string_view
    */
-  decltype(auto) find_required(const KeyType& key) {
+  decltype(auto) find_required(
+    const KeyType& key,
+    const std::source_location location = std::source_location::current()) {
     const auto entry = this->find(key);
-    JMG_ENFORCE(this->end() != entry, Base::kDescription,
-                " had no value for required ", Base::kKeyOrElementDescription,
-                "[", key, "]");
+    JMG_ENFORCE_AT_SRC(this->end() != entry, location, Base::kDescription,
+                       " had no value for required ",
+                       Base::kKeyOrElementDescription, " [", key, "]");
     return std::get<1>(*entry);
   }
 
   /**
    * const version of find_required
    */
-  decltype(auto) find_required(const KeyType& key) const {
+  decltype(auto) find_required(const KeyType& key,
+                               const std::source_location&& location =
+                                 std::source_location::current()) const {
     auto& self = const_cast<DictBase&>(*this);
-    auto& entry = self.find_required(key);
+    auto& entry = self.find_required(key, std::move(location));
     using Rslt = DecayT<decltype(entry)>;
     return (const Rslt&)entry;
   }

@@ -87,16 +87,33 @@
   JMG_THROW_SYSTEM_ERROR_FROM_ERRNO(errno, __VA_ARGS__)
 
 /**
+ * helper macro for simplifying the logging of locations at which
+ * exceptions happen.
+ */
+#define JMG_THROW_EXCEPTION_AT_LOCATION(exception_type, line, file, ...)     \
+  do {                                                                       \
+    const auto err_msg =                                                     \
+      absl::StrCat("'", __VA_ARGS__, "' on line ", line, " of file ", file); \
+    throw exception_type(err_msg);                                           \
+  } while (0)
+
+/**
  * helper macro for simplifying the use of exceptions.
  *
  * @todo use basename of filename?
  */
-#define JMG_THROW_EXCEPTION(exception_type, ...)                        \
-  do {                                                                  \
-    const auto err_msg = absl::StrCat("'", __VA_ARGS__, "' on line ",   \
-                                      __LINE__, " of file ", __FILE__); \
-    throw exception_type(err_msg);                                      \
-  } while (0)
+#define JMG_THROW_EXCEPTION(exception_type, ...)                      \
+  JMG_THROW_EXCEPTION_AT_LOCATION(exception_type, __LINE__, __FILE__, \
+                                  __VA_ARGS__)
+
+/**
+ * helper macro for simplifying the use of exceptions with std::source_location.
+ *
+ * @todo use basename of filename?
+ */
+#define JMG_THROW_EXCEPTION_AT_SRC(exception_type, src_location, ...)  \
+  JMG_THROW_EXCEPTION_AT_LOCATION(exception_type, src_location.line(), \
+                                  src_location.file_name(), __VA_ARGS__)
 
 /**
  * helper macro for throwing std::runtime_error.
@@ -122,6 +139,18 @@
 #define JMG_ENFORCE(predicate, ...)                                \
   do {                                                             \
     JMG_ENFORCE_USING(std::runtime_error, predicate, __VA_ARGS__); \
+  } while (0)
+
+/**
+ * throw an exception of type std::runtime_error constructed with the
+ * argument error message if a predicate fails
+ */
+#define JMG_ENFORCE_AT_SRC(predicate, src_location, ...)           \
+  do {                                                             \
+    if (JMG_UNLIKELY(!(predicate))) {                              \
+      JMG_THROW_EXCEPTION_AT_SRC(std::runtime_error, src_location, \
+                                 __VA_ARGS__);                     \
+    }                                                              \
   } while (0)
 
 /**

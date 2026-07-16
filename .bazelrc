@@ -5,9 +5,12 @@ common --enable_bzlmod
 # maybe install pre-commit hook and update workspace status
 common --workspace_status_command=./githooks/install-pre-commit-hook.sh
 
-# builds with C++23
-build --action_env=BAZEL_CXXOPTS="-std=c++23"
-build --cxxopt='-std=c++23'
+# builds with C++26
+build --action_env=BAZEL_CXXOPTS="-std=c++26"
+build --cxxopt='-std=c++26'
+
+# support c++26 static reflection
+build --cxxopt='-freflection'
 
 # allow C++23 stack traces
 build --linkopt='-lstdc++exp'
@@ -31,11 +34,14 @@ build --cxxopt='-Werror'
 build --cxxopt='-Wno-deprecated-declarations'
 build --cxxopt='-Wno-unused-parameter'
 build --cxxopt='-Wno-missing-field-initializers'
+build --cxxopt='-Wno-maybe-musttail-local-addr'
 # TODO(bd) the following warning suppressions are required to get
 # grpc to build correctly
 build --cxxopt='-Wno-redundant-move'
 build --cxxopt='-Wno-class-memaccess'
 build --cxxopt='-Wno-unused-function'
+# TODO(bd) this warning suppression is likely related to a gcc bug
+build --cxxopt='-Wno-subobject-linkage'
 
 # Enable the modern proto toolchain resolution (Default in Bazel 9+)
 common --incompatible_enable_proto_toolchain_resolution
@@ -46,19 +52,19 @@ build --@protobuf//bazel/toolchains:prefer_prebuilt_protoc
 # TODO(bd) use hermetic toolchain
 
 # gcc toolchain
-build --repo_env=CC=/usr/bin/gcc-14
-build --repo_env=CXX=/usr/bin/g++-14
-build --action_env=CC=/usr/bin/gcc-14
-build --action_env=CXX=/usr/bin/g++-14
+build --repo_env=CC=gcc-16
+build --repo_env=CXX=g++-16
+build --action_env=CC=gcc-16
+build --action_env=CXX=g++-16
 # need to be able to diagnose severe errors in concepts
 build --cxxopt='-fconcepts-diagnostics-depth=10'
 build --cxxopt='-fdiagnostics-all-candidates'
 
 # clang toolchain
-# build --repo_env=CC=/usr/bin/clang
-# build --repo_env=CXX=/usr/bin/clang++
-# build --action_env=CC=/usr/bin/clang
-# build --action_env=CXX=/usr/bin/clang++
+# build --repo_env=CC=clang
+# build --repo_env=CXX=clang++
+# build --action_env=CC=clang
+# build --action_env=CXX=clang++
 # # TODO(bd) compiler flag is specific to clang and prevents an
 # # error that seems to be caused by the abseil library insisting on
 # # building its files with clang instead of clang++
@@ -122,11 +128,3 @@ coverage --nocache_test_results
 # -fsplit-stack
 # -DBOOST_USE_SEGMENTED_STACKS
 # also need to be using ucontext_t for boost.context
-
-# TODO use this??
-#common --enable_platform_specific_config
-# Prevent Bazel from detecting the system's C++ toolchain.
-#build:linux --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
-#build:linux --incompatible_strict_action_env=true
-# Enable the CC toolchain resolution based on platforms.
-#build:linux --incompatible_enable_cc_toolchain_resolution
