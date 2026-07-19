@@ -87,6 +87,25 @@ namespace detail
 {
 
 ////////////////////
+// Python-specific classes
+
+class PythonString {
+public:
+  template <typename... Args>
+  PythonString(Args&&... args)
+    : cpp_str_(str_cat(std::forward<Args>(args)...))
+    , py_str_(PyUnicode_FromStringAndSize(cpp_str_.data(), cpp_str_.size()))
+  {
+    JMG_ENFORCE(py_str_, "unable to create python string");
+  }
+  ~PythonString() { Py_DECREF(py_str_); }
+  PyObject* operator*() const { return py_str_; }
+private:
+  std::string cpp_str_;
+  PyObject* py_str_;
+};
+
+////////////////////
 // Python-specific functions
 
 /**
@@ -132,17 +151,16 @@ PyObject* to_python(T&& value) {
  *
  * TODO(bd) figure out how to handle optional parameters
  */
-template<rflx::info T>
+template<typename T>
 consteval char get_python_format_char() {
-  constexpr auto type_ref = T;
-  if constexpr (type_ref == ^^int) { return 'i'; }
-  else if constexpr (type_ref == ^^long) { return 'l'; }
-  else if constexpr (type_ref == ^^float) { return 'f'; }
-  else if constexpr (type_ref == ^^double) { return 'd'; }
-  else if constexpr (type_ref == ^^bool) {
+  if constexpr (SameAsDecayedT<int, T>) { return 'i'; }
+  else if constexpr (SameAsDecayedT<long, T>) { return 'l'; }
+  else if constexpr (SameAsDecayedT<float, T>) { return 'f'; }
+  else if constexpr (SameAsDecayedT<double, T>) { return 'd'; }
+  else if constexpr (SameAsDecayedT<bool, T>) {
     return 'p'; // boolean predicate
   }
-  else if constexpr ((type_ref == ^^const char*) || (type_ref == ^^char*)) {
+  else if constexpr (StringLikeT<T>) {
     return 's';
   }
   JMG_THROW_EXCEPTION(std::runtime_error,
@@ -160,25 +178,22 @@ template<rflx::info Fcn>
 consteval auto make_python_method_params_fmt_str() {
   static constexpr auto params =
     std::define_static_array(rflx::parameters_of(Fcn));
-  constexpr auto sz = [&]() {
-    size_t rslt = 1; // always needs null terminator
-    template for (constexpr auto _ : params) { ++rslt; }
-    return rslt;
-  }();
-  std::array<char, sz> rslt;
+  // always needs null terminator
+  std::array<char, params.size() + 1> rslt;
   size_t idx = 0;
   template for (constexpr auto param : params) {
-    rslt[idx++] = get_python_format_char<rflx::type_of(param)>();
+    using ParamType = typename[:rflx::type_of(param):];
+    rslt[idx++] = get_python_format_char<ParamType>();
   }
   rslt[idx] = '\0';
   return rslt;
 }
 
 /**
- * function template that invokes a C++ function called via a python
- * method whose arguments have already been converted into a tuple,
- * allowing exceptions to pass through under the expectation that they
- * will be handled by the caller
+ * invoke a C++ function called via a python method whose arguments
+ * have already been converted into a tuple and return a value usable
+ * by python, allowing exceptions to pass through under the
+ * expectation that they will be handled by the caller
  */
 template<rflx::info FcnInfo, TupleT ArgsTpl>
 PyObject* invoke_from_python(ArgsTpl args_tpl) {
@@ -193,8 +208,12 @@ PyObject* invoke_from_python(ArgsTpl args_tpl) {
   }
 }
 
+/**
+ * return a value indicating failure using a type that is appropriate
+ * for the function that is failing
+ */
 template<typename T>
-consteval auto failReturn() {
+consteval auto fail_return() {
   if constexpr (SameAsDecayedT<int, T>) {
     return -1;
   }
@@ -206,6 +225,11 @@ consteval auto failReturn() {
   }
 }
 
+/**
+ * invoke any C++ function called from python, returning the result
+ * (if any) in a form usable by python and automatically converting
+ * any C++ exceptions that occur to python exceptions
+ */
 template<typename Fcn>
 auto sinking_invoke_from_python(Fcn&& fcn) {
   using Rslt = decltype(fcn());
@@ -214,73 +238,123 @@ auto sinking_invoke_from_python(Fcn&& fcn) {
   }
   catch (const std::invalid_argument& e) {
     PyErr_SetString(PyExc_ValueError, e.what());
-    return failReturn<Rslt>();
+    return fail_return<Rslt>();
   }
   catch (const std::out_of_range& e) {
     PyErr_SetString(PyExc_IndexError, e.what());
-    return failReturn<Rslt>();
+    return fail_return<Rslt>();
   }
   catch (const std::runtime_error& e) {
     PyErr_SetString(PyExc_RuntimeError, e.what());
-    return failReturn<Rslt>();
+    return fail_return<Rslt>();
   }
   catch (const std::exception& e) {
     PyErr_SetString(PyExc_Exception, e.what());
-    return failReturn<Rslt>();
+    return fail_return<Rslt>();
   }
   catch (...) {
     auto err_msg = str_cat("unknown/unexpected c++ exception of type [",
                            current_exception_type_name(), "] occurred.");
     PyErr_SetString(PyExc_SystemError, err_msg.c_str());
-    return failReturn<Rslt>();
+    return fail_return<Rslt>();
   }
-}
-
-template<rflx::info Fcn>
-consteval rflx::info make_fcn_params_tuple() {
-  constexpr auto params = std::define_static_array(rflx::parameters_of(Fcn));
-  return [&]<size_t... kIdxs>(std::index_sequence<kIdxs...>) {
-    return ^^std::tuple<typename[:std::meta::type_of(params.data()[kIdxs]):]...>;
-  }(std::make_index_sequence<params.size()>{});
-}
-
-template<rflx::info Fcn>
-auto parse_python_args(PyObject* args) {
-  // construct a format string that will allow python to convert the
-  // function arguments into a tuple
-  constexpr auto fmt_array =
-    detail::make_python_method_params_fmt_str<Fcn>();
-  const char* fmt = fmt_array.data();
-
-  // determine the type of the tuple that holds the argument
-  using ArgTpl = typename[:make_fcn_params_tuple<Fcn>():];
-  using Rslt = std::optional<ArgTpl>;
-  Rslt rslt{};
-
-  // don't bother trying to parse the arguments if the sizes don't match
-  if (PyTuple_Size(args) != std::tuple_size_v<ArgTpl>) {
-    return rslt;
-  }
-
-  // convert the arguments provided by python into a tuple that can be
-  // used to execute the member function with std::apply
-  ArgTpl parsed_args;
-  auto is_parsed = [&]<size_t... Is>(std::index_sequence<Is...>) {
-    return PyArg_ParseTuple(args, fmt, &std::get<Is>(parsed_args)...);
-  }(std::make_index_sequence<std::tuple_size_v<ArgTpl>>{});
-  if (is_parsed) { rslt = std::move(parsed_args); }
-  else {
-    // clear the global python error state set by the failed parse to
-    // allow further matches to be attempted
-    PyErr_Clear();
-  }
-  return rslt;
 }
 
 /**
- * function template that invokes a C++ non-static member function
- * called via a python method, automatically sinking any exceptions
- * that occur and converting them to python exceptions
+ * class used to generate the tuple type needed to store the result of
+ * converting python arguments to a form usable in C++
+ */
+template<rflx::info Fcn>
+class FcnArgsConverter {
+  /**
+   * special handling of tuple storage for string types
+   */
+  template<typename T>
+  struct TgtStorageType {
+    using type = std::conditional_t<StdStringLikeT<T>, const char*, T>;
+  };
+
+  /**
+   * alias for special storage type
+   */
+  template<typename T>
+  using TgtStorageTypeT = typename TgtStorageType<T>::type;
+
+  /**
+   * dummy function that is never called and is used as a convenient
+   * way to generate the tuple type
+   */
+  static consteval rflx::info meta_make_tuple() {
+    constexpr auto params = std::define_static_array(rflx::parameters_of(Fcn));
+    return [&]<size_t... kIdxs>(std::index_sequence<kIdxs...>) {
+      return ^^std::tuple<TgtStorageTypeT<typename[:rflx::type_of(params.data()[kIdxs]):]>...>;
+    }(std::make_index_sequence<params.size()>{});
+  }
+
+  /**
+   * alias for tuple-ized parameters type
+   */
+  using ArgsTpl = typename[:meta_make_tuple():];
+
+public:
+  /**
+   * convert python arguments into a form usable by C++
+   */
+  static auto convert(PyObject* args, const bool is_searching) {
+    // construct a format string that will allow python to convert the
+    // function arguments into a tuple
+    constexpr auto fmt_array =
+      detail::make_python_method_params_fmt_str<Fcn>();
+    const char* fmt = fmt_array.data();
+
+    // determine the type of the tuple that holds the argument
+    using Rslt = std::optional<ArgsTpl>;
+    Rslt rslt{};
+
+    // don't bother trying to parse the arguments if the sizes don't match
+    if (PyTuple_Size(args) != std::tuple_size_v<ArgsTpl>) {
+      if (!is_searching) {
+        const auto err_msg =
+          PythonString("size mismatch on method arguments, expected [",
+                       std::tuple_size_v<ArgsTpl>, "] but got [",
+                       PyTuple_Size(args), "]");
+        PyErr_SetObject(PyExc_TypeError, *err_msg);
+      }
+      return rslt;
+    }
+
+    // convert the arguments provided by python into a tuple that can be
+    // used to execute the member function with std::apply
+    ArgsTpl parsed_args;
+    auto is_parsed = [&]<size_t... Is>(std::index_sequence<Is...>) {
+      return PyArg_ParseTuple(args, fmt, &std::get<Is>(parsed_args)...);
+    }(std::make_index_sequence<std::tuple_size_v<ArgsTpl>>{});
+    if (is_parsed) { rslt = std::move(parsed_args); }
+    else {
+      // clear the global python error state set by the failed parse to
+      // allow further matches to be attempted
+      if (is_searching) {
+        PyErr_Clear();
+      }
+    }
+    return rslt;
+  }
+};
+
+/**
+ * convert python arguments into a form usable by the function whose
+ * type info was used to instantiate this function template
+ */
+template<rflx::info Fcn>
+auto parse_python_args(PyObject* args, const bool is_searching = false) {
+  return FcnArgsConverter<Fcn>::convert(args, is_searching);
+}
+
+/**
+ * invoke a C++ non-static member function called via a python method,
+ * returning the result (if any) in a form usable by python and
+ * automatically converting any C++ exceptions that occur to python
+ * exceptions
  */
 template<rflx::info MbrFcn, typename CppObj>
 PyObject* sinking_invoke_from_python(CppObj* cpp_obj, PyObject* args) {
@@ -300,32 +374,35 @@ PyObject* sinking_invoke_from_python(CppObj* cpp_obj, PyObject* args) {
   return detail::sinking_invoke_from_python(dispatch);
 }
 
+/**
+ * return true if the parameter is a public member function, false otherwise
+ */
+template<rflx::info Mbr>
+consteval bool is_public_member_function() {
+  if constexpr (rflx::is_function(Mbr)
+                && !rflx::is_constructor(Mbr)
+                && !rflx::is_destructor(Mbr)
+                && rflx::has_identifier(Mbr)) {
+    return true;
+  }
+  else { return false; }
+}
+
+/**
+ * lazily generate wrappers that will allow C++ member functions to be
+ * called from python
+ */
 template<ClassT T>
 class LazyPythonMethodFactory {
 public:
   static constinit inline auto methods = []() {
     static constexpr auto mbrs =
       std::define_static_array(rflx::members_of(^^T, kPublicAccess));
-    constexpr auto sz = []() {
-      size_t sz = 0;
-      template for (constexpr auto mbr : mbrs) {
-        if constexpr (rflx::is_function(mbr)
-                      && !rflx::is_constructor(mbr)
-                      && !rflx::is_destructor(mbr)
-                      && rflx::has_identifier(mbr)
-                      && !rflx::is_static_member(mbr)) {
-          ++sz;
-        }
-      }
-      return sz;
-    }();
 
-    std::array<PyMethodDef, sz + 1> rslt{};
+    std::array<PyMethodDef, mbrs.size() + 1> rslt{};
     size_t idx = 0;
     template for (constexpr auto mbr : mbrs) {
-      if constexpr (rflx::is_function(mbr)
-                    && !rflx::is_constructor(mbr) && !rflx::is_destructor(mbr)
-                    && rflx::has_identifier(mbr)
+      if constexpr (is_public_member_function<mbr>()
                     && !rflx::is_static_member(mbr)) {
         constexpr auto name = rflx::identifier_of(mbr);
         auto method =
@@ -337,7 +414,7 @@ public:
                                   .ml_doc = "TODO(bd) some doc string"};
       }
     }
-    rslt[sz] = kMethodListTerminator;
+    rslt[mbrs.size()] = kMethodListTerminator;
     return rslt;
   }();
 };
@@ -511,22 +588,6 @@ private:
   }
 
   /**
-   * count the number of public non-static member functions that
-   * should be registered as python methods
-   */
-  static constexpr size_t methodsSz() {
-    size_t sz = 0;
-    template for (constexpr auto mbr :
-                  rflx::members_of(^^Derived, kAnyAccess)) {
-      if constexpr (rflx::is_function(mbr) && rflx::is_public(mbr)
-                    && !rflx::is_static_member(mbr)) {
-        ++sz;
-      }
-    }
-    return sz;
-  }
-
-  /**
    * wrapper for internal python representation of the class
    */
   using PyObj = PythonObjWrapper<Derived>;
@@ -591,7 +652,8 @@ private:
                       && !rflx::is_copy_constructor(mbr)
                       && !rflx::is_move_constructor(mbr)
                       && !rflx::is_deleted(mbr)) {
-          auto parsed_args = detail::parse_python_args<mbr>(args);
+          auto parsed_args =
+            detail::parse_python_args<mbr>(args, true /* is_searching */);
           if (parsed_args) {
             std::apply([&](auto... arg_vals) {
               py_obj->instance = new Derived(arg_vals...);
@@ -650,11 +712,7 @@ private:
       rslt.tp_doc = docStr().data();
       rslt.tp_methods = PythonReflex::nonStaticMethods();
       rslt.tp_init = PythonReflex::construct;
-#if 1
       rslt.tp_new = PythonReflex::initialize;
-#else
-      rslt.tp_new = PyType_GenericNew;
-#endif
       return rslt;
     }();
 

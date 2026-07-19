@@ -45,6 +45,19 @@ constexpr auto kReflexiveTestDocStr =
 struct ReflexiveFeatures
   : PythonModule<ReflexiveFeatures, kReflexiveTestDocStr> {};
 
+constexpr auto kTestLifetimeDocStr =
+  "class that logs lifetime events for testing with PythonReflex"sv;
+
+/**
+ * very simple class that logs to stdout in its constructor and destructor
+ */
+class TestLifetime
+  : public PythonReflex<TestLifetime, ReflexiveFeatures, kTestLifetimeDocStr> {
+public:
+  TestLifetime() { cout << "constructor called" << endl; }
+  ~TestLifetime() { cout << "destructor called" << endl; }
+};
+
 constexpr auto kTestClassDocStr =
   "class that exhibits various behaviors for testing with PythonReflex"sv;
 
@@ -52,11 +65,12 @@ class TestClass
   : public PythonReflex<TestClass, ReflexiveFeatures, kTestClassDocStr> {
 public:
   // constructors
-  TestClass() { cout << "default constructor called" << endl; }
+  TestClass() = default;
   explicit TestClass(const int int_val) : int_val_(int_val) {}
+  explicit TestClass(const std::string str_val) : str_val_(str_val) {}
 
   // destructor
-  ~TestClass() { cout << "destructor called" << endl; }
+  ~TestClass() = default;
 
   ////////////////////
   // member functions with no arguments
@@ -72,9 +86,19 @@ public:
     JMG_ENFORCE(int_val_, "trying to return int_val that was not set");
     return *int_val_;
   }
+  std::string returnsStrVal() const {
+    JMG_ENFORCE(str_val_, "trying to return str_val that was not set");
+    return *str_val_;
+  }
+
+  ////////////////////
+  // member functions with one argument
+
+  int returnsIntArg(const int arg) const { return arg; }
 
 private:
   std::optional<int> int_val_{};
+  std::optional<std::string> str_val_{};
 };
 
 } // namespace jmg
