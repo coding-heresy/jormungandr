@@ -3,6 +3,7 @@ import sys
 
 try:
     import reflexive_features
+    from reflexive_features import TestClass, TestLifetime
 except UnicodeDecodeError as e:
     print("\n--- BAZEL PYTHON IMPORT CRASH DIAGNOSTIC ---", file=sys.stderr)
     print(f"Error Type: {type(e).__name__}", file=sys.stderr)
@@ -25,7 +26,7 @@ def test_reflexive_features():
     print(
         "==========   next line should be printed by C++   ==========",
         flush=True)
-    test_lifetime = reflexive_features.TestLifetime()
+    test_lifetime = TestLifetime()
     print("^^^^^^^^^^ previous line should be printed by C++ ^^^^^^^^^^",
           flush=True)
     print(
@@ -38,7 +39,9 @@ def test_reflexive_features():
     ####################
     # test methods when class is default constructed
 
-    test_class = reflexive_features.TestClass()
+    print("-----------------------------------------------------------------------------")
+
+    test_class = TestClass()
     print(
         "==========   next line should be printed by C++   ==========",
         flush=True)
@@ -55,22 +58,43 @@ def test_reflexive_features():
     int_val = test_class.returns_int_arg(19440606)
     print(f"int return value from argument was [{int_val}]")
 
+    str_val = test_class.returns_std_string_arg("foo")
+    print(f"string return value from argument was [{str_val}]")
+
+    str_val = test_class.returns_std_string_view_arg("bar")
+    print(f"string return value from argument was [{str_val}]")
+
+    ####################
+    # static methods that return one argument
+
+    int_val = TestClass.static_returns_int_arg(19411207)
+    print(f"int return value from argument was [{int_val}]")
+
+    str_val = TestClass.static_returns_std_string_arg("FOO")
+    print(f"string return value from argument was [{str_val}]")
+
+    str_val = TestClass.static_returns_std_string_view_arg("BAR")
+    print(f"string return value from argument was [{str_val}]")
+
     ####################
     # test methods when class is constructed with a value
 
     # integer value
-    test_class = reflexive_features.TestClass(17760704)
+    test_class = TestClass(17760704)
     int_val = test_class.returns_int_val()
     print(f"int return value was [{int_val}]")
 
     # integer value
-    test_class = reflexive_features.TestClass("foo")
+    test_class = TestClass("blub")
     str_val = test_class.returns_str_val()
-    print(f"string return value was [{str_val}]")
+    print(f"string return value from internal data was [{str_val}]")
 
     ####################
     # test failures
-    failer = reflexive_features.TestClass()
+
+    print("-----------------------------------------------------------------------------")
+
+    failer = TestClass()
     try:
         # fails because failer wasn't constructed with an int
         int_val = failer.returns_int_val()

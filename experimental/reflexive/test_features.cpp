@@ -30,13 +30,11 @@
  *
  */
 
-/**
- * Library that converts the test_features library into a python
- * module using the reflexive library.
- */
-
-#include "reflexive.h"
 #include "test_features.h"
+
+#include <iostream>
+
+#include "jmg/preprocessor.h"
 
 using namespace std;
 using namespace std::string_literals;
@@ -45,30 +43,52 @@ using namespace std::string_view_literals;
 namespace jmg
 {
 
-/**
- * python docstring for the ReflexiveFeatures module
- */
-constexpr auto kReflexiveFeaturesModuleDocStr =
-  "module for testing the python reflex library"sv;
+////////////////////
+// TestLifetime class
 
-/**
- * python docstring for the TestLifetime class
- */
-constexpr auto kTestLifetimeDocStr =
-  "class that logs lifetime events for testing with PythonReflex"sv;
+TestLifetime::TestLifetime() { cout << "constructor called" << endl; }
 
-/**
- * python docstring for the TestClass class
- */
-constexpr auto kTestClassDocStr =
-  "class that exhibits various behaviors for testing with PythonReflex"sv;
+TestLifetime::~TestLifetime() { cout << "destructor called" << endl; }
 
-struct ReflexiveFeatures
-  : PythonModule<ReflexiveFeatures,
-                 kReflexiveFeaturesModuleDocStr,
-                 PythonReflex<TestLifetime, kTestLifetimeDocStr>,
-                 PythonReflex<TestClass, kTestClassDocStr>> {};
+////////////////////
+// TestClass class
+
+TestClass::TestClass(const int int_val) : int_val_(int_val) {}
+
+TestClass::TestClass(const string str_val) : str_val_(str_val) {}
+
+int TestClass::returnsIntConst() const { return 20010911; }
+
+double TestClass::returnsDblConst() const { return 42.0; }
+
+string TestClass::returnsStrConst() const { return "foo"s; }
+
+void TestClass::returnsVoid() const { cout << __PRETTY_FUNCTION__ << endl; }
+
+int TestClass::returnsIntVal() const {
+  JMG_ENFORCE(int_val_, "trying to return int_val that was not set");
+  return *int_val_;
+}
+
+string TestClass::returnsStrVal() const {
+  JMG_ENFORCE(str_val_, "trying to return str_val that was not set");
+  return *str_val_;
+}
+
+int TestClass::returnsIntArg(const int arg) const { return arg; }
+
+string TestClass::returnsStdStringArg(const string& str) const { return str; }
+
+string TestClass::returnsStdStringViewArg(string_view str) const {
+  return string(str);
+}
+
+int TestClass::staticReturnsIntArg(const int arg) { return arg; }
+
+string TestClass::staticReturnsStdStringArg(const string& str) { return str; }
+
+string TestClass::staticReturnsStdStringViewArg(string_view str) {
+  return string(str);
+}
 
 } // namespace jmg
-
-JMG_DECLARE_MODULE(reflexive_features)

@@ -150,6 +150,13 @@ PyObject* to_python(T&& value) {
  * ambiguity when choosing constructors?
  *
  * TODO(bd) figure out how to handle optional parameters
+ *
+ * TODO(bd) handle std::string and std::string_view arguments using
+ * 's#' format that supports zero copy for std::string_view and avoids
+ * an error for std::string if the python string contains one or more
+ * NULL bytes
+ *
+ * TODO(bd) handle user-defined types
  */
 template<typename T>
 consteval char get_python_format_char() {
@@ -281,8 +288,8 @@ class FcnArgsConverter {
   using TgtStorageTypeT = typename TgtStorageType<T>::type;
 
   /**
-   * dummy function that is never called and is used as a convenient
-   * way to generate the tuple type
+   * dummy function that is never called and is only used as a
+   * convenient way to generate the tuple type
    */
   static consteval rflx::info meta_make_tuple() {
     constexpr auto params = std::define_static_array(rflx::parameters_of(Fcn));
@@ -396,22 +403,31 @@ template<ClassT T>
 class LazyPythonMethodFactory {
 public:
   static constinit inline auto methods = []() {
+    using CppClass = typename T::CppType;
     static constexpr auto mbrs =
-      std::define_static_array(rflx::members_of(^^T, kPublicAccess));
+      std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
 
     std::array<PyMethodDef, mbrs.size() + 1> rslt{};
     size_t idx = 0;
     template for (constexpr auto mbr : mbrs) {
-      if constexpr (is_public_member_function<mbr>()
-                    && !rflx::is_static_member(mbr)) {
-        constexpr auto name = rflx::identifier_of(mbr);
-        auto method =
-          reinterpret_cast<PyCFunction>(&T::template pythonMethodDispatch<mbr>);
-        rslt[idx++] = PyMethodDef{.ml_name =
-                                    SnakeCaseIdOwner<mbr>().c_str(),
-                                  .ml_meth = method,
-                                  .ml_flags = METH_VARARGS,
-                                  .ml_doc = "TODO(bd) some doc string"};
+      if constexpr (is_public_member_function<mbr>()) {
+        const auto* snake_case_name = SnakeCaseIdOwner<mbr>().c_str();
+        if constexpr (!rflx::is_static_member(mbr)) {
+          auto method =
+            reinterpret_cast<PyCFunction>(&T::template pythonMethodDispatch<mbr>);
+          rslt[idx++] = PyMethodDef{.ml_name = snake_case_name,
+                                    .ml_meth = method,
+                                    .ml_flags = METH_VARARGS,
+                                    .ml_doc = "TODO(bd) some doc string"};
+        }
+        else {
+          auto method =
+            reinterpret_cast<PyCFunction>(&T::template pythonClassMethodDispatch<mbr>);
+          rslt[idx++] = PyMethodDef{.ml_name = snake_case_name,
+                                    .ml_meth = method,
+                                    .ml_flags = METH_VARARGS | METH_STATIC,
+                                    .ml_doc = "TODO(bd) some doc string"};
+        }
       }
     }
     rslt[mbrs.size()] = kMethodListTerminator;
@@ -464,7 +480,9 @@ public:
 /**
  * mixin class template that declares a python module
  */
-template<typename Derived, const std::string_view& kDocStr>
+template<typename Derived,
+         const std::string_view& kDocStr,
+         typename... Wraps>
 class PythonModule {
   static_assert(!kDocStr.empty(), "module doc string may not be empty");
 
@@ -513,6 +531,13 @@ private:
     static bool is_created = false;
     if (is_created) { return nullptr; }
 
+    auto processWrap = [&]<typename T>() {
+      auto [class_name, py_obj] = T::make(std::string_view(name()));
+      auto tpl = std::make_tuple(std::string_view(class_name), py_obj);
+      classes().push_back(std::move(tpl));
+    };
+    (processWrap.template operator()<Wraps>(), ...);
+
     // add sentinel null entry
     staticMethods().push_back(kMethodListTerminator);
 
@@ -521,15 +546,15 @@ private:
     PyObject* module = PyModule_Create(&def);
     if (!module) { return nullptr; }
 
-    for (auto& [class_name, py_object] : classes()) {
-      if (PyType_Ready(py_object) < 0) {
+    for (auto& [class_name, py_obj] : classes()) {
+      if (PyType_Ready(py_obj) < 0) {
         Py_DECREF(module);
         return nullptr;
       }
 
-      Py_INCREF(py_object);
+      Py_INCREF(py_obj);
       PyModule_AddObject(module, class_name.data(),
-                         reinterpret_cast<PyObject*>(py_object));
+                         reinterpret_cast<PyObject*>(py_obj));
     }
 
     is_created = true;
@@ -569,13 +594,15 @@ private:
 };
 
 /**
- * mixin class template that uses reflection to create a python class
- * from a C++ class
+ * Class template that uses reflection to create a python class from a
+ * C++ class
  */
-template<typename Derived, typename TgtModule, const std::string_view& kDocStr>
+template<typename CppClass, const std::string_view& kDocStr>
 class PythonReflex {
 private:
-  friend detail::LazyPythonMethodFactory<Derived>;
+  using type = PythonReflex<CppClass, kDocStr>;
+  using CppType = CppClass;
+  friend detail::LazyPythonMethodFactory<type>;
 
   /**
    * convert the non-type template parameter with the class doc
@@ -590,7 +617,7 @@ private:
   /**
    * wrapper for internal python representation of the class
    */
-  using PyObj = PythonObjWrapper<Derived>;
+  using PyObj = PythonObjWrapper<CppClass>;
 
   /**
    * memory deallocator
@@ -644,7 +671,7 @@ private:
       }
 
       static constexpr auto mbrs =
-        std::define_static_array(rflx::members_of(^^Derived, kPublicAccess));
+        std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
 
       template for (constexpr rflx::info mbr : mbrs) {
         // TODO(bd) support copy constructor?
@@ -656,7 +683,7 @@ private:
             detail::parse_python_args<mbr>(args, true /* is_searching */);
           if (parsed_args) {
             std::apply([&](auto... arg_vals) {
-              py_obj->instance = new Derived(arg_vals...);
+              py_obj->instance = new CppClass(arg_vals...);
             }, *parsed_args);
             return 0;
           }
@@ -689,40 +716,51 @@ private:
     return detail::sinking_invoke_from_python<MbrFcn>(cpp_obj, args);
   }
 
-  static PyMethodDef* nonStaticMethods() {
-    return const_cast<PyMethodDef*>(
-      detail::LazyPythonMethodFactory<Derived>::methods.data());
+  /**
+   * generic static member function that implements calling a non-static public
+   * member function of the derived class from python
+   */
+  template<rflx::info MbrFcn>
+  static PyObject* pythonClassMethodDispatch(PyObject* self, PyObject* args) {
+    auto parsed_args = detail::parse_python_args<MbrFcn>(args);
+    if (!parsed_args) {
+      // python error state was set by PyArg_ParseTuple
+      return nullptr;
+    }
+    auto dispatch = [&]() -> PyObject* {
+      return detail::invoke_from_python<MbrFcn>(std::move(*parsed_args));
+    };
+    return detail::sinking_invoke_from_python(dispatch);
   }
 
-  /**
-   * static registration of the class with the target module
-   */
-  static inline bool PY_is_created_ = []() {
-    static const auto class_name =
-      PascalCaseIdOwner<^^Derived>::c_str();
-    static const auto tp_name = str_cat(TgtModule::name(), ".", class_name);
+  static PyMethodDef* allMethods() {
+    const auto& methods = detail::LazyPythonMethodFactory<type>::methods;
+    return const_cast<PyMethodDef*>(
+      methods.data());
+  }
 
-    static auto py_type = [&]() -> PyTypeObject {
-      PyTypeObject rslt = {PyVarObject_HEAD_INIT(nullptr, 0)};
+public:
+
+  static auto make(const std::string_view module_name) {
+    static const auto class_name =
+      PascalCaseIdOwner<^^CppClass>::c_str();
+    static const auto tp_name = str_cat(module_name, ".", class_name);
+    static PyTypeObject* ptr = nullptr;
+    if (!ptr) {
+      static PyTypeObject rslt = {PyVarObject_HEAD_INIT(nullptr, 0)};
       // populate required fields
       rslt.tp_name = tp_name.data();
       rslt.tp_basicsize = sizeof(PyObj);
       rslt.tp_dealloc = PythonReflex::destroy;
       rslt.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
       rslt.tp_doc = docStr().data();
-      rslt.tp_methods = PythonReflex::nonStaticMethods();
-      rslt.tp_init = PythonReflex::construct;
-      rslt.tp_new = PythonReflex::initialize;
-      return rslt;
-    }();
-
-    TgtModule::classes().push_back({std::string_view(class_name), &py_type});
-    return true;
-  }();
-
-  template<bool&>
-  struct ForceCreation {};
-  inline static ForceCreation<PY_is_created_> PY_force_creation_;
+      rslt.tp_methods = allMethods();
+      rslt.tp_init = construct;
+      rslt.tp_new = initialize;
+      ptr = &rslt;
+    }
+    return std::make_tuple(class_name, ptr);
+  };
 };
 
 } // namespace jmg
