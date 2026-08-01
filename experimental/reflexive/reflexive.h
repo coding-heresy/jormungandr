@@ -43,6 +43,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <boost/numeric/conversion/cast.hpp>
 
 #include "jmg/reflection_util.h"
 #include "jmg/types.h"
@@ -51,6 +52,59 @@
 namespace rflx = std::meta;
 namespace rng = std::ranges;
 namespace vws = std::views;
+
+////////////////////
+// useful macros
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION >= 12) || (PY_MAJOR_VERSION > 3)
+// NOTE: use PyErr_GetRaisedException for python version >= 3.12
+#define MAYBE_HANDLE_PYTHON_ERROR(...)                                  \
+  do {                                                                  \
+    if (PyErr_Occurred()) {                                             \
+      auto* py_exception = PyErr_GetRaisedException();                  \
+      JMG_ENFORCE(py_exception,                                         \
+                  "a python error occurred exception object could not " \
+                  "be retrieved");                                      \
+      const auto exc_cleanup = Cleanup([&]() { Py_DECREF(py_exception); }); \
+      auto* py_err_msg = PyObject_Str(py_exception);                    \
+      JMG_ENFORCE(py_err_msg,                                           \
+                  "unable to get string value for python exception");   \
+      const auto msg_cleanup = Cleanup([&]() { Py_DECREF(py_err_msg); }); \
+      const char* err_msg = PyUnicode_AsUTF8(py_err_msg);               \
+      JMG_ENFORCE(err_msg,                                              \
+                  "unable to get string value for python exception");   \
+      JMG_THROW_EXCEPTION(std::runtime_error, "python exception [",     \
+                          err_msg, "] occurred when ", __VA_ARGS__);    \
+    }                                                                   \
+  } while (0)
+#else
+// NOTE: use PyErr_Fetch for python version < 3.12
+#define MAYBE_HANDLE_PYTHON_ERROR(...)                                  \
+  do {                                                                  \
+    if (PyErr_Occurred()) {                                             \
+      PyObject* py_type = nullptr;                                      \
+      PyObject* py_val = nullptr;                                       \
+      PyObject* py_traceback = nullptr;                                 \
+      PyErr_Fetch(&py_type, &py_val, &py_traceback);                    \
+      const auto err_cleanup = Cleanup([&]() {                          \
+        Py_XDECREF(py_type);                                            \
+        Py_XDECREF(py_val);                                             \
+        Py_XDECREF(py_traceback);                                       \
+      });                                                               \
+      JMG_ENFORCE(py_val,                                               \
+                  "a python error occurred but could not be fetcted");  \
+      auto* py_err_msg = PyObject_Str(py_val);                          \
+      JMG_ENFORCE(py_err_msg,                                           \
+                  "unable to get string value for python exception");   \
+      const auto msg_cleanup = Cleanup([&]() { Py_DECREF(py_err_msg); }); \
+      const char* err_msg = PyUnicode_AsUTF8(py_err_msg);               \
+      JMG_ENFORCE(err_msg,                                              \
+                  "unable to get string value for python exception");   \
+      JMG_THROW_EXCEPTION(std::runtime_error, "python exception [",     \
+                          std::string_view(err_msg), "] occurred when ", \
+                          __VA_ARGS__);                                 \
+    }                                                                   \
+  } while (0)
+#endif
 
 namespace jmg
 {
@@ -65,12 +119,38 @@ using ClassDefEntry = std::tuple<std::string_view, PyTypeObject*>;
 using ClassDefs = std::vector<ClassDefEntry>;
 constexpr auto kAnyAccess = rflx::access_context::unchecked();
 constexpr auto kPublicAccess = rflx::access_context::unprivileged();
+constexpr int64_t kFailInt = -1LL;
+constexpr int kPyErr = -1;
+constexpr int kPySuccess = 0;
 
+// TODO(bd) store the C++ instance in the object instead of on the
+// heap
 template<ClassT T>
 struct PythonObjWrapper {
   PyObject_HEAD //
-    T* instance;
+  T* instance;
 };
+
+/**
+ * metaclass associated with a class used to access static member functions and data members
+ */
+struct PythonMetaclassWrapper {
+  PyHeapTypeObject base;
+};
+
+/**
+ * class that C++ wrapper code should throw as an exception in cases
+ * where a python error message has already been set
+ */
+struct RuntimePythonErrorNoCppMsg {};
+
+/**
+ * std::runtime_error-derived class that C++ wrapper code should throw
+ * in cases where a python type error (which does not map cleanly to
+ * any existing C++ standard library exception type) should be
+ * returned
+ */
+JMG_DEFINE_RUNTIME_EXCEPTION(RuntimePythonTypeError);
 
 namespace detail
 {
@@ -109,6 +189,33 @@ private:
 // Python-specific functions
 
 /**
+ * get a pointer to the C++ type wrapped in a python object
+ */
+template<typename T>
+decltype(auto) get_cpp_instance(PyObject* self,
+                                const std::source_location location =
+                                std::source_location::current()) {
+  auto* py_obj = reinterpret_cast<T*>(self);
+  using CppType = decltype(py_obj->instance);
+  auto make_err_msg = [&](const auto* op) {
+    return str_cat(op, " on line ", location.line(), " of file ",
+                   location.file_name());
+  };
+  if (!py_obj) {
+    const auto err_msg = make_err_msg("python object is null");
+    PyErr_SetString(PyExc_RuntimeError, err_msg.c_str());
+    return static_cast<CppType>(nullptr);
+  }
+  auto* cpp_obj = py_obj->instance;
+  if (!cpp_obj) {
+    const auto err_msg = make_err_msg("c++ instance is null");
+    PyErr_SetString(PyExc_RuntimeError, err_msg.c_str());
+    return static_cast<CppType>(nullptr);
+  }
+  return cpp_obj;
+}
+
+/**
  * convert a c++ type to a python type
  *
  * TODO(bd) integrate with return type overloading?
@@ -140,6 +247,64 @@ PyObject* to_python(T&& value) {
     return PyUnicode_FromString(value);
   }
   JMG_ENFORCE_USING(std::logic_error, false, "TODO(bd) return non-primitive");
+}
+
+template<typename T>
+T from_python(PyObject* py_obj) {
+  if constexpr (SameAsDecayedT<bool, T>) {
+    return (PyObject_IsTrue(py_obj) > 0);
+  }
+  else if constexpr (IntegralT<T>) {
+    // TODO(bd) allow implicit conversion between python floating
+    // point and c++ integer?
+    JMG_ENFORCE(PyLong_Check(py_obj),
+                "unable to convert python object to an integer value");
+    if constexpr (SignedT<T>) {
+      const int64_t val = PyLong_AsLongLong(py_obj);
+      if (kFailInt == val) {
+        MAYBE_HANDLE_PYTHON_ERROR("retrieving signed integer from python");
+      }
+      // TODO(bd) add safe integer type conversions to jmg::from
+      return boost::numeric_cast<T>(val);
+    }
+    else {
+      const uint64_t val = PyLong_AsUnsignedLongLong(py_obj);
+      if ((uint64_t)kFailInt == val) {
+        MAYBE_HANDLE_PYTHON_ERROR("retrieving unsigned integer from python");
+      }
+      // TODO(bd) add safe integer type conversions to jmg::from
+      return boost::numeric_cast<T>(val);
+    }
+  }
+  else if constexpr (FloatingPointT<T>) {
+    JMG_ENFORCE(PyFloat_Check(py_obj) || PyLong_Check(py_obj),
+                "unable to convert python object to a floating point value");
+    return static_cast<T>(PyFloat_AsDouble(py_obj));
+  }
+  // TODO(bd) handle string_view or char*?
+  else if constexpr (SameAsDecayedT<std::string, T>) {
+    const char* val = PyUnicode_AsUTF8(py_obj);
+    if (!val) {
+      MAYBE_HANDLE_PYTHON_ERROR("retrieving string from python");
+      // TODO(bd) probably not correct, but assume that nullptr
+      // returned from PyUnicode_AsUTF8() with no python error set
+      // indicates empty string
+      return std::string();
+    }
+    return std::string(val);
+  }
+  JMG_ENFORCE_USING(std::logic_error, false, "TODO(bd) return non-primitive");
+}
+
+/**
+ * TODO(bd) this currently does not work due to some weird compiler
+ * issue, see related TODO comments associated with attribute name
+ * handling
+ */
+std::string_view get_python_attr_name(PyObject* name) {
+  const char* attr_name = PyUnicode_AsUTF8(name);
+  if (!attr_name) { throw RuntimePythonErrorNoCppMsg(); }
+  return std::string_view(attr_name);
 }
 
 /**
@@ -222,7 +387,7 @@ PyObject* invoke_from_python(ArgsTpl args_tpl) {
 template<typename T>
 consteval auto fail_return() {
   if constexpr (SameAsDecayedT<int, T>) {
-    return -1;
+    return kPyErr;
   }
   else if constexpr (std::is_pointer_v<T>) {
     return static_cast<T>(nullptr);
@@ -242,6 +407,14 @@ auto sinking_invoke_from_python(Fcn&& fcn) {
   using Rslt = decltype(fcn());
   try {
     return fcn();
+  }
+  catch (const RuntimePythonErrorNoCppMsg& e) {
+    // no need to set a python error string
+    return fail_return<Rslt>();
+  }
+  catch (const RuntimePythonTypeError& e) {
+    PyErr_SetString(PyExc_TypeError, e.what());
+    return fail_return<Rslt>();
   }
   catch (const std::invalid_argument& e) {
     PyErr_SetString(PyExc_ValueError, e.what());
@@ -651,18 +824,17 @@ private:
    * c++ object initializer/constructor
    */
   static int construct(PyObject* self, PyObject* args, PyObject* kwds) {
-    if (kwds && (PyDict_Size(kwds) > 0)) {
-      // TODO(bd) support keyword arguments for constructors?
-      PyErr_SetString(PyExc_TypeError,
-                      "keyword arguments for constructors are not yet supported");
-      return -1;
-    }
+    return detail::sinking_invoke_from_python([&]() -> int {
+      if (kwds && (PyDict_Size(kwds) > 0)) {
+        // TODO(bd) support keyword arguments for constructors?
+        PyErr_SetString(PyExc_TypeError,
+                        "keyword arguments for constructors are not yet supported");
+        return kPyErr;
+      }
 
-    auto dispatch = [&]() -> int {
-      JMG_ENFORCE(!kwds || (0 == PyDict_Size(kwds)),
-                  "keyword arguments for constructors are not supported");
       auto* py_obj = reinterpret_cast<PyObj*>(self);
-      JMG_ENFORCE(py_obj, "python object is null");
+      JMG_ENFORCE_USING(std::invalid_argument, py_obj,
+                        "python object is null");
 
       // prevent re-initialization memory leaks
       if (py_obj->instance) {
@@ -685,15 +857,14 @@ private:
             std::apply([&](auto... arg_vals) {
               py_obj->instance = new CppClass(arg_vals...);
             }, *parsed_args);
-            return 0;
+            return kPySuccess;
           }
         }
       }
       PyErr_SetString(PyExc_TypeError,
                       "no matching C++ constructor signature found.");
-      return -1;
-    };
-    return detail::sinking_invoke_from_python(dispatch);
+      return kPyErr;
+    });
   }
 
   /**
@@ -702,18 +873,15 @@ private:
    */
   template<rflx::info MbrFcn>
   static PyObject* pythonMethodDispatch(PyObject* self, PyObject* args) {
-    auto* py_obj = reinterpret_cast<PyObj*>(self);
-    if (!py_obj) {
-      PyErr_SetString(PyExc_RuntimeError, "python object is null");
-      return nullptr;
-    }
-    auto* cpp_obj = py_obj->instance;
-    if (!cpp_obj) {
-      PyErr_SetString(PyExc_RuntimeError, "c++ instance is null");
-      return nullptr;
-    }
-
-    return detail::sinking_invoke_from_python<MbrFcn>(cpp_obj, args);
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+      auto* cpp_obj = detail::get_cpp_instance<PyObj>(self);
+      if (!cpp_obj) { return nullptr; }
+      auto parsed_args = detail::parse_python_args<MbrFcn>(args);
+      if (!parsed_args) { return nullptr; }
+      auto mbr_fcn_args = std::tuple_cat(std::make_tuple(cpp_obj),
+                                         std::move(*parsed_args));
+      return detail::invoke_from_python<MbrFcn>(std::move(mbr_fcn_args));
+    });
   }
 
   /**
@@ -722,15 +890,145 @@ private:
    */
   template<rflx::info MbrFcn>
   static PyObject* pythonClassMethodDispatch(PyObject* self, PyObject* args) {
-    auto parsed_args = detail::parse_python_args<MbrFcn>(args);
-    if (!parsed_args) {
-      // python error state was set by PyArg_ParseTuple
-      return nullptr;
-    }
-    auto dispatch = [&]() -> PyObject* {
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+      auto parsed_args = detail::parse_python_args<MbrFcn>(args);
+      if (!parsed_args) { return nullptr; }
       return detail::invoke_from_python<MbrFcn>(std::move(*parsed_args));
-    };
-    return detail::sinking_invoke_from_python(dispatch);
+    });
+  }
+
+  /**
+   * static member function that implements retrieval of C++ public
+   * data members as python attributes
+   */
+  static PyObject* pythonGetAttr(PyObject* self, PyObject* name) {
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+      auto* cpp_obj = detail::get_cpp_instance<PyObj>(self);
+      if (!cpp_obj) { return nullptr; }
+
+      // TODO(bd) figure out why attempting to factor out a function
+      // to get a string_view for the attribute name results in the
+      // compiler believing that the variable used to store the name
+      // is not used
+      const char* raw_attr_name = PyUnicode_AsUTF8(name);
+      if (!raw_attr_name) { return nullptr; }
+      std::string_view attr_name(raw_attr_name);
+
+      static constexpr auto mbrs =
+        std::define_static_array(rflx::nonstatic_data_members_of(^^CppClass,
+                                                                 kPublicAccess));
+
+      template for (constexpr rflx::info mbr : mbrs) {
+        if (std::string_view(SnakeCaseIdOwner<mbr>::c_str()) == attr_name) {
+          return detail::to_python(cpp_obj->[:mbr:]);
+        }
+      }
+      return PyObject_GenericGetAttr(self, name);
+    });
+  }
+
+  /**
+   * static member function that implements update of C++ public data
+   * members as python attributes
+   */
+  static int pythonSetAttr(PyObject* self, PyObject* name, PyObject* value) {
+    return detail::sinking_invoke_from_python([&]() -> int {
+      if (!value) {
+        PyErr_SetString(PyExc_TypeError,
+                        "illegal attempt to delete an attribute of a wrapped "
+                        "C++ class");
+        return kPyErr;
+      }
+      auto* cpp_obj = detail::get_cpp_instance<PyObj>(self);
+      if (!cpp_obj) { return kPyErr; }
+
+      // TODO(bd) figure out why attempting to factor out a function
+      // to get a string_view for the attribute name results in the
+      // compiler believing that the variable used to store the name
+      // is not used
+      const char* raw_attr_name = PyUnicode_AsUTF8(name);
+      if (!raw_attr_name) { return kPyErr; }
+      std::string_view attr_name(raw_attr_name);
+
+      static constexpr auto mbrs =
+        std::define_static_array(rflx::nonstatic_data_members_of(^^CppClass,
+                                                                 kPublicAccess));
+
+      template for (constexpr rflx::info mbr : mbrs) {
+        if (std::string_view(SnakeCaseIdOwner<mbr>::c_str()) == attr_name) {
+          using MbrType = DecayT<decltype(cpp_obj->[:mbr:])>;
+          cpp_obj->[:mbr:] = detail::from_python<MbrType>(value);
+          return kPySuccess;
+        }
+      }
+      return PyObject_GenericSetAttr(self, name, value);
+    });
+  }
+
+  /**
+   * static member function that implements retrieval of C++ public
+   * static data members as python class attributes
+   */
+  static PyObject* pythonGetClassAttr(PyObject* metaclass, PyObject* name) {
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+
+      // TODO(bd) figure out why attempting to factor out a function
+      // to get a string_view for the attribute name results in the
+      // compiler believing that the variable used to store the name
+      // is not used
+      const char* raw_attr_name = PyUnicode_AsUTF8(name);
+      if (!raw_attr_name) { return nullptr; }
+      std::string_view attr_name(raw_attr_name);
+
+      static constexpr auto mbrs =
+        std::define_static_array(rflx::static_data_members_of(^^CppClass,
+                                                              kPublicAccess));
+
+      template for (constexpr rflx::info mbr : mbrs) {
+        if (std::string_view(SnakeCaseIdOwner<mbr>::c_str()) == attr_name) {
+          return detail::to_python([:mbr:]);
+        }
+      }
+      return PyType_Type.tp_getattro(metaclass, name);
+    });
+  }
+
+  /**
+   * static member function that implements update of C++ public
+   * static data members as python class attributes
+   */
+  static int pythonSetClassAttr(PyObject* metaclass,
+                                PyObject* name,
+                                PyObject* value) {
+    return detail::sinking_invoke_from_python([&]() -> int {
+      if (!value) {
+        PyErr_SetString(PyExc_TypeError,
+                        "illegal attempt to delete an attribute of a wrapped "
+                        "C++ metaclass");
+        return kPyErr;
+      }
+
+      // TODO(bd) figure out why attempting to factor out a function
+      // to get a string_view for the attribute name results in the
+      // compiler believing that the variable used to store the name
+      // is not used
+      const char* raw_attr_name = PyUnicode_AsUTF8(name);
+      if (!raw_attr_name) { return kPyErr; }
+      std::string_view attr_name(raw_attr_name);
+
+      static constexpr auto mbrs =
+        std::define_static_array(rflx::static_data_members_of(^^CppClass,
+                                                              kPublicAccess));
+
+      template for (constexpr rflx::info mbr : mbrs) {
+        if (std::string_view(SnakeCaseIdOwner<mbr>::c_str()) == attr_name) {
+          using MbrType = DecayT<decltype([:mbr:])>;
+          [:mbr:] = detail::from_python<MbrType>(value);
+          return kPySuccess;
+        }
+      }
+      return PyType_Type.tp_setattro(metaclass, name, value);
+    });
   }
 
   static PyMethodDef* allMethods() {
@@ -741,14 +1039,38 @@ private:
 
 public:
 
+  /**
+   * factory function for the reflexive wrapper class
+   */
   static auto make(const std::string_view module_name) {
     static const auto class_name =
       PascalCaseIdOwner<^^CppClass>::c_str();
-    static const auto tp_name = str_cat(module_name, ".", class_name);
-    static PyTypeObject* ptr = nullptr;
-    if (!ptr) {
+
+    // create the custom metaclass
+    static PyTypeObject* metaclass_ptr = nullptr;
+    if (!metaclass_ptr) {
+      static PyTypeObject metaclass = {PyVarObject_HEAD_INIT(nullptr, 0)};
+      // populate required fields
+      static const auto tp_name =
+        str_cat(module_name, ".", class_name, "Meta");
+      metaclass.tp_name = tp_name.data();
+      metaclass.tp_basicsize = sizeof(PythonMetaclassWrapper);
+      metaclass.tp_flags = Py_TPFLAGS_DEFAULT;
+      metaclass.tp_base = &PyType_Type;
+      metaclass.tp_getattro = PythonReflex::pythonGetClassAttr;
+      metaclass.tp_setattro = PythonReflex::pythonSetClassAttr;
+      metaclass_ptr = &metaclass;
+      JMG_ENFORCE(PyType_Ready(metaclass_ptr) >= 0,
+                  "unable to initialize the python metaclass for class [",
+                  class_name, "]");
+    }
+
+    // create the standard instance type
+    static PyTypeObject* type_ptr = nullptr;
+    if (!type_ptr) {
       static PyTypeObject rslt = {PyVarObject_HEAD_INIT(nullptr, 0)};
       // populate required fields
+      static const auto tp_name = str_cat(module_name, ".", class_name);
       rslt.tp_name = tp_name.data();
       rslt.tp_basicsize = sizeof(PyObj);
       rslt.tp_dealloc = PythonReflex::destroy;
@@ -757,9 +1079,12 @@ public:
       rslt.tp_methods = allMethods();
       rslt.tp_init = construct;
       rslt.tp_new = initialize;
-      ptr = &rslt;
+      rslt.tp_getattro = PythonReflex::pythonGetAttr;
+      rslt.tp_setattro = PythonReflex::pythonSetAttr;
+      type_ptr = &rslt;
+      Py_SET_TYPE(type_ptr, metaclass_ptr);
     }
-    return std::make_tuple(class_name, ptr);
+    return std::make_tuple(class_name, type_ptr);
   };
 };
 

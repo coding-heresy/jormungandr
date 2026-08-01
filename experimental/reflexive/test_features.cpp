@@ -91,4 +91,8 @@ string TestClass::staticReturnsStdStringViewArg(string_view str) {
   return string(str);
 }
 
+int TestClass::static_int_data_member = 20000101;
+string TestClass::static_str_data_member = "blah"s;
+string_view TestClass::static_str_view_data_member = "not far enough"sv;
+
 } // namespace jmg

@@ -92,6 +92,19 @@ public:
   static std::string staticReturnsStdStringArg(const std::string& str);
   static std::string staticReturnsStdStringViewArg(std::string_view str);
 
+  ////////////////////
+  // non-static data members
+
+  int int_data_member = 19991231;
+  std::string str_data_member = std::string("BLUB");
+  std::string_view str_view_data_member = std::string_view("too far");
+
+  ////////////////////
+  // static data members
+  static int static_int_data_member;
+  static std::string static_str_data_member;
+  static std::string_view static_str_view_data_member;
+
 private:
   std::optional<int> int_val_{};
   std::optional<std::string> str_val_{};

@@ -90,6 +90,50 @@ def test_reflexive_features():
     print(f"string return value from internal data was [{str_val}]")
 
     ####################
+    # test data members as attributes
+
+    # getting values
+    int_val = test_class.int_data_member
+    print(f"value of int_data_member was [{int_val}]")
+
+    str_val = test_class.str_data_member
+    print(f"value of str_data_member was [{str_val}]")
+
+    str_val = test_class.str_view_data_member
+    print(f"value of str_view_data_member was [{str_val}]")
+
+    # setting values
+    test_class.int_data_member = 19700101
+    int_val = test_class.int_data_member
+    print(f"value of int_data_member was updated to [{int_val}]")
+
+    test_class.str_data_member = "too close"
+    str_val = test_class.str_data_member
+    print(f"value of str_data_member was updated to [{str_val}]")
+
+    ####################
+    # test static data members as class attributes
+
+    # getting values
+    int_val = TestClass.static_int_data_member
+    print(f"value of static_int_data_member was [{int_val}]")
+
+    str_val = TestClass.static_str_data_member
+    print(f"value of static_str_data_member was [{str_val}]")
+
+    str_val = TestClass.static_str_view_data_member
+    print(f"value of static_str_view_data_member was [{str_val}]")
+
+    # setting values
+    TestClass.static_int_data_member = 20260101
+    int_val = TestClass.static_int_data_member
+    print(f"value of static_int_data_member was updated to [{int_val}]")
+
+    TestClass.static_str_data_member = "never too close"
+    str_val = TestClass.static_str_data_member
+    print(f"value of static_str_data_member was updated to [{str_val}]")
+
+    ####################
     # test failures
 
     print("-----------------------------------------------------------------------------")
