@@ -38,6 +38,7 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace jmg
 {
@@ -108,6 +109,24 @@ public:
 private:
   std::optional<int> int_val_{};
   std::optional<std::string> str_val_{};
+};
+
+/**
+ * test class that demonstrates python handling of C++ types that
+ * present an interface compatible with std::ranges::range
+ */
+class TestContainer {
+  std::vector<int> data_ = {1, 2, 3, 4, 5};
+
+public:
+  using value_type = int;
+
+  auto begin() const { return data_.begin(); }
+  auto end() const { return data_.end(); }
+  auto size() const { return data_.size(); }
+
+  auto operator[](const size_t idx) const { return data_[idx]; }
+  auto& operator[](const size_t idx) { return data_[idx]; }
 };
 
 } // namespace jmg

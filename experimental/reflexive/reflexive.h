@@ -45,6 +45,7 @@
 #include <Python.h>
 #include <boost/numeric/conversion/cast.hpp>
 
+#include "jmg/conversion.h"
 #include "jmg/reflection_util.h"
 #include "jmg/types.h"
 #include "jmg/util.h"
@@ -122,15 +123,39 @@ constexpr auto kPublicAccess = rflx::access_context::unprivileged();
 constexpr int64_t kFailInt = -1LL;
 constexpr int kPyErr = -1;
 constexpr int kPySuccess = 0;
+constexpr auto kTrueStr = std::string_view("True");
+constexpr auto kFalseStr = std::string_view("False");
 
 ////////////////////
 // type wrappers
 
-// TODO(bd) store the C++ instance in the object instead of on the
-// heap
+/**
+ * wrapper class for a C++ class used by python
+ */
 template<ClassT T>
 struct PythonObjWrapper {
   PyObject_HEAD std::optional<T> instance;
+};
+
+/**
+ * wrapper class that supports iteration over C++ objects using
+ * standard python constructs
+ */
+template <std::ranges::random_access_range Container>
+struct PythonItrState {
+  PyObject_HEAD
+  using value_type = std::ranges::range_value_t<Container>;
+  using iterator = std::ranges::iterator_t<Container>;
+  PyObject* iterable;
+  iterator current;
+  iterator end;
+  PythonItrState(PyObject* i, iterator&& c, iterator&& e)
+    : iterable(i), current(c), end(e) {
+    Py_INCREF(iterable);
+  }
+  ~PythonItrState() {
+    Py_XDECREF(iterable);
+  }
 };
 
 /**
@@ -196,25 +221,18 @@ private:
 
 /**
  * get a pointer to the C++ type wrapped in a python object
+ *
+ * TODO(bd) modify this to return a non-const ref
  */
 template<typename T>
 decltype(auto) get_cpp_instance(PyObject* self,
                                 const std::source_location location =
                                 std::source_location::current()) {
   auto* py_obj = reinterpret_cast<T*>(self);
-  using CppType = RemoveOptionalT<decltype(py_obj->instance)>;
-  auto make_err_msg = [&](const auto* op) {
-    return str_cat(op, " on line ", location.line(), " of file ",
-                   location.file_name());
-  };
-  if (!py_obj) {
-    const auto err_msg = make_err_msg("python object is null");
-    PyErr_SetString(PyExc_RuntimeError, err_msg.c_str());
-    return static_cast<CppType*>(nullptr);
-  }
+  JMG_ENFORCE(py_obj, "python object is null");
   JMG_ENFORCE_USING(RuntimePythonTypeError, py_obj->instance,
                     "C++ instance was not properly initialized");
-  return &(*(py_obj->instance));
+  return *(py_obj->instance);
 }
 
 /**
@@ -223,7 +241,7 @@ decltype(auto) get_cpp_instance(PyObject* self,
  * TODO(bd) integrate with return type overloading?
  */
 template<typename T>
-PyObject* to_python(T&& value) {
+PyObject* to_python(const T& value) {
   if constexpr (SameAsDecayedT<PyObject*, T>) {
     // If it's already a raw PyObject*, pass it through directly
     return value;
@@ -390,6 +408,9 @@ template<typename T>
 consteval auto fail_return() {
   if constexpr (SameAsDecayedT<int, T>) {
     return kPyErr;
+  }
+  else if constexpr (SameAsDecayedT<Py_ssize_t, T>) {
+    return static_cast<Py_ssize_t>(0);
   }
   else if constexpr (std::is_pointer_v<T>) {
     return static_cast<T>(nullptr);
@@ -867,11 +888,10 @@ private:
   template<rflx::info MbrFcn>
   static PyObject* callMemberFcn(PyObject* self, PyObject* args) {
     return detail::sinking_invoke_from_python([&]() -> PyObject* {
-      auto* cpp_obj = detail::get_cpp_instance<PyObj>(self);
-      if (!cpp_obj) { return nullptr; }
+      auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
       auto parsed_args = detail::parse_python_args<MbrFcn>(args);
       if (!parsed_args) { return nullptr; }
-      auto mbr_fcn_args = std::tuple_cat(std::make_tuple(cpp_obj),
+      auto mbr_fcn_args = std::tuple_cat(std::make_tuple(&cpp_obj),
                                          std::move(*parsed_args));
       return detail::invoke_from_python<MbrFcn>(std::move(mbr_fcn_args));
     });
@@ -896,8 +916,7 @@ private:
    */
   static PyObject* getDataMember(PyObject* self, PyObject* name) {
     return detail::sinking_invoke_from_python([&]() -> PyObject* {
-      auto* cpp_obj = detail::get_cpp_instance<PyObj>(self);
-      if (!cpp_obj) { return nullptr; }
+      auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
 
       // TODO(bd) figure out why attempting to factor out a function
       // to get a string_view for the attribute name results in the
@@ -913,7 +932,7 @@ private:
 
       template for (constexpr rflx::info mbr : mbrs) {
         if (std::string_view(SnakeCaseIdOwner<mbr>::c_str()) == attr_name) {
-          return detail::to_python(cpp_obj->[:mbr:]);
+          return detail::to_python(cpp_obj.[:mbr:]);
         }
       }
       return PyObject_GenericGetAttr(self, name);
@@ -932,8 +951,7 @@ private:
                         "C++ class");
         return kPyErr;
       }
-      auto* cpp_obj = detail::get_cpp_instance<PyObj>(self);
-      if (!cpp_obj) { return kPyErr; }
+      auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
 
       // TODO(bd) figure out why attempting to factor out a function
       // to get a string_view for the attribute name results in the
@@ -949,8 +967,8 @@ private:
 
       template for (constexpr rflx::info mbr : mbrs) {
         if (std::string_view(SnakeCaseIdOwner<mbr>::c_str()) == attr_name) {
-          using MbrType = DecayT<decltype(cpp_obj->[:mbr:])>;
-          cpp_obj->[:mbr:] = detail::from_python<MbrType>(value);
+          using MbrType = DecayT<decltype(cpp_obj.[:mbr:])>;
+          cpp_obj.[:mbr:] = detail::from_python<MbrType>(value);
           return kPySuccess;
         }
       }
@@ -991,8 +1009,8 @@ private:
    * static data members as python class attributes
    */
   static int setStaticDataMember(PyObject* metaclass,
-                                PyObject* name,
-                                PyObject* value) {
+                                 PyObject* name,
+                                 PyObject* value) {
     return detail::sinking_invoke_from_python([&]() -> int {
       if (!value) {
         PyErr_SetString(PyExc_TypeError,
@@ -1021,6 +1039,186 @@ private:
         }
       }
       return PyType_Type.tp_setattro(metaclass, name, value);
+    });
+  }
+
+  /**
+   * static member function that creates an iterator for an iterable
+   * C++ object
+   */
+  static PyObject* iterator(PyObject* self) {
+    namespace rng = std::ranges;
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+      if constexpr (!rng::random_access_range<CppType>) {
+        // NOTE: should never happen
+        JMG_THROW_EXCEPTION(RuntimePythonTypeError, "object is not iterable");
+      }
+      else {
+        using ItrState = PythonItrState<CppType>;
+        using ItrWrapper = PythonObjWrapper<ItrState>;
+        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        auto* itr_obj =
+          reinterpret_cast<ItrWrapper*>(PyType_GenericAlloc(Py_TYPE(self), 0));
+        if (!itr_obj) { throw RuntimePythonErrorNoCppMsg(); }
+        new (&(itr_obj->instance)) std::optional<ItrState>(std::nullopt);
+        itr_obj->instance.emplace(self,
+                                  rng::begin(cpp_obj),
+                                  rng::end(cpp_obj));
+        return reinterpret_cast<PyObject*>(itr_obj);
+      }
+    });
+  }
+
+  /**
+   * static member function that returns the next item from an
+   * iterator for an iterable C++ object
+   */
+  static PyObject* nextItem(PyObject* self) {
+    namespace rng = std::ranges;
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+      if constexpr (!rng::random_access_range<CppType>) {
+        // NOTE: should never happen
+        JMG_THROW_EXCEPTION(RuntimePythonTypeError, "object is not iterable");
+      }
+      else {
+        using ItrState = PythonItrState<CppType>;
+        using ItrWrapper = PythonObjWrapper<ItrState>;
+        auto& itr_state = detail::get_cpp_instance<ItrWrapper>(self);
+        if (itr_state.end == itr_state.current) { return nullptr; }
+
+        using ValueType =
+          typename ItrState::value_type;
+        PyObject* item = detail::to_python<ValueType>(*(itr_state.current));
+        ++(itr_state.current);
+        return item;
+      }
+    });
+  }
+
+  /**
+   * static member function that returns the size/length of an object
+   */
+  static Py_ssize_t sequenceSz(PyObject* self) {
+    namespace rng = std::ranges;
+    return detail::sinking_invoke_from_python([&]() -> Py_ssize_t {
+      if constexpr (!rng::sized_range<CppType>) {
+        // NOTE: should never happen
+        JMG_THROW_EXCEPTION(RuntimePythonTypeError, "object has no len()");
+      }
+      else {
+        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        return cpp_obj.size();
+      }
+    });
+  }
+
+  static PyObject* sequenceItem(PyObject* self, Py_ssize_t idx) {
+    namespace rng = std::ranges;
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+      // TODO(bd) is random_access_range specific enough here?
+      if constexpr (!rng::random_access_range<CppType>) {
+        // NOTE: should never happen
+        JMG_THROW_EXCEPTION(RuntimePythonTypeError,
+                            "object is not subscriptable");
+      }
+      else {
+        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        const auto sz = static_cast<Py_ssize_t>(cpp_obj.size());
+
+        // support pythonic negative indexing (e.g., v[-1])
+        if (idx < 0) { idx += sz; }
+        JMG_ENFORCE_USING(std::out_of_range, (idx >= 0) && (idx < sz),
+                          "index [", idx, "] out of range [0..", sz, "]");
+        using ItemType = CppType::value_type;
+        return detail::to_python<ItemType>(cpp_obj[idx]);
+      }
+    });
+  }
+
+  static int sequenceSetItem(PyObject* self,
+                                    Py_ssize_t idx,
+                                    PyObject* value) {
+    namespace rng = std::ranges;
+    return detail::sinking_invoke_from_python([&]() -> int {
+      // TODO(bd) is random_access_range specific enough here?
+      if constexpr (!rng::random_access_range<CppType>) {
+        // NOTE: should never happen
+        JMG_THROW_EXCEPTION(RuntimePythonTypeError,
+                            "object is not subscriptable");
+      }
+      else {
+        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        const auto sz = static_cast<Py_ssize_t>(cpp_obj.size());
+
+        // support pythonic negative indexing (e.g., v[-1])
+        if (idx < 0) { idx += sz; }
+        JMG_ENFORCE_USING(std::out_of_range, (idx >= 0) && (idx < sz),
+                          "index [", idx, "] out of range [0..", sz, "]");
+        using ItemType = CppType::value_type;
+        cpp_obj[idx] = detail::from_python<ItemType>(value);
+        return kPySuccess;
+      }
+    });
+  }
+
+  static PyObject* strRepr(PyObject* self) {
+    namespace rng = std::ranges;
+    namespace vws = std::views;
+    using namespace std::string_view_literals;
+    return detail::sinking_invoke_from_python([&]() -> PyObject* {
+      auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+
+      // NOTE: "deducing this" is not idiomatic here due to the caller
+      // following python's nomenclature
+      [[maybe_unused]] auto str_for = [](this auto& recurse,
+                                         auto val) -> std::string {
+        using ValType = DecayT<decltype(val)>;
+        if constexpr (SameAsDecayedT<bool, ValType>) {
+          return val ? kTrueStr : kFalseStr;
+        }
+        else if constexpr (ArithmeticT<ValType>) {
+          return static_cast<std::string>(from(val));
+        }
+        else if constexpr (StringLikeT<ValType>) {
+          return str_cat("'", val, "'");
+        }
+        else if constexpr (rng::range<ValType>) {
+          auto joined =
+            val | vws::transform(recurse) | vws::join_with(","sv);
+          return str_cat("["sv, rng::to<std::string>(joined), "]"sv);
+        }
+        else {
+          JMG_THROW_EXCEPTION(RuntimePythonTypeError,
+                              "attempted to get the string representation for "
+                              "type [",
+                              type_name_for<ValType>(),
+                              "] that is not representable");
+        }
+      };
+
+      std::ostringstream strm;
+      if constexpr (rng::range<CppType>) {
+        strm << str_for(cpp_obj);
+        return detail::to_python(strm.str());
+      }
+
+      // TODO(bd) what is the correct output if the container is
+      // iterable and has public data members?
+      strm << "{"sv;
+      static constexpr auto mbrs =
+        std::define_static_array(rflx::nonstatic_data_members_of(^^CppClass,
+                                                                 kPublicAccess));
+      [[maybe_unused]] bool first = true;
+      template for (constexpr rflx::info mbr : mbrs) {
+        if (first) { first = false; }
+        else { strm << ","sv; }
+        strm << SnakeCaseIdOwner<mbr>::c_str() << "="sv;
+        auto& val = cpp_obj.[:mbr:];
+        strm << str_for(val);
+      }
+      strm << "}"sv;
+
+      return detail::to_python(strm.str());
     });
   }
 
@@ -1074,6 +1272,21 @@ public:
       rslt.tp_new = allocate;
       rslt.tp_getattro = PythonReflex::getDataMember;
       rslt.tp_setattro = PythonReflex::setDataMember;
+      rslt.tp_repr = PythonReflex::strRepr;
+      rslt.tp_str = PythonReflex::strRepr;
+      static PySequenceMethods seq_hooks{};
+      if constexpr (std::ranges::random_access_range<CppType>) {
+        // only provide enable python iteration for types that support it
+        rslt.tp_iter = PythonReflex::iterator;
+        rslt.tp_iternext = PythonReflex::nextItem;
+        // TODO(bd) is random_access_range specific enough for item handling?
+        seq_hooks.sq_item = PythonReflex::sequenceItem;
+        seq_hooks.sq_ass_item = PythonReflex::sequenceSetItem;
+        if constexpr (rng::sized_range<CppType>) {
+          seq_hooks.sq_length = PythonReflex::sequenceSz;
+        }
+        rslt.tp_as_sequence = &seq_hooks;
+      }
       type_ptr = &rslt;
       Py_SET_TYPE(type_ptr, metaclass_ptr);
     }

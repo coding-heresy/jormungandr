@@ -25,10 +25,23 @@ cc_library(
     ],
 )
 
+####################
+# test code below here
+
+cc_library(
+    name = "test_features",
+    srcs = ["test_features.cpp"],
+    hdrs = ["test_features.h"],
+    deps = ["//:jmg"],
+)
+
 reflexive_library(
     name = "reflexive_features",
     srcs = ["reflexive_features.cpp"],
-    deps = [":reflexive"],
+    deps = [
+        ":reflexive",
+        ":test_features",
+    ],
 )
 
 py_test(

@@ -3,7 +3,11 @@ import sys
 
 try:
     import reflexive_features
-    from reflexive_features import TestClass, TestLifetime
+    from reflexive_features import (
+        TestClass,
+        TestLifetime,
+        TestContainer,
+    )
 except UnicodeDecodeError as e:
     print("\n--- BAZEL PYTHON IMPORT CRASH DIAGNOSTIC ---", file=sys.stderr)
     print(f"Error Type: {type(e).__name__}", file=sys.stderr)
@@ -12,11 +16,11 @@ except UnicodeDecodeError as e:
     # The 'object' attribute contains the exact bytes Python tried to decode
     print(f"The exact offending bytes: {e.object}", file=sys.stderr)
     print(f"Crash position index: {e.start}", file=sys.stderr)
-    
+
     print("\n--- RELEVANT BAZEL ENV VARIABLES ---", file=sys.stderr)
     for key in ['LANG', 'LC_ALL', 'PYTHONIOENCODING', 'BAZEL_TEST']:
         print(f"{key}: {os.environ.get(key, 'NOT SET')}", file=sys.stderr)
-    
+
     # Force exit so Bazel registers the failure cleanly
     sys.exit(1)
 
@@ -35,7 +39,7 @@ def test_reflexive_features():
     test_lifetime = None
     print("^^^^^^^^^^ previous line should be printed by C++ ^^^^^^^^^^",
           flush=True)
-    
+
     ####################
     # test methods when class is default constructed
 
@@ -44,7 +48,8 @@ def test_reflexive_features():
     test_class = TestClass()
     print(
         "==========   next line should be printed by C++   ==========",
-        flush=True)
+        flush=True,
+    )
     test_class.returns_void()
     print("^^^^^^^^^^ previous line should be printed by C++ ^^^^^^^^^^",
           flush=True)
@@ -112,6 +117,10 @@ def test_reflexive_features():
     print(f"value of str_data_member was updated to [{str_val}]")
 
     ####################
+    # test string representation
+    print(f"string representation >>>>> {test_class} <<<<<")
+
+    ####################
     # test static data members as class attributes
 
     # getting values
@@ -134,6 +143,21 @@ def test_reflexive_features():
     print(f"value of static_str_data_member was updated to [{str_val}]")
 
     ####################
+    # test container
+
+    test_container = TestContainer()
+    print(f"length of container is '{len(test_container)}'")
+    print(f"string representation of container is {test_container}")
+    for item in test_container:
+        print(f"--> container item is [{item}]")
+    print(f"item 2 is [{test_container[2]}]")
+    test_container[2] = test_container[2] * 2
+    print("after modifying item 2:")
+    for item in test_container:
+        print(f"--> container item is [{item}]")
+    print(f"last container item value is [{test_container[-1]}]")
+
+    ####################
     # test failures
 
     print("-----------------------------------------------------------------------------")
@@ -151,7 +175,31 @@ def test_reflexive_features():
         int_val = failer.returns_int_arg("foo")
     except TypeError as e:
         err_msg = str(e)
-        print(f"caught expected RuntimeError with message [{err_msg}]")
+        print(f"caught expected TypeError with message [{err_msg}]")
+
+    # TODO(bd) fail setting const data members
+
+    try:
+        # fails because object is not iterable
+        for item in failer:
+            print(item)
+    except TypeError as e:
+        err_msg = str(e)
+        print(f"caught expected TypeError with message [{err_msg}]")
+
+    try:
+        # fails because object does not expose a length
+        print(f"{len(failer)}")
+    except TypeError as e:
+        err_msg = str(e)
+        print(f"caught expected TypeError with message [{err_msg}]")
+
+    try:
+        # fails because object is not subscriptable
+        print(f"{failer[0]}")
+    except TypeError as e:
+        err_msg = str(e)
+        print(f"caught expected TypeError with message [{err_msg}]")
 
     ####################
     # test complete

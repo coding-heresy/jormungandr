@@ -63,11 +63,18 @@ constexpr auto kTestLifetimeDocStr =
 constexpr auto kTestClassDocStr =
   "class that exhibits various behaviors for testing with PythonReflex"sv;
 
+/**
+ * python docstring for the TestContainer class
+ */
+constexpr auto kTestContainerDocStr =
+  "class that exhibits container behavior for testing with PythonReflex"sv;
+
 struct ReflexiveFeatures
   : PythonModule<ReflexiveFeatures,
                  kReflexiveFeaturesModuleDocStr,
                  PythonReflex<TestLifetime, kTestLifetimeDocStr>,
-                 PythonReflex<TestClass, kTestClassDocStr>> {};
+                 PythonReflex<TestClass, kTestClassDocStr>,
+                 PythonReflex<TestContainer, kTestContainerDocStr>> {};
 
 } // namespace jmg
 
