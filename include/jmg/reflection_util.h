@@ -1,6 +1,6 @@
 /** -*- mode: c++ -*-
  *
- * Copyright (C) 2024 Brian Davis
+ * Copyright (C) 2026 Brian Davis
  * All Rights Reserved
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,8 @@
 #pragma once
 
 #include <meta>
+#include <ranges>
+#include <tuple>
 
 #include "compatibility.h"
 
@@ -44,10 +46,9 @@ namespace jmg
 /**
  * compile-time owner of a snake_case version of an identifier
  */
-template<std::meta::info Identifiable>
-class SnakeCaseIdOwner {
+template <std::meta::info kIdentifiable> class SnakeCaseIdOwner {
   static consteval auto make_snake_case() {
-    constexpr auto id = std::meta::identifier_of(Identifiable);
+    constexpr auto id = std::meta::identifier_of(kIdentifiable);
     static_assert(id.size() > 1UZ, "snake_case conversion of empty or single "
                                    "letter strings is not supported");
     // TODO(bd) impose more restrictions on what constitutes a valid
@@ -91,49 +92,71 @@ public:
   }
 };
 
+namespace detail
+{
+
+/**
+ * helper that generates either a PascalCase or a camelCase identifier
+ * using the metadata for an entity
+ */
+template <std::meta::info kIdentifiable, bool kMakePascalCase = true>
+consteval auto makePascalOrCamelCase() {
+  static_assert(std::meta::has_identifier(kIdentifiable),
+                "unable to generate PascalCase or camelCase identifier for "
+                "entity that has no identifier");
+  constexpr auto id = std::meta::identifier_of(kIdentifiable);
+  static_assert(id.size() > 1UZ,
+                "PascalCase or camelCase conversion of empty "
+                "or single letter identifiers is not supported");
+  // TODO(bd) impose more restrictions on what constitutes a valid
+  // identifier to convert to PascalCase or camelCase?
+  static_assert(
+      ('_' != id[id.size() - 1] && '_' != id[0]),
+      "PascalCase or camelCase conversion of a string beginning or ending "
+      "with an underscore character '_' is not supported");
+  constexpr auto rsltSz = [&]() {
+    size_t rslt = 1; // always needs null terminator
+    for (size_t idx = 0; idx < id.size(); ++idx) {
+      // input underscore characters do not appear in the output
+      rslt += ('_' == id[idx]) ? 0UZ : 1UZ;
+    }
+    return rslt;
+  }();
+  auto rslt = std::array<char, rsltSz>{};
+  if constexpr (kMakePascalCase) {
+    // first character is always uppercase
+    rslt[0] = jmg_std::to_upper(id[0]);
+  } else {
+    // first character is always lowercase
+    rslt[0] = jmg_std::to_lower(id[0]);
+  }
+  size_t offset = 1;
+  for (size_t idx = 1; idx < id.size(); ++idx) {
+    if ('_' == id[idx]) {
+      continue;
+    }
+    if ('_' == id[idx - 1]) {
+      rslt[offset++] = jmg_std::to_upper(id[idx]);
+    } else {
+      rslt[offset++] = id[idx];
+    }
+  }
+  rslt[rslt.size() - 1] = '\0';
+  return rslt;
+}
+
+} // namespace detail
+
 /**
  * compile-time owner of a PascalCase version of an identifier
  */
-template<std::meta::info Identifiable>
-class PascalCaseIdOwner {
-protected:
-  static consteval auto make_pascal_case() {
-    constexpr auto id = std::meta::identifier_of(Identifiable);
-    static_assert(id.size() > 1UZ, "PascalCase conversion of empty or single "
-                                   "letter strings is not supported");
-    // TODO(bd) impose more restrictions on what constitutes a valid
-    // identifier to convert to PascalCase?
-    static_assert(
-      ('_' != id[id.size() - 1] && '_' != id[0]),
-      "PascalCase conversion of a string beginning or ending with an "
-      "underscore character '_' is not supported");
-    constexpr auto rsltSz = [&]() {
-      size_t rslt = 1; // always needs null terminator
-      for (size_t idx = 0; idx < id.size(); ++idx) {
-        // input underscore characters do not appear in the output
-        rslt += ('_' == id[idx]) ? 0UZ : 1UZ;
-      }
-      return rslt;
-    }();
-    auto rslt = std::array<char, rsltSz>{};
-    // first character is always uppercase
-    rslt[0] = jmg_std::to_upper(id[0]);
-    size_t offset = 1;
-    for (size_t idx = 1; idx < id.size(); ++idx) {
-      if ('_' == id[idx]) { continue; }
-      if ('_' == id[idx - 1]) { rslt[offset++] = jmg_std::to_upper(id[idx]); }
-      else { rslt[offset++] = id[idx]; }
-    }
-    rslt[rslt.size() - 1] = '\0';
-    return rslt;
-  }
-
-public:
+template <std::meta::info kIdentifiable> struct PascalCaseIdOwner {
   /**
    * return a C-style string pointer to the identifier
    */
   static constexpr const char* c_str() {
-    static constexpr auto owner = make_pascal_case();
+    static constexpr auto owner =
+        detail::makePascalOrCamelCase<kIdentifiable>();
     return owner.data();
   }
 };
@@ -141,34 +164,23 @@ public:
 /**
  * compile-time owner of a camelCase version of an identifier
  */
-template<std::meta::info Identifiable>
-class CamelCaseOwner : PascalCaseIdOwner<Identifiable> {
-private:
-  static consteval auto make_camel_case() {
-    {
-      constexpr auto id = std::meta::identifier_of(Identifiable);
-      static_assert(id.size() > 1UZ, "camelCase conversion of empty or single "
-                                     "letter strings is not supported");
-      // TODO(bd) impose more restrictions on what constitutes a valid
-      // identifier to convert to camelCase?
-      static_assert(
-        ('_' != id[id.size() - 1] && '_' != id[0]),
-        "camelCase conversion of a string beginning or ending with an "
-        "underscore character is not supported");
-    }
-    auto rslt = PascalCaseIdOwner<Identifiable>::pascal_case();
-    rslt[0] = jmg_std::to_lower(rslt[0]);
-  }
-
-public:
+template <std::meta::info kIdentifiable> struct CamelCaseIdOwner {
   /**
    * return a C-style string pointer to the identifier
    */
   static constexpr const char* c_str() {
-    static constexpr auto owner = make_camel_case();
+    static constexpr auto owner =
+        detail::makePascalOrCamelCase<kIdentifiable,
+                                      false /* kMakePascalCase */>();
     return owner.data();
   }
 };
+
+/**
+ * concept for reflection metadata associated with a function
+ */
+template <std::meta::info Meta>
+concept FcnMetaT = std::meta::is_function(Meta);
 
 namespace detail
 {
@@ -176,28 +188,25 @@ namespace detail
  * reflection type metafunction that computes the type of a tuple
  * holding the types of the parameters to a function call
  */
-template<std::meta::info FcnInfo>
+template <std::meta::info FcnMeta>
+  requires FcnMetaT<FcnMeta>
 class FcnArgsTuple {
-  static constexpr auto params =
-    std::define_static_array(std::meta::parameters_of(FcnInfo));
+  static constexpr auto kParamsMeta =
+      std::define_static_array(std::meta::parameters_of(FcnMeta) |
+                               std::views::transform(std::meta::type_of));
 
-  /**
-   * intermediate function which is never called but returns the
-   * tuple-ized version of the static params array and is subsequently
-   * used with decltype to compute the type of that tuple at compile
-   * time
-   */
-  template<size_t... kIdxs>
-  static auto derive_type(std::index_sequence<kIdxs...>) {
-    return std::make_tuple<params[kIdxs]...>();
-  }
+  static constexpr auto kTpl = std::meta::substitute(^^std::tuple, kParamsMeta);
 
 public:
-  using type = decltype(derive_type(std::make_index_sequence<params.size()>{}));
+  using type = typename[:kTpl:];
 };
 } // namespace detail
 
-template<std::meta::info FcnInfo>
-using FcnArgsTupleForT = detail::FcnArgsTuple<FcnInfo>::type;
+template <auto FcnPtr>
+using FcnParamsTupleForFcnPtrT =
+    typename detail::FcnArgsTuple<std::meta::reflect_function(*FcnPtr)>::type;
+
+template <std::meta::info FcnMeta>
+using FcnParamsTupleForFcnMetaT = typename detail::FcnArgsTuple<FcnMeta>::type;
 
 } // namespace jmg

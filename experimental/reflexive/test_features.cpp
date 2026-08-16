@@ -35,6 +35,7 @@
 #include <iostream>
 
 #include "jmg/preprocessor.h"
+#include "jmg/util.h"
 
 using namespace std;
 using namespace std::string_literals;
@@ -83,12 +84,28 @@ string TestClass::returnsStdStringViewArg(string_view str) const {
   return string(str);
 }
 
+int TestClass::addAndSet(const int arg1, const int arg2) {
+  auto val = arg1 + arg2;
+  int_val_ = arg1;
+  return int_val_ ? *int_val_ + val : val;
+}
+
+int TestClass::addAndSetWithDefault(const int arg1, const int arg2) {
+  auto val = arg1 + arg2;
+  int_val_ = arg1;
+  return int_val_ ? *int_val_ + val : val;
+}
+
 int TestClass::staticReturnsIntArg(const int arg) { return arg; }
 
 string TestClass::staticReturnsStdStringArg(const string& str) { return str; }
 
 string TestClass::staticReturnsStdStringViewArg(string_view str) {
   return string(str);
+}
+
+string TestClass::staticReturnsCatArgs(std::string_view str_arg, int int_arg) {
+  return str_cat(str_arg, int_arg);
 }
 
 int TestClass::static_int_data_member = 20000101;

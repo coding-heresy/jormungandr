@@ -87,11 +87,31 @@ public:
   std::string returnsStdStringViewArg(std::string_view str) const;
 
   ////////////////////
+  // member functions with two arguments
+
+  /**
+   * adds its two arguments together and adds the stored value (if
+   * any), returns the result and sets the stored value to the first
+   * argument value
+   */
+  int addAndSet(const int arg1, const int arg2);
+
+  /**
+   * same as addAndSet, but second argument can be defaulted
+   */
+  int addAndSetWithDefault(const int arg1, const int arg2 = 0);
+
+  ////////////////////
   // static member functions with one argument
 
   static int staticReturnsIntArg(const int arg);
   static std::string staticReturnsStdStringArg(const std::string& str);
   static std::string staticReturnsStdStringViewArg(std::string_view str);
+
+  ////////////////////
+  // static member functions with two arguments
+
+  static std::string staticReturnsCatArgs(std::string_view str_arg, int int_arg);
 
   ////////////////////
   // non-static data members

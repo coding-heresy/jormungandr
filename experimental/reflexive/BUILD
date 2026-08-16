@@ -1,18 +1,6 @@
 load("@rules_python//python:defs.bzl", "py_test")
 load("//experimental/reflexive:reflexive_bindings.bzl", "reflexive_library")
 
-cc_test(
-    name = "test_experimental",
-    srcs = ["test_experimental.cpp"],
-    copts = [
-        "-std=c++26",  # TODO(bd) remove, should be at top level
-    ],
-    deps = [
-        "//:jmg",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
 cc_library(
     name = "reflexive",
     hdrs = ["reflexive.h"],
