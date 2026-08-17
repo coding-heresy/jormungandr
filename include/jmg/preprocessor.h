@@ -133,6 +133,17 @@
   } while (0)
 
 /**
+ * throw an exception of a specified type constructed with the
+ * argument error message if a predicate fails
+ */
+#define JMG_ENFORCE_AT_SRC_USING(exception_type, predicate, src_location, ...) \
+  do {                                                                         \
+    if (JMG_UNLIKELY(!(predicate))) {                                          \
+      JMG_THROW_EXCEPTION_AT_SRC(exception_type, src_location, __VA_ARGS__);   \
+    }                                                                          \
+  } while (0)
+
+/**
  * throw an exception of type std::runtime_error constructed with the
  * argument error message if a predicate fails
  */
@@ -145,13 +156,9 @@
  * throw an exception of type std::runtime_error constructed with the
  * argument error message if a predicate fails
  */
-#define JMG_ENFORCE_AT_SRC(predicate, src_location, ...)           \
-  do {                                                             \
-    if (JMG_UNLIKELY(!(predicate))) {                              \
-      JMG_THROW_EXCEPTION_AT_SRC(std::runtime_error, src_location, \
-                                 __VA_ARGS__);                     \
-    }                                                              \
-  } while (0)
+#define JMG_ENFORCE_AT_SRC(predicate, src_location, ...)                \
+  JMG_ENFORCE_AT_SRC_USING(std::runtime_error, predicate, src_location, \
+                           __VA_ARGS__)
 
 /**
  * helper macro for wrapping the behavior of calling a POSIX-style system

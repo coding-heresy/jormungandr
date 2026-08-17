@@ -30,52 +30,38 @@
  *
  */
 
-/**
- * Library that converts the test_features library into a python
- * module using the reflexive library.
- */
-
-#include "reflexive.h"
-#include "test_features.h"
-
-using namespace std;
-using namespace std::string_literals;
-using namespace std::string_view_literals;
+#include "jmg/python_object.h"
 
 namespace jmg::python
 {
 
-/**
- * python docstring for the ReflexiveFeatures module
- */
-constexpr auto kReflexiveFeaturesModuleDocStr =
-  "module for testing the python reflex library"sv;
+PythonObject::~PythonObject() { Py_XDECREF(obj_); }
 
-/**
- * python docstring for the TestLifetime class
- */
-constexpr auto kTestLifetimeDocStr =
-  "class that logs lifetime events for testing with PythonReflex"sv;
+PythonObject::PythonObject(const PythonObject& src) { Py_XINCREF(obj_); }
 
-/**
- * python docstring for the TestClass class
- */
-constexpr auto kTestClassDocStr =
-  "class that exhibits various behaviors for testing with PythonReflex"sv;
+PythonObject& PythonObject::operator=(const PythonObject& src) {
+  if (this != &src) {
+    Py_XDECREF(obj_);
+    obj_ = src.obj_;
+    Py_XINCREF(obj_);
+  }
+  return *this;
+}
 
-/**
- * python docstring for the TestContainer class
- */
-constexpr auto kTestContainerDocStr =
-  "class that exhibits container behavior for testing with PythonReflex"sv;
+PythonObject& PythonObject::operator=(PythonObject&& src) {
+  if (this != &src) {
+    Py_XDECREF(obj_);
+    obj_ = src.obj_;
+  }
+  return *this;
+}
 
-struct ReflexiveFeatures
-  : PythonModule<ReflexiveFeatures,
-                 kReflexiveFeaturesModuleDocStr,
-                 PythonReflex<TestLifetime, kTestLifetimeDocStr>,
-                 PythonReflex<TestClass, kTestClassDocStr>,
-                 PythonReflex<TestContainer, kTestContainerDocStr>> {};
+PyObject* PythonObject::operator*() const { return obj_; }
+
+PyObject* PythonObject::release() && {
+  auto* rslt = obj_;
+  obj_ = nullptr;
+  return rslt;
+}
 
 } // namespace jmg::python
-
-JMG_DECLARE_MODULE(reflexive_features)

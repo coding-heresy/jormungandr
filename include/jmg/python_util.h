@@ -29,53 +29,40 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
+#pragma once
 
-/**
- * Library that converts the test_features library into a python
- * module using the reflexive library.
- */
+#include <concepts>
+#include <utility>
 
-#include "reflexive.h"
-#include "test_features.h"
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
 
-using namespace std;
-using namespace std::string_literals;
-using namespace std::string_view_literals;
+#include "jmg/preprocessor.h"
 
 namespace jmg::python
 {
 
-/**
- * python docstring for the ReflexiveFeatures module
- */
-constexpr auto kReflexiveFeaturesModuleDocStr =
-  "module for testing the python reflex library"sv;
+////////////////////
+// exception types
 
 /**
- * python docstring for the TestLifetime class
+ * class that C++ wrapper code should throw as an exception in cases
+ * where a python error message has already been set
  */
-constexpr auto kTestLifetimeDocStr =
-  "class that logs lifetime events for testing with PythonReflex"sv;
+struct RuntimePythonErrorNoCppMsg {};
 
 /**
- * python docstring for the TestClass class
+ * std::runtime_error-derived class that C++ wrapper code should throw
+ * in cases where a python type error (which does not map cleanly to
+ * any existing C++ standard library exception type) should be
+ * returned
  */
-constexpr auto kTestClassDocStr =
-  "class that exhibits various behaviors for testing with PythonReflex"sv;
+JMG_DEFINE_RUNTIME_EXCEPTION(RuntimePythonTypeError);
 
-/**
- * python docstring for the TestContainer class
- */
-constexpr auto kTestContainerDocStr =
-  "class that exhibits container behavior for testing with PythonReflex"sv;
+////////////////////
+// utility constants and types
 
-struct ReflexiveFeatures
-  : PythonModule<ReflexiveFeatures,
-                 kReflexiveFeaturesModuleDocStr,
-                 PythonReflex<TestLifetime, kTestLifetimeDocStr>,
-                 PythonReflex<TestClass, kTestClassDocStr>,
-                 PythonReflex<TestContainer, kTestContainerDocStr>> {};
+constexpr int kPyErr = -1;
+constexpr int kPySuccess = 0;
 
 } // namespace jmg::python
-
-JMG_DECLARE_MODULE(reflexive_features)

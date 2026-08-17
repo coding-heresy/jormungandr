@@ -41,7 +41,7 @@ using namespace std;
 using namespace std::string_literals;
 using namespace std::string_view_literals;
 
-namespace jmg
+namespace jmg::python
 {
 
 ////////////////////
@@ -112,4 +112,4 @@ int TestClass::static_int_data_member = 20000101;
 string TestClass::static_str_data_member = "blah"s;
 string_view TestClass::static_str_view_data_member = "not far enough"sv;
 
-} // namespace jmg
+} // namespace jmg::python

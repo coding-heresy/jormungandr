@@ -8,7 +8,7 @@ cc_library(
         "-std=c++26",  # TODO(bd) remove, should be at top level
     ],
     deps = [
-        "//:jmg",
+        "//:jmg_python",
         "@rules_python//python/cc:current_py_cc_headers",
     ],
 )

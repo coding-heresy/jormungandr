@@ -66,6 +66,25 @@ cc_library(
 )
 
 cc_library(
+    name = "jmg_python",
+    srcs = [
+        "src/python_object.cpp",
+    ],
+    hdrs = [
+        "include/jmg/python_object.h",
+        "include/jmg/python_util.h",
+    ],
+    includes = ["include"],
+    linkstatic = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:jmg",
+        "@rules_python//python/cc:current_py_cc_headers",
+        "@rules_python//python/cc:current_py_cc_libs",
+    ],
+)
+
+cc_library(
     name = "jmg_server_main",
     srcs = ["src/server_main.cpp"],
     linkstatic = True,

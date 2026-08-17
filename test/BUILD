@@ -227,6 +227,17 @@ cc_test(
 )
 
 cc_test(
+    name = "test_reflection_util",
+    size = "small",
+    srcs = ["test_reflection_util.cpp"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "test_union",
     size = "small",
     srcs = ["test_union.cpp"],

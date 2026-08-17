@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 
-namespace jmg
+namespace jmg::python
 {
 
 /**
@@ -149,4 +149,4 @@ public:
   auto& operator[](const size_t idx) { return data_[idx]; }
 };
 
-} // namespace jmg
+} // namespace jmg::python
