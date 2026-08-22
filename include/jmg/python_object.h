@@ -31,6 +31,7 @@
  */
 #pragma once
 
+#include <source_location>
 #include <string>
 #include <string_view>
 
@@ -107,6 +108,10 @@ class PythonObject {
   static constexpr int64_t kFailInt = -1LL;
 
 public:
+  /**
+   * default constructor creates a python object of type/value None
+   */
+  PythonObject();
   ~PythonObject();
 
   PythonObject(const PythonObject& src);
@@ -173,6 +178,16 @@ public:
    * share that the wrapper object holds in it
    */
   [[nodiscard]] PyObject* release() &&;
+
+  [[nodiscard]] bool operator==(PythonObject rhs) const;
+
+  [[nodiscard]] bool operator!=(PythonObject rhs) const;
+
+  [[nodiscard]] bool operator==(PyObject* rhs) const;
+
+  [[nodiscard]] bool operator!=(PyObject* rhs) const;
+
+  // TODO(bd) starship operator?
 
   /**
    * retrieve a C++ value from the value in the python object

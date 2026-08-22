@@ -59,10 +59,34 @@ struct RuntimePythonErrorNoCppMsg {};
  */
 JMG_DEFINE_RUNTIME_EXCEPTION(RuntimePythonTypeError);
 
+/**
+ * enforcement macro used when a call to a CPython API function has
+ * already set the python exception type and message
+ *
+ * TODO(bd) use PyErr_Occurred everywhere
+ */
+#define JMG_ENFORCE_PYTHON_SUCCESS(pred)                 \
+  do {                                                   \
+    if (!(pred)) { throw RuntimePythonErrorNoCppMsg(); } \
+  } while (0)
+
 ////////////////////
 // utility constants and types
 
 constexpr int kPyErr = -1;
 constexpr int kPySuccess = 0;
+
+////////////////////
+// utility operators and functions
+
+[[nodiscard]] inline bool equal(PyObject* lhs, PyObject* rhs) {
+  if (lhs != rhs) {
+    if (!lhs || !rhs) { return false; }
+    const auto rc = PyObject_RichCompareBool(lhs, rhs, Py_EQ);
+    JMG_ENFORCE_PYTHON_SUCCESS(kPyErr != rc);
+    return 1 == rc;
+  }
+  return true;
+}
 
 } // namespace jmg::python

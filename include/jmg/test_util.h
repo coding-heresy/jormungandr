@@ -29,55 +29,27 @@
  * Author: Brian Davis <brian8702@sbcglobal.net>
  *
  */
+#pragma once
 
-#include "jmg/python_object.h"
+#include <string>
+#include <string_view>
 
-namespace jmg::python
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
+namespace jmg
 {
 
-PythonObject::PythonObject() : obj_(Py_None) { Py_INCREF(obj_); }
+/**
+ * return the absolute path of the path given relative to the runfiles
+ * root directory
+ */
+std::string rlocation(std::string_view relative_path);
 
-PythonObject::~PythonObject() { Py_XDECREF(obj_); }
+/**
+ * get the python configuration needed to initialize an embedded
+ * python environment in a test case
+ */
+PyConfig& python_cfg();
 
-PythonObject::PythonObject(const PythonObject& src) : obj_(src.obj_) {
-  Py_XINCREF(obj_);
-}
-
-PythonObject& PythonObject::operator=(const PythonObject& src) {
-  if (this != &src) {
-    Py_XDECREF(obj_);
-    obj_ = src.obj_;
-    Py_XINCREF(obj_);
-  }
-  return *this;
-}
-
-PythonObject& PythonObject::operator=(PythonObject&& src) {
-  if (this != &src) {
-    Py_XDECREF(obj_);
-    obj_ = src.obj_;
-  }
-  return *this;
-}
-
-PyObject* PythonObject::operator*() const { return obj_; }
-
-PyObject* PythonObject::release() && {
-  auto* rslt = obj_;
-  obj_ = nullptr;
-  return rslt;
-}
-
-bool PythonObject::operator==(PythonObject rhs) const {
-  return equal(obj_, rhs.obj_);
-}
-
-bool PythonObject::operator!=(PythonObject rhs) const {
-  return !(*this == rhs);
-}
-
-bool PythonObject::operator==(PyObject* rhs) const { return equal(obj_, rhs); }
-
-bool PythonObject::operator!=(PyObject* rhs) const { return !(*this == rhs); }
-
-} // namespace jmg::python
+} // namespace jmg

@@ -53,6 +53,8 @@
  *
  * TODO(bd) sort out whether to support multiple versions of python or
  * only the one that the library was built with
+ *
+ * TODO(bd) use PyErr_Occurred for all error handling?
  */
 
 #include <algorithm>
@@ -228,7 +230,7 @@ namespace detail
  * TODO(bd) modify this to return a non-const ref
  */
 template<typename T>
-decltype(auto) get_cpp_instance(
+decltype(auto) getCppInstance(
   PyObject* self,
   const std::source_location location = std::source_location::current()) {
   JMG_ENFORCE(self, "python object is null");
@@ -243,7 +245,7 @@ decltype(auto) get_cpp_instance(
  * for the function that is failing
  */
 template<typename T>
-consteval auto fail_return() {
+consteval auto failReturn() {
   if constexpr (SameAsDecayedT<int, T>) { return kPyErr; }
   else if constexpr (SameAsDecayedT<Py_ssize_t, T>) {
     return static_cast<Py_ssize_t>(0);
@@ -265,33 +267,33 @@ auto sinkingInvoke(Fcn&& fcn) {
   }
   catch (const RuntimePythonErrorNoCppMsg& e) {
     // no need to set a python error string
-    return fail_return<Rslt>();
+    return failReturn<Rslt>();
   }
   catch (const RuntimePythonTypeError& e) {
     PyErr_SetString(PyExc_TypeError, e.what());
-    return fail_return<Rslt>();
+    return failReturn<Rslt>();
   }
   catch (const std::invalid_argument& e) {
     PyErr_SetString(PyExc_ValueError, e.what());
-    return fail_return<Rslt>();
+    return failReturn<Rslt>();
   }
   catch (const std::out_of_range& e) {
     PyErr_SetString(PyExc_IndexError, e.what());
-    return fail_return<Rslt>();
+    return failReturn<Rslt>();
   }
   catch (const std::runtime_error& e) {
     PyErr_SetString(PyExc_RuntimeError, e.what());
-    return fail_return<Rslt>();
+    return failReturn<Rslt>();
   }
   catch (const std::exception& e) {
     PyErr_SetString(PyExc_Exception, e.what());
-    return fail_return<Rslt>();
+    return failReturn<Rslt>();
   }
   catch (...) {
     auto err_msg = str_cat("unknown/unexpected c++ exception of type [",
                            current_exception_type_name(), "] occurred.");
     PyErr_SetString(PyExc_SystemError, err_msg.c_str());
-    return fail_return<Rslt>();
+    return failReturn<Rslt>();
   }
 }
 
@@ -538,7 +540,7 @@ public:
       return kPyErr;
     }
     else {
-      if (!is_parsing_successful) { throw RuntimePythonErrorNoCppMsg(); }
+      JMG_ENFORCE_PYTHON_SUCCESS(is_parsing_successful);
       if constexpr (SameAsDecayedT<std::monostate, T>) {
         // no c++ instance was provided, this is a static member
         // function or free subprogram call
@@ -559,6 +561,17 @@ public:
         return applyFcn(std::move(mbr_fcn_args));
       }
     }
+  }
+
+  /**
+   * construct a C++ object using arguments provided by python
+   */
+  template<typename T>
+  static auto construct(PyObject* args,
+                        PyObject* kwargs,
+                        std::optional<T>& instance) {
+    // delegate to invoke()
+    return invoke<T, true /* kIsConstructor */>(args, kwargs, &instance);
   }
 };
 
@@ -816,6 +829,8 @@ private:
       static constexpr auto mbrs =
         std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
 
+      // compile-time unrolled loop over the constructors, invoking
+      // each one until one succeeds or the list is exhausted
       template for (constexpr rflx::info mbr : mbrs) {
         // TODO(bd) support copy constructor?
         if constexpr (rflx::is_constructor(mbr)
@@ -823,10 +838,7 @@ private:
                       && !rflx::is_move_constructor(mbr)
                       && !rflx::is_deleted(mbr)) {
           using Invoker = detail::FcnInvoker<mbr>;
-          const auto rslt =
-            Invoker::template invoke<Tgt, true /* kIsConstructor */>(args,
-                                                                     kwargs,
-                                                                     &tgt);
+          const auto rslt = Invoker::template construct<Tgt>(args, kwargs, tgt);
           if (kPySuccess == rslt) { return kPySuccess; }
         }
       }
@@ -848,8 +860,8 @@ private:
       JMG_ENFORCE(self, "python object is null");
       auto* py_obj = reinterpret_cast<PyObj*>(self);
       using Invoker = detail::FcnInvoker<MbrFcn>;
-      return Invoker::template invoke<CppClass, false>(args, kwargs,
-                                                       &(py_obj->instance));
+      return Invoker::template invoke<CppClass>(args, kwargs,
+                                                &(py_obj->instance));
     });
   }
 
@@ -873,7 +885,7 @@ private:
    */
   static PyObject* getDataMember(PyObject* self, PyObject* name) {
     return detail::sinkingInvoke([&]() -> PyObject* {
-      auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+      auto& cpp_obj = detail::getCppInstance<PyObj>(self);
 
       // TODO(bd) figure out why attempting to factor out a function
       // to get a string_view for the attribute name results in the
@@ -909,7 +921,7 @@ private:
                         "C++ class");
         return kPyErr;
       }
-      auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+      auto& cpp_obj = detail::getCppInstance<PyObj>(self);
 
       // TODO(bd) figure out why attempting to factor out a function
       // to get a string_view for the attribute name results in the
@@ -1026,10 +1038,10 @@ private:
       else {
         using ItrState = PythonItrState<CppType>;
         using ItrWrapper = PythonObjWrapper<ItrState>;
-        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        auto& cpp_obj = detail::getCppInstance<PyObj>(self);
         auto* itr_obj =
           reinterpret_cast<ItrWrapper*>(PyType_GenericAlloc(itrProxy(), 0));
-        if (!itr_obj) { throw RuntimePythonErrorNoCppMsg(); }
+        JMG_ENFORCE_PYTHON_SUCCESS(itr_obj);
         new (&(itr_obj->instance)) std::optional<ItrState>(std::nullopt);
         itr_obj->instance.emplace(self, rng::begin(cpp_obj), rng::end(cpp_obj));
         return reinterpret_cast<PyObject*>(itr_obj);
@@ -1051,7 +1063,7 @@ private:
       else {
         using ItrState = PythonItrState<CppType>;
         using ItrWrapper = PythonObjWrapper<ItrState>;
-        auto& itr_state = detail::get_cpp_instance<ItrWrapper>(self);
+        auto& itr_state = detail::getCppInstance<ItrWrapper>(self);
         if (itr_state.end == itr_state.current) { return nullptr; }
         PyObject* item = PythonObject(*(itr_state.current)).release();
         ++(itr_state.current);
@@ -1071,7 +1083,7 @@ private:
         JMG_THROW_EXCEPTION(RuntimePythonTypeError, "object has no len()");
       }
       else {
-        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        auto& cpp_obj = detail::getCppInstance<PyObj>(self);
         return cpp_obj.size();
       }
     });
@@ -1087,7 +1099,7 @@ private:
                             "object is not subscriptable");
       }
       else {
-        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        auto& cpp_obj = detail::getCppInstance<PyObj>(self);
         const auto sz = static_cast<Py_ssize_t>(cpp_obj.size());
 
         // support pythonic negative indexing (e.g., v[-1])
@@ -1109,7 +1121,7 @@ private:
                             "object is not subscriptable");
       }
       else {
-        auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+        auto& cpp_obj = detail::getCppInstance<PyObj>(self);
         const auto sz = static_cast<Py_ssize_t>(cpp_obj.size());
 
         // support pythonic negative indexing (e.g., v[-1])
@@ -1129,7 +1141,7 @@ private:
     namespace vws = std::views;
     using namespace std::string_view_literals;
     return detail::sinkingInvoke([&]() -> PyObject* {
-      auto& cpp_obj = detail::get_cpp_instance<PyObj>(self);
+      auto& cpp_obj = detail::getCppInstance<PyObj>(self);
 
       // NOTE: "deducing this" is not idiomatic here due to the caller
       // following python's nomenclature

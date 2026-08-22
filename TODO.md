@@ -3,6 +3,9 @@
 
 ## Misc other/minor
 
+* Switch formatting to version 20 of clang-format to work around some
+  parsing bugs that affect earlier versions of clang-format when using
+  more recent versions of c++
 * Modify `find_required` to support `string_view` object for key if the
   dictionary key type is `string`
 * Create `identifier` and `arithmetic` traits for safe types that

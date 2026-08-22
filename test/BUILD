@@ -227,6 +227,22 @@ cc_test(
 )
 
 cc_test(
+    name = "test_python_support",
+    size = "small",
+    srcs = ["test_python_support.cpp"],
+    # NOTE: add the libraries from the hermetic python interpreter to
+    # the runfiles for the test
+    data = ["@rules_python//python/cc:current_py_cc_libs"],
+    linkstatic = True,
+    deps = [
+        "//:jmg",
+        "//:jmg_python",
+        "//:jmg_test_util",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "test_reflection_util",
     size = "small",
     srcs = ["test_reflection_util.cpp"],

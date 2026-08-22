@@ -68,9 +68,11 @@ cc_library(
 cc_library(
     name = "jmg_python",
     srcs = [
+        "src/python_dict.cpp",
         "src/python_object.cpp",
     ],
     hdrs = [
+        "include/jmg/python_dict.h",
         "include/jmg/python_object.h",
         "include/jmg/python_util.h",
     ],
@@ -81,6 +83,26 @@ cc_library(
         "//:jmg",
         "@rules_python//python/cc:current_py_cc_headers",
         "@rules_python//python/cc:current_py_cc_libs",
+    ],
+)
+
+cc_library(
+    name = "jmg_test_util",
+    srcs = ["src/test_util.cpp"],
+    hdrs = ["include/jmg/test_util.h"],
+    data = [
+        # include the toolchain bundle in the sandbox data map
+        "@rules_python//python:current_py_toolchain",
+    ],
+    defines = ['PYTHON_INTERPRETER_RLOCATION=\\\"$(PYTHON3)\\\"'],
+    includes = ["include"],
+    linkstatic = True,
+    toolchains = ["@rules_python//python:current_py_toolchain"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:jmg",
+        "@bazel_tools//tools/cpp/runfiles",
+        "@rules_python//python/cc:current_py_cc_headers",
     ],
 )
 
