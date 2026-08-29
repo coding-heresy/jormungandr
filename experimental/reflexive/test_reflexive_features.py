@@ -75,7 +75,7 @@ def test_reflexive_features():
     printfl(f"int return value from defaulting adding and setting was [{int_val}]")
 
     # use the default parameter
-    #int_val = test_class. add_and_set_with_default(2)
+    int_val = test_class. add_and_set_with_default(2)
     printfl(f"int return value from defaulting adding and setting was [{int_val}]")
 
     # call methods using keyword arguments
@@ -105,6 +105,15 @@ def test_reflexive_features():
     # keyword argument
     int_val = test_class.returns_int_val()
     printfl(f"int return value from previous set was [{int_val}]")
+
+    ####################
+    # overloaded methods that return one argument
+
+    int_val = test_class.overloaded_arg_return(-1)
+    printfl(f"int return value from overloaded function [{int_val}]")
+
+    str_val = test_class.overloaded_arg_return("heavily")
+    printfl(f"string return value from overloaded function [{str_val}]")
 
     ####################
     # static methods that return one argument

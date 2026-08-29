@@ -44,37 +44,59 @@ using namespace std::chrono;
 namespace rng = std::ranges;
 namespace vws = std::views;
 
-namespace jmg
+namespace
 {
 
-string snakeCaseToCamelCase(const string_view str, bool capitalize_leading) {
-  return str | vws::enumerate | vws::transform([&](auto&& item) {
-           auto [idx, chr] = item;
-           const auto capitalize =
-             ((idx < 1) && capitalize_leading) || ('_' == str[idx - 1]);
-           return capitalize ? to_upper(chr) : to_lower(chr);
-         })
+string snakeCaseConvertImpl(const string_view str,
+                            const bool capitalize_leading) {
+  return str | vws::enumerate
+         | vws::transform([&](auto&& item) {
+             auto [idx, chr] = item;
+             return // maybe capitalize the leading character
+               (capitalize_leading && !idx) ||
+                   // capitalize the first character after an underscore
+                   ((idx > 0) && ('_' == str[idx - 1]))
+                 ? jmg::to_upper(chr)
+                 : jmg::to_lower(chr);
+           })
+         // filter out all underscores
          | vws::filter([](const char chr) { return chr != '_'; })
          | rng::to<string>();
 }
 
+} // namespace
+
+namespace jmg
+{
+
+string snakeCaseToCamelCase(const string_view str) {
+  return snakeCaseConvertImpl(str, false /* capitalize_leading */);
+}
+
+string snakeCaseToPascalCase(const string_view str) {
+  return snakeCaseConvertImpl(str, true /* capitalize_leading */);
+}
+
 string camelCaseToSnakeCase(const string_view str, const bool all_caps) {
-  string rslt;
-  rslt.reserve(2 * str.size());
-  bool is_first = true;
-  rng::copy(str | vws::transform([&](const char chr) -> string {
-              if (is_first) {
-                is_first = false;
-                string rslt = from(all_caps ? to_upper(chr) : to_lower(chr));
-                return rslt;
-              }
-              return isupper(chr)
-                       ? str_cat("_", string(1, all_caps ? to_upper(chr)
-                                                         : to_lower(chr)))
-                       : from(all_caps ? to_upper(chr) : chr);
-            }) | vws::join,
-            inserterator(rslt));
-  return rslt;
+  return str | vws::enumerate | vws::transform([&](auto&& item) -> string {
+           auto [idx, chr] = item;
+           return (!idx) ?
+                         // first character converts to the appropriate version
+                         // of itself
+                    from(all_caps ? to_upper(chr) : to_lower(chr))
+                         :
+                         // characters after the first
+                    (isupper(chr)
+                       ?
+                       // uppercase characters convert to underscore followed by
+                       // the appropriate version of the character
+                       str_cat("_", string(1, all_caps ? chr : to_lower(chr)))
+                       :
+                       // lowercase characters convert to the appropriate
+                       // version of themselves
+                       from(all_caps ? to_upper(chr) : chr));
+         })
+         | vws::join | rng::to<string>();
 }
 
 std::string translateTypeNames(std::string&& content) {

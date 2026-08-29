@@ -79,6 +79,9 @@ constexpr int kPySuccess = 0;
 ////////////////////
 // utility operators and functions
 
+/**
+ * return true if two python objects are equal
+ */
 [[nodiscard]] inline bool equal(PyObject* lhs, PyObject* rhs) {
   if (lhs != rhs) {
     if (!lhs || !rhs) { return false; }
@@ -88,5 +91,10 @@ constexpr int kPySuccess = 0;
   }
   return true;
 }
+
+/**
+ * return the python reference count of an object
+ */
+inline Py_ssize_t get_ref_count(PyObject* obj) { return Py_REFCNT(obj); }
 
 } // namespace jmg::python

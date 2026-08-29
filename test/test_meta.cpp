@@ -44,9 +44,10 @@
 
 using namespace jmg;
 using namespace std;
+using namespace std::string_literals;
 
 TEST(MetaprogrammingTests, TestTypeListConcept) {
-  using TestList = meta::list<bool, float>;
+  using TestList = ::meta::list<bool, float>;
   EXPECT_TRUE(TypeListT<TestList>);
   EXPECT_FALSE(TypeListT<int>);
 }
@@ -59,8 +60,8 @@ TEST(MetaprogrammingTests, TestDecayedSameAs) {
   using RefT = decltype(ref);
   using ConstRefT = decltype(const_ref);
   // ValT is not the same as reference types
-  EXPECT_FALSE((std::same_as<ValT, RefT>));
-  EXPECT_FALSE((std::same_as<ValT, ConstRefT>));
+  EXPECT_FALSE((same_as<ValT, RefT>));
+  EXPECT_FALSE((same_as<ValT, ConstRefT>));
   // all combinations of fully decayed types are the same as all others
   EXPECT_TRUE((DecayedSameAsT<ValT, RefT>));
   EXPECT_TRUE((DecayedSameAsT<ValT, ConstRefT>));
@@ -78,9 +79,9 @@ TEST(MetaprogrammingTests, TestSameAsDecayed) {
   using RefT = decltype(ref);
   using ConstRefT = decltype(const_ref);
   // only ValT is the same as itself
-  EXPECT_TRUE((std::same_as<ValT, ValT>));
-  EXPECT_FALSE((std::same_as<ValT, RefT>));
-  EXPECT_FALSE((std::same_as<ValT, ConstRefT>));
+  EXPECT_TRUE((same_as<ValT, ValT>));
+  EXPECT_FALSE((same_as<ValT, RefT>));
+  EXPECT_FALSE((same_as<ValT, ConstRefT>));
   // ValT is the same as itself and the decayed type of any reference type
   EXPECT_TRUE((SameAsDecayedT<ValT, ValT>));
   EXPECT_TRUE((SameAsDecayedT<ValT, RefT>));
@@ -128,7 +129,7 @@ TEST(MetaprogrammingTests, TestReferenceConcepts) {
   auto& val_ref = val;
   EXPECT_FALSE(ReferenceT<decltype(val)>);
   EXPECT_TRUE(ReferenceT<decltype(val_ref)>);
-  auto val_ref_wrapped = std::ref(val_ref);
+  auto val_ref_wrapped = ref(val_ref);
   EXPECT_FALSE(RefWrappedT<decltype(val)>);
   EXPECT_FALSE(RefWrappedT<decltype(val_ref)>);
   EXPECT_TRUE(RefWrappedT<decltype(val_ref_wrapped)>);
@@ -204,7 +205,7 @@ TEST(MetaprogrammingTests, TestCStyleStringConcept) {
 
   EXPECT_FALSE(CStyleStringT<int>);
 
-  // std::string and std::string_view don't match
+  // string and string_view don't match
   EXPECT_FALSE(CStyleStringT<string>);
   EXPECT_FALSE(CStyleStringT<string_view>);
 
@@ -227,7 +228,7 @@ TEST(MetaprogrammingTests, TestStringLikeConcepts) {
   const char const_barf[5] = "barf";
   EXPECT_TRUE(StringLikeT<decltype(const_barf)>);
 
-  // also check std::string and std::string_view
+  // also check string and string_view
   EXPECT_TRUE(StringLikeT<string>);
   EXPECT_TRUE(StringLikeT<string_view>);
 }
@@ -301,27 +302,27 @@ TEST(MetaprogrammingTests, TestReturnTypeMetafunction) {
   EXPECT_TRUE((same_as<TimePoint&, ReturnTypeForT<TimePoint>>));
 }
 
-using namespace meta::placeholders;
+using namespace ::meta::placeholders;
 template<typename T1, typename T2>
-struct Matched : std::integral_constant<uint8_t, 0> {};
+struct Matched : integral_constant<uint8_t, 0> {};
 template<typename T>
-struct Matched<T, T> : std::integral_constant<uint8_t, 1> {};
+struct Matched<T, T> : integral_constant<uint8_t, 1> {};
 template<typename T>
 using CountMatchesLambda =
-  meta::lambda<_a, _b, meta::lazy::plus<_a, Matched<T, _b>>>;
+  ::meta::lambda<_a, _b, ::meta::lazy::plus<_a, Matched<T, _b>>>;
 template<typename T, TypeListT Lst>
 using CountMatches =
-  meta::fold<Lst, std::integral_constant<uint8_t, 0>, CountMatchesLambda<T>>;
+  ::meta::fold<Lst, integral_constant<uint8_t, 0>, CountMatchesLambda<T>>;
 
 TEST(MetaprogrammingTests, TestListMembershipHelpers) {
-  using List = meta::list<int, double, string>;
+  using List = ::meta::list<int, double, string>;
   EXPECT_TRUE((MemberOfListT<int, List>));
   EXPECT_FALSE((MemberOfListT<char, List>));
 
   // MemberOfListT should work when the list is constructed directly
   // from a parameter pack
   auto dbl_checker = []<typename... Args>(Args&&...) {
-    return MemberOfListT<double, meta::list<Args...>>;
+    return MemberOfListT<double, ::meta::list<Args...>>;
   };
   EXPECT_TRUE(dbl_checker(20010911, 42.0, "foo"s));
 
@@ -335,7 +336,7 @@ TEST(MetaprogrammingTests, TestListMembershipHelpers) {
   // false for non-member
   EXPECT_FALSE((UniqueMemberOfListT<float, List>));
 
-  using DuplicateList = meta::list<int, double, string, int>;
+  using DuplicateList = ::meta::list<int, double, string, int>;
   EXPECT_TRUE((UniqueMemberOfListT<double, DuplicateList>));
   // false for duplicate member
   EXPECT_FALSE((UniqueMemberOfListT<int, DuplicateList>));
@@ -349,19 +350,19 @@ TEST(MetaprogrammingTests, TestListMembershipHelpers) {
 
   // confirm that scoped enums work correctly
   enum class Enum { kFoo, kBar };
-  using ListWithEnum = meta::list<int, double, Enum, string>;
+  using ListWithEnum = ::meta::list<int, double, Enum, string>;
   EXPECT_TRUE((MemberOfListT<Enum, ListWithEnum>));
   EXPECT_TRUE((UniqueMemberOfListT<Enum, ListWithEnum>));
 
   []<typename... Args>(Args&&...) {
-    using ArgsList = meta::list<Args...>;
+    using ArgsList = ::meta::list<Args...>;
     EXPECT_TRUE((MemberOfListT<Enum, ArgsList>));
   }(15, Enum::kBar);
 }
 
 TEST(MetaprogrammingTests, TestEntryIdx) {
   using TestList =
-    meta::list<bool, uint8_t, uint16_t, uint32_t, uint64_t, float, double>;
+    ::meta::list<bool, uint8_t, uint16_t, uint32_t, uint64_t, float, double>;
   size_t idx = 0;
   EXPECT_EQ(idx++, (entryIdx<bool, TestList>()));
   EXPECT_EQ(idx++, (entryIdx<uint8_t, TestList>()));
@@ -381,42 +382,42 @@ TEST(MetaprogrammingTests, TestPolicyResolver) {
   struct DefaultPolicy2 : Policy2Tag {};
   struct OptionalPolicy2 : Policy2Tag {};
 
-  using AllTags = meta::list<Policy1Tag, Policy2Tag>;
+  using AllTags = ::meta::list<Policy1Tag, Policy2Tag>;
   {
-    using AllDefaultPolicies = meta::list<>;
-    EXPECT_TRUE((
-      is_same_v<DefaultPolicy1, PolicyResolverT<Policy1Tag, DefaultPolicy1,
-                                                AllTags, AllDefaultPolicies>>));
-    EXPECT_TRUE((
-      is_same_v<DefaultPolicy2, PolicyResolverT<Policy2Tag, DefaultPolicy2,
-                                                AllTags, AllDefaultPolicies>>));
-  }
-  {
-    using Default1Optional2 = meta::list<OptionalPolicy2>;
+    using AllDefaultPolicies = ::meta::list<>;
     EXPECT_TRUE(
-      (is_same_v<DefaultPolicy1, PolicyResolverT<Policy1Tag, DefaultPolicy1,
-                                                 AllTags, Default1Optional2>>));
-    EXPECT_TRUE((
-      is_same_v<OptionalPolicy2, PolicyResolverT<Policy2Tag, DefaultPolicy2,
-                                                 AllTags, Default1Optional2>>));
-  }
-  {
-    using Optional1Default2 = meta::list<OptionalPolicy1>;
-    EXPECT_TRUE((
-      is_same_v<OptionalPolicy1, PolicyResolverT<Policy1Tag, DefaultPolicy1,
-                                                 AllTags, Optional1Default2>>));
+      (same_as<DefaultPolicy1, PolicyResolverT<Policy1Tag, DefaultPolicy1,
+                                               AllTags, AllDefaultPolicies>>));
     EXPECT_TRUE(
-      (is_same_v<DefaultPolicy2, PolicyResolverT<Policy2Tag, DefaultPolicy2,
-                                                 AllTags, Optional1Default2>>));
+      (same_as<DefaultPolicy2, PolicyResolverT<Policy2Tag, DefaultPolicy2,
+                                               AllTags, AllDefaultPolicies>>));
   }
   {
-    using AllOptionalPolicies = meta::list<OptionalPolicy1, OptionalPolicy2>;
-    EXPECT_TRUE((is_same_v<OptionalPolicy1,
-                           PolicyResolverT<Policy1Tag, DefaultPolicy1, AllTags,
-                                           AllOptionalPolicies>>));
-    EXPECT_TRUE((is_same_v<OptionalPolicy2,
-                           PolicyResolverT<Policy2Tag, DefaultPolicy2, AllTags,
-                                           AllOptionalPolicies>>));
+    using Default1Optional2 = ::meta::list<OptionalPolicy2>;
+    EXPECT_TRUE(
+      (same_as<DefaultPolicy1, PolicyResolverT<Policy1Tag, DefaultPolicy1,
+                                               AllTags, Default1Optional2>>));
+    EXPECT_TRUE(
+      (same_as<OptionalPolicy2, PolicyResolverT<Policy2Tag, DefaultPolicy2,
+                                                AllTags, Default1Optional2>>));
+  }
+  {
+    using Optional1Default2 = ::meta::list<OptionalPolicy1>;
+    EXPECT_TRUE(
+      (same_as<OptionalPolicy1, PolicyResolverT<Policy1Tag, DefaultPolicy1,
+                                                AllTags, Optional1Default2>>));
+    EXPECT_TRUE(
+      (same_as<DefaultPolicy2, PolicyResolverT<Policy2Tag, DefaultPolicy2,
+                                               AllTags, Optional1Default2>>));
+  }
+  {
+    using AllOptionalPolicies = ::meta::list<OptionalPolicy1, OptionalPolicy2>;
+    EXPECT_TRUE((
+      same_as<OptionalPolicy1, PolicyResolverT<Policy1Tag, DefaultPolicy1,
+                                               AllTags, AllOptionalPolicies>>));
+    EXPECT_TRUE((
+      same_as<OptionalPolicy2, PolicyResolverT<Policy2Tag, DefaultPolicy2,
+                                               AllTags, AllOptionalPolicies>>));
   }
 }
 
@@ -438,7 +439,7 @@ TEST(MetaprogrammingTests, TestTupleHandling) {
   using TestTuple = tuple<int, float>;
   EXPECT_TRUE(TupleT<TestTuple>);
   EXPECT_FALSE(TupleT<int>);
-  using TestTypeList = meta::list<int, float>;
+  using TestTypeList = ::meta::list<int, float>;
   EXPECT_TRUE((same_as<TestTypeList, DeTuplizeT<TestTuple>>));
   EXPECT_TRUE((same_as<TestTuple, TuplizeT<TestTypeList>>));
 }
@@ -447,7 +448,7 @@ TEST(MetaprogrammingTests, TestVariantHandling) {
   using TestVariant = variant<int, float>;
   EXPECT_TRUE(VariantT<TestVariant>);
   EXPECT_FALSE(VariantT<int>);
-  using TestTypeList = meta::list<int, float>;
+  using TestTypeList = ::meta::list<int, float>;
   EXPECT_TRUE((same_as<TestTypeList, DeVariantizeT<TestVariant>>));
   EXPECT_TRUE((same_as<TestVariant, VariantizeT<TestTypeList>>));
 
@@ -458,11 +459,11 @@ TEST(MetaprogrammingTests, TestVariantHandling) {
   EXPECT_TRUE((same_as<int, VariantMemberForT<ReturnTypeForT<int>>>));
   EXPECT_FALSE(
     (same_as<NonPrimitive, VariantMemberForT<ReturnTypeForT<NonPrimitive>>>));
-  using NonPrimitiveTestTypeList = meta::list<int, float, NonPrimitive>;
+  using NonPrimitiveTestTypeList = ::meta::list<int, float, NonPrimitive>;
   using ReturnTypes =
-    meta::transform<NonPrimitiveTestTypeList, meta::quote<ReturnTypeForT>>;
+    ::meta::transform<NonPrimitiveTestTypeList, ::meta::quote<ReturnTypeForT>>;
   using VariantMemberTypes =
-    meta::transform<ReturnTypes, meta::quote<VariantMemberForT>>;
+    ::meta::transform<ReturnTypes, ::meta::quote<VariantMemberForT>>;
   using NonPrimitiveTestVariant = VariantizeT<VariantMemberTypes>;
   EXPECT_FALSE((MemberOfListT<NonPrimitive, VariantMemberTypes>));
   EXPECT_FALSE((MemberOfListT<NonPrimitive&, VariantMemberTypes>));
@@ -474,11 +475,9 @@ TEST(MetaprogrammingTests, TestVariantHandling) {
 }
 
 TEST(MetaprogrammingTests, TestReserableConcept) {
-  EXPECT_TRUE((ReservableT<std::unordered_map<int, int>>));
-  EXPECT_FALSE((ReservableT<std::map<int, int>>));
+  EXPECT_TRUE((ReservableT<unordered_map<int, int>>));
+  EXPECT_FALSE((ReservableT<map<int, int>>));
 }
-
-using namespace std::literals::string_literals;
 
 TEST(MetaprogrammingTests, TestTypeNameDemangler) {
   EXPECT_EQ("double"s, type_name_for<double>());
@@ -502,6 +501,6 @@ struct Ident {
 };
 
 TEST(MetaprogrammingTests, TestTrait) {
-  EXPECT_TRUE((SameAsDecayedT<int, meta::_t<Ident<int>>>));
+  EXPECT_TRUE((SameAsDecayedT<int, ::meta::_t<Ident<int>>>));
   EXPECT_TRUE((SameAsDecayedT<int, _T<Ident<int>>>));
 }

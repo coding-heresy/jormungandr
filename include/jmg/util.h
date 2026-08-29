@@ -296,7 +296,7 @@ concept BackPushableT = requires(Container& container) {
  * inserting new items into a container
  */
 template<typename Container>
-auto inserterator(Container& container) {
+constexpr auto inserterator(Container& container) {
   if constexpr (BackPushableT<Container>) {
     return std::back_inserter(container);
   }
@@ -320,9 +320,21 @@ auto inserterator(Container& container) {
  * must be stored in their unsafe forms
  */
 template<typename T>
-UnwrapT<T> unsafe_ify(T maybe_safe) {
+constexpr UnwrapT<T> unsafe_ify(T maybe_safe) {
   if constexpr (SafeT<T>) { return unsafe(maybe_safe); }
   else { return maybe_safe; }
+}
+
+/**
+ * remove duplicate elements from a container
+ *
+ * NOTE: this will result in the remaining elements being in sorted order
+ */
+template<typename Container>
+constexpr void uniq_ify(Container& container) {
+  std::ranges::sort(container);
+  const auto extras = std::ranges::unique(container);
+  container.erase(extras.begin(), extras.end());
 }
 
 /**
@@ -350,10 +362,14 @@ inline char to_upper(char chr) { return static_cast<char>(std::toupper(chr)); }
 // between cases, the target case should probably be sufficien
 
 /**
- * convert a string from snake_case to CamelCase or camelCase
+ * convert a string from snake_case to camelCase
  */
-std::string snakeCaseToCamelCase(std::string_view str,
-                                 bool capitalize_leading = true);
+std::string snakeCaseToCamelCase(std::string_view str);
+
+/**
+ * convert a string from snake_case to PascalCase
+ */
+std::string snakeCaseToPascalCase(std::string_view str);
 
 /**
  * convert a string from CamelCase or camelCase to snake_case
@@ -389,7 +405,7 @@ std::string translateTypeNames(std::string&& content);
  * construct a container and reserve memory in it
  */
 template<ReservableT Container>
-decltype(auto) make_reserved(const size_t sz) {
+constexpr decltype(auto) make_reserved(const size_t sz) {
   Container rslt;
   rslt.reserve(sz);
   return rslt;

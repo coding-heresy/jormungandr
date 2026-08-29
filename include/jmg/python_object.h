@@ -115,7 +115,7 @@ public:
   ~PythonObject();
 
   PythonObject(const PythonObject& src);
-  PythonObject(PythonObject&& src) = default;
+  PythonObject(PythonObject&& src);
   PythonObject& operator=(const PythonObject& src);
   PythonObject& operator=(PythonObject&& src);
 

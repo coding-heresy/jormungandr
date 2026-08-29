@@ -82,9 +82,15 @@ public:
   ////////////////////
   // member functions with one argument
 
-  int returnsIntArg(const int arg) const;
+  int returnsIntArg(int arg) const;
   std::string returnsStdStringArg(const std::string& str) const;
   std::string returnsStdStringViewArg(std::string_view str) const;
+
+  ////////////////////
+  // overloaded member functions with one argument
+
+  int overloadedArgReturn(int arg) const;
+  std::string overloadedArgReturn(const std::string& arg) const;
 
   ////////////////////
   // member functions with two arguments

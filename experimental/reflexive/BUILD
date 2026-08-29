@@ -39,20 +39,3 @@ py_test(
     imports = ["."],
     main = "test_reflexive_features.py",
 )
-
-################################################################################
-# TODO(bd) remove
-
-reflexive_library(
-    name = "engines",
-    srcs = ["engines.cpp"],
-    deps = [":reflexive"],
-)
-
-py_test(
-    name = "test_engines",
-    srcs = ["test_engines.py"],
-    data = [":engines.so"],
-    imports = ["."],
-    main = "test_engines.py",
-)

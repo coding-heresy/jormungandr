@@ -84,6 +84,10 @@ string TestClass::returnsStdStringViewArg(string_view str) const {
   return string(str);
 }
 
+int TestClass::overloadedArgReturn(const int arg) const { return arg; }
+
+string TestClass::overloadedArgReturn(const string& str) const { return str; }
+
 int TestClass::addAndSet(const int arg1, const int arg2) {
   auto val = arg1 + arg2;
   int_val_ = arg1;

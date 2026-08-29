@@ -193,25 +193,29 @@ TEST(GeneralUtilitiesTest, TestAbseilRework) {
 
 // TODO(bd) investigate more corner cases?
 TEST(GeneralUtilitiesTest, TestSnakeCaseToCamelCase) {
-  EXPECT_EQ("Foo"s, snakeCaseToCamelCase("foo"));
-  EXPECT_EQ("foo"s, snakeCaseToCamelCase("foo", false /*capitalize_leading */));
-  EXPECT_EQ("FooBar"s, snakeCaseToCamelCase("foo_bar"));
-  EXPECT_EQ("blub"s,
-            snakeCaseToCamelCase("blub_", false /*capitalize_leading */));
+  EXPECT_EQ("foo"s, snakeCaseToCamelCase("foo"sv));
+  EXPECT_EQ("foo"s, snakeCaseToCamelCase("Foo"sv));
+  EXPECT_EQ("fooBar"s, snakeCaseToCamelCase("foo_bar"sv));
+}
+
+TEST(GeneralUtilitiesTest, TestSnakeCaseToPascalCase) {
+  EXPECT_EQ("Foo"s, snakeCaseToPascalCase("foo"sv));
+  EXPECT_EQ("Foo"s, snakeCaseToPascalCase("Foo"sv));
+  EXPECT_EQ("FooBar"s, snakeCaseToPascalCase("foo_bar"sv));
 }
 
 TEST(GeneralUtilitiesTest, TestCamelCaseToSnakeCase) {
-  EXPECT_EQ("foo"s, camelCaseToSnakeCase("Foo"));
-  EXPECT_EQ("foo"s, camelCaseToSnakeCase("foo"));
-  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("FooBar"));
-  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("fooBar"));
-  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("foo_bar"));
+  EXPECT_EQ("foo"s, camelCaseToSnakeCase("Foo"sv));
+  EXPECT_EQ("foo"s, camelCaseToSnakeCase("foo"sv));
+  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("FooBar"sv));
+  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("fooBar"sv));
+  EXPECT_EQ("foo_bar"s, camelCaseToSnakeCase("foo_bar"sv));
 
-  EXPECT_EQ("FOO"s, camelCaseToSnakeCase("Foo", true /* all_caps */));
-  EXPECT_EQ("FOO"s, camelCaseToSnakeCase("foo", true /* all_caps */));
-  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("FooBar", true /* all_caps */));
-  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("fooBar", true /* all_caps */));
-  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("foo_bar", true /* all_caps */));
+  EXPECT_EQ("FOO"s, camelCaseToSnakeCase("Foo"sv, true /* all_caps */));
+  EXPECT_EQ("FOO"s, camelCaseToSnakeCase("foo"sv, true /* all_caps */));
+  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("FooBar"sv, true /* all_caps */));
+  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("fooBar"sv, true /* all_caps */));
+  EXPECT_EQ("FOO_BAR"s, camelCaseToSnakeCase("foo_bar"sv, true /* all_caps */));
 }
 
 TEST(GeneralUtilitiesTest, TestUnsafeIfier) {

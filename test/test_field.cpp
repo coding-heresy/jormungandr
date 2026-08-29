@@ -71,7 +71,7 @@ using OptArrayFld = ArrayField<uint64_t, "array_dbl", Optional>;
 
 TEST(FieldTests, SmokeTest) {
   // retrieve the field type with meta::_t
-  EXPECT_TRUE((same_as<int, meta::_t<IntFld>>));
+  EXPECT_TRUE((same_as<int, ::meta::_t<IntFld>>));
 }
 
 TEST(FieldTests, TestArgTypeForFieldT) {

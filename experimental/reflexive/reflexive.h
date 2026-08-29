@@ -60,7 +60,6 @@
 #include <algorithm>
 #include <array>
 #include <functional>
-#include <iostream>
 #include <meta>
 #include <numeric>
 #include <ranges>
@@ -297,6 +296,60 @@ auto sinkingInvoke(Fcn&& fcn) {
   }
 }
 
+/**
+ * return true if the parameter is a public member function, false otherwise
+ */
+template<rflx::info Mbr>
+consteval bool isPublicMemberFunction() {
+  if constexpr (rflx::is_function(Mbr) && !rflx::is_constructor(Mbr)
+                && !rflx::is_destructor(Mbr) && rflx::has_identifier(Mbr)) {
+    return true;
+  }
+  else { return false; }
+}
+
+/**
+ * return true if the parameter is a public, non-static member function, false
+ * otherwise
+ */
+template<rflx::info Mbr>
+consteval bool isPublicNonStaticMbrFcn() {
+  if constexpr (isPublicMemberFunction<Mbr>() && !rflx::is_static_member(Mbr)) {
+    return true;
+  }
+  else { return false; }
+}
+
+/**
+ * return true if the parameter is a public, static member function, false
+ * otherwise
+ */
+template<rflx::info Mbr>
+consteval bool isPublicStaticMbrFcn() {
+  if constexpr (isPublicMemberFunction<Mbr>() && rflx::is_static_member(Mbr)) {
+    return true;
+  }
+  else { return false; }
+}
+
+/**
+ * return true if the parameter is a public, non-special constructor other than
+ * a default constructor (i.e. not a copy constructor or a move constructor)
+ * false otherwise
+ */
+template<rflx::info Mbr>
+consteval bool isNonSpecialConstructor() {
+  if constexpr (rflx::is_constructor(Mbr) && !rflx::is_copy_constructor(Mbr)
+                && !rflx::is_move_constructor(Mbr) && !rflx::is_deleted(Mbr)) {
+    return true;
+  }
+  else { return false; }
+}
+
+/**
+ * class template specialized on static reflection meta info that handles all of
+ * the details of executing a c++ function using arguments passed from python
+ */
 template<rflx::info FcnMeta>
 class FcnInvoker {
   // reflection metadata for the parameters
@@ -405,7 +458,7 @@ class FcnInvoker {
    *
    * TODO(bd) handle non-primitive types other than std::string?
    */
-  static consteval rflx::info meta_make_arg_tuple() {
+  static consteval rflx::info metaMakeArgTuple() {
     return [&]<size_t... kIdxs>(std::index_sequence<kIdxs...>) {
       return ^^std::tuple<
         TgtStorageTypeT<typename[:rflx::type_of(kParamsMeta.data()[kIdxs]):]>...>;
@@ -415,7 +468,7 @@ class FcnInvoker {
   /**
    * alias for tuple-ized arguments type
    */
-  using ArgsTpl = typename[:meta_make_arg_tuple():];
+  using ArgsTpl = typename[:metaMakeArgTuple():];
 
   /**
    * transform a single python argument type into the corresponding
@@ -486,23 +539,17 @@ public:
 
     // initial sanity check of python arguments
     if constexpr (kIsConstructor) {
-      if (kwargs && !PyDict_Check(kwargs)) {
-        PyErr_SetString(PyExc_TypeError,
-                        "keyword arguments object was not a valid dictionary");
-        return kPyErr;
-      }
       if (!instance) {
         PyErr_SetString(PyExc_TypeError,
                         "no target instance was provided for constructor");
         return kPyErr;
       }
     }
-    else {
-      if (kwargs) {
-        JMG_ENFORCE_USING(
-          RuntimePythonTypeError, PyDict_Check(kwargs),
-          "keyword arguments object was not a valid dictionary");
-      }
+    if (kwargs && !PyDict_Check(kwargs)) {
+      PyErr_SetString(PyExc_TypeError,
+                      "keyword arguments object was not a valid dictionary");
+      if constexpr (kIsConstructor) { return kPyErr; }
+      else { return static_cast<PyObject*>(nullptr); }
     }
 
     ArgsTpl parsed_args{};
@@ -514,52 +561,54 @@ public:
       },
       parsed_args);
 
+    if (!is_parsing_successful) {
+      if constexpr (kIsConstructor) { return kPyErr; }
+      else { return static_cast<PyObject*>(nullptr); }
+    }
+
+    // at this point, argument parse was successful, indicating that this is
+    // correct match and subsequent exceptions should be allowed to escape to be
+    // handled by the top-level exception sink because they represent actual
+    // errors from the c++ function being called
     if constexpr (kIsConstructor) {
-      if (!is_parsing_successful) { return kPyErr; }
-      try {
-        std::apply(
-          [&](auto&&... elements) {
-            instance->emplace(std::forward<decltype(elements)>(elements)...);
-          },
-          std::move(parsed_args));
-        // clear any previously set python exception
-        PyErr_Clear();
-        return kPySuccess;
-      }
-      catch (const std::exception& e) {
-        const auto err_msg =
-          str_cat("caught exception when constructing object: ", e.what());
-        PyErr_SetString(PyExc_TypeError, err_msg.c_str());
-      }
-      catch (...) {
-        const auto err_msg =
-          str_cat("caught unexpected exception type [",
-                  current_exception_type_name(), "] when constructing object");
-        PyErr_SetString(PyExc_TypeError, err_msg.c_str());
-      }
-      return kPyErr;
+      std::apply(
+        [&](auto&&... elements) {
+          instance->emplace(std::forward<decltype(elements)>(elements)...);
+        },
+        std::move(parsed_args));
+      // clear any previously set python exception
+      PyErr_Clear();
+      return kPySuccess;
     }
     else {
-      JMG_ENFORCE_PYTHON_SUCCESS(is_parsing_successful);
+      PyObject* rslt = nullptr;
       if constexpr (SameAsDecayedT<std::monostate, T>) {
         // no c++ instance was provided, this is a static member
         // function or free subprogram call
-        JMG_ENFORCE_USING(RuntimePythonTypeError, !instance,
+        if (instance) {
+          PyErr_SetString(PyExc_TypeError,
                           "a c++ object was provided when attempting to "
                           "execute a c++ static member function");
-        return applyFcn(std::move(parsed_args));
+          return static_cast<PyObject*>(nullptr);
+        }
+        rslt = applyFcn(std::move(parsed_args));
       }
       else {
-        JMG_ENFORCE_USING(RuntimePythonTypeError,
-                          instance && instance->has_value(),
+        if (!instance || !instance->has_value()) {
+          PyErr_SetString(PyExc_TypeError,
                           "no c++ object was provided when attempting to "
                           "execute a c++ member function");
+          return static_cast<PyObject*>(nullptr);
+        }
         // c++ instance was provided, this is a member function call
         auto& cpp_obj = instance->value();
         auto mbr_fcn_args =
           std::tuple_cat(std::make_tuple(&cpp_obj), std::move(parsed_args));
-        return applyFcn(std::move(mbr_fcn_args));
+        rslt = applyFcn(std::move(mbr_fcn_args));
       }
+      // clear any previously set python exception
+      PyErr_Clear();
+      return rslt;
     }
   }
 
@@ -575,18 +624,6 @@ public:
   }
 };
 
-/**
- * return true if the parameter is a public member function, false otherwise
- */
-template<rflx::info Mbr>
-consteval bool is_public_member_function() {
-  if constexpr (rflx::is_function(Mbr) && !rflx::is_constructor(Mbr)
-                && !rflx::is_destructor(Mbr) && rflx::has_identifier(Mbr)) {
-    return true;
-  }
-  else { return false; }
-}
-
 #define JMG_RECAST_AS_PYCFCN(method) \
   reinterpret_cast<PyCFunction>(reinterpret_cast<void (*)()>(method))
 
@@ -597,34 +634,95 @@ consteval bool is_public_member_function() {
               .ml_doc = "TODO(bd) some doc string"}
 
 /**
+ * class template specialized on a c++ class type that handles execution of
+ * public member functions of the class using arguments passed from python
+ */
+template<ClassT CppClass>
+class MbrFcnInvoker {
+  static constexpr auto mbrs_ =
+    std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
+
+public:
+  template<const char* kFcnName>
+  static PyObject* invoke(PyObject* args,
+                          PyObject* kwargs,
+                          std::optional<CppClass>* instance = nullptr) {
+    static constexpr auto invoke_name = std::string_view(kFcnName);
+    // compile-time unrolled loop over the members of the class with the
+    // expectation that the various `if constexpr` gates will effectively cook
+    // it down to a loop over the member functions whose names match the
+    // non-type template parameter and the specializations of invoke (which at
+    // least attempt to parse the python arguments) will only be called for
+    // those (i.e. it will produce the most efficient code possible)
+    template for (constexpr rflx::info mbr : mbrs_) {
+      if constexpr (rflx::has_identifier(mbr)) {
+        constexpr auto mbr_name =
+          std::string_view(SnakeCaseIdOwner<mbr>().c_str());
+        if constexpr (invoke_name == mbr_name) {
+          if constexpr (isPublicNonStaticMbrFcn<mbr>()) {
+            if (instance) {
+              // non-static member function being called with an object
+              using InnerInvoker = FcnInvoker<mbr>;
+              auto* rslt =
+                InnerInvoker::template invoke<CppClass>(args, kwargs, instance);
+              if (rslt) { return rslt; }
+            }
+          }
+          else {
+            if (!instance) {
+              // static member function being called without an object
+              using InnerInvoker = FcnInvoker<mbr>;
+              auto* rslt =
+                InnerInvoker::template invoke<std::monostate>(args, kwargs);
+              if (rslt) { return rslt; }
+            }
+          }
+        }
+      }
+    }
+    PyErr_SetString(PyExc_TypeError,
+                    "no matching C++ member function signature found");
+    return nullptr;
+  }
+};
+
+/**
  * lazily generate wrappers that will allow C++ member functions to be
  * called from python
  */
 template<ClassT T>
 class LazyPythonMethodFactory {
 public:
-  static const inline auto methods = []() {
-    using CppClass = typename T::CppType;
-    static constexpr auto mbrs =
-      std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
+  using CppClass = typename T::CppType;
 
-    std::array<PyMethodDef, mbrs.size() + 1> rslt{};
+  static constexpr auto mbrs_ =
+    std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
+
+  static const inline auto methods = []() {
+    std::array<PyMethodDef, mbrs_.size() + 1> rslt{};
     size_t idx = 0;
-    template for (constexpr auto mbr : mbrs) {
-      if constexpr (is_public_member_function<mbr>()) {
-        const auto* snake_case_name = SnakeCaseIdOwner<mbr>().c_str();
-        if constexpr (!rflx::is_static_member(mbr)) {
-          rslt[idx++] = JMG_DEF_PY_METHOD(&T::template callMemberFcn<mbr>,
-                                          METH_VARARGS | METH_KEYWORDS);
-        }
-        else {
-          rslt[idx++] =
-            JMG_DEF_PY_METHOD(&T::template callStaticMemberFcn<mbr>,
-                              METH_VARARGS | METH_KEYWORDS | METH_STATIC);
+    Set<std::string, "python method names", "method name"> fcn_names{};
+    template for (constexpr auto mbr : mbrs_) {
+      if constexpr (isPublicMemberFunction<mbr>()) {
+        constexpr auto vw = std::string_view(SnakeCaseIdOwner<mbr>().c_str());
+        constexpr auto* snake_case_name = std::define_static_string(vw);
+        const auto [_, inserted] =
+          fcn_names.insert(std::string(snake_case_name));
+        if (inserted) {
+          if constexpr (!rflx::is_static_member(mbr)) {
+            rslt[idx++] =
+              JMG_DEF_PY_METHOD(&T::template callMbrFcn<snake_case_name>,
+                                METH_VARARGS | METH_KEYWORDS);
+          }
+          else {
+            rslt[idx++] =
+              JMG_DEF_PY_METHOD(&T::template callStaticMbrFcn<snake_case_name>,
+                                METH_VARARGS | METH_KEYWORDS | METH_STATIC);
+          }
         }
       }
     }
-    rslt[mbrs.size()] = kMethodListTerminator;
+    rslt[idx] = kMethodListTerminator;
     return rslt;
   }();
 };
@@ -801,6 +899,9 @@ private:
   using CppType = CppClass;
   friend detail::LazyPythonMethodFactory<type>;
 
+  static constexpr auto mbrs_ =
+    std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
+
   /**
    * convert the non-type template parameter with the class doc
    * string into a form that can be passed to the Python API
@@ -826,17 +927,11 @@ private:
       auto& tgt = py_obj->instance;
       using Tgt = DecayT<decltype(*tgt)>;
 
-      static constexpr auto mbrs =
-        std::define_static_array(rflx::members_of(^^CppClass, kPublicAccess));
-
       // compile-time unrolled loop over the constructors, invoking
       // each one until one succeeds or the list is exhausted
-      template for (constexpr rflx::info mbr : mbrs) {
+      template for (constexpr rflx::info mbr : mbrs_) {
         // TODO(bd) support copy constructor?
-        if constexpr (rflx::is_constructor(mbr)
-                      && !rflx::is_copy_constructor(mbr)
-                      && !rflx::is_move_constructor(mbr)
-                      && !rflx::is_deleted(mbr)) {
+        if constexpr (detail::isNonSpecialConstructor<mbr>()) {
           using Invoker = detail::FcnInvoker<mbr>;
           const auto rslt = Invoker::template construct<Tgt>(args, kwargs, tgt);
           if (kPySuccess == rslt) { return kPySuccess; }
@@ -848,34 +943,24 @@ private:
     });
   }
 
-  /**
-   * generic static member function that implements calling a non-static public
-   * member function of the derived class from python
-   */
-  template<rflx::info MbrFcn>
-  static PyObject* callMemberFcn(PyObject* self,
-                                 PyObject* args,
-                                 PyObject* kwargs) {
+  template<const char* kFcnName>
+  static PyObject* callMbrFcn(PyObject* self, PyObject* args, PyObject* kwargs) {
     return detail::sinkingInvoke([&]() -> PyObject* {
       JMG_ENFORCE(self, "python object is null");
       auto* py_obj = reinterpret_cast<PyObj*>(self);
-      using Invoker = detail::FcnInvoker<MbrFcn>;
-      return Invoker::template invoke<CppClass>(args, kwargs,
+      using Invoker = detail::MbrFcnInvoker<CppClass>;
+      return Invoker::template invoke<kFcnName>(args, kwargs,
                                                 &(py_obj->instance));
     });
   }
 
-  /**
-   * generic static member function that implements calling a non-static public
-   * member function of the derived class from python
-   */
-  template<rflx::info MbrFcn>
-  static PyObject* callStaticMemberFcn(PyObject* self,
-                                       PyObject* args,
-                                       PyObject* kwargs) {
+  template<const char* kFcnName>
+  static PyObject* callStaticMbrFcn(PyObject* self,
+                                    PyObject* args,
+                                    PyObject* kwargs) {
     return detail::sinkingInvoke([&]() -> PyObject* {
-      using Invoker = detail::FcnInvoker<MbrFcn>;
-      return Invoker::template invoke<std::monostate>(args, kwargs);
+      using Invoker = detail::MbrFcnInvoker<CppClass>;
+      return Invoker::template invoke<kFcnName>(args, kwargs);
     });
   }
 

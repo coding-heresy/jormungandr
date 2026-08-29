@@ -37,10 +37,17 @@ namespace jmg::python
 
 PythonObject::PythonObject() : obj_(Py_None) { Py_INCREF(obj_); }
 
-PythonObject::~PythonObject() { Py_XDECREF(obj_); }
+PythonObject::~PythonObject() {
+  if (obj_) { Py_XDECREF(obj_); }
+}
 
 PythonObject::PythonObject(const PythonObject& src) : obj_(src.obj_) {
   Py_XINCREF(obj_);
+}
+
+PythonObject::PythonObject(PythonObject&& src) : obj_(src.obj_) {
+  Py_XINCREF(obj_);
+  src.obj_ = nullptr;
 }
 
 PythonObject& PythonObject::operator=(const PythonObject& src) {
@@ -56,6 +63,7 @@ PythonObject& PythonObject::operator=(PythonObject&& src) {
   if (this != &src) {
     Py_XDECREF(obj_);
     obj_ = src.obj_;
+    src.obj_ = nullptr;
   }
   return *this;
 }

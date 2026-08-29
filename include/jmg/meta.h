@@ -250,8 +250,11 @@ concept AnyEnumT =
   std::is_enum_v<DecayT<T>> || std::is_scoped_enum_v<DecayT<T>>;
 
 ////////////////////////////////////////////////////////////////////////////////
-// concept for non-bool types
+// concept for bool and non-bool types
 ////////////////////////////////////////////////////////////////////////////////
+
+template<typename T>
+concept BoolT = SameAsDecayedT<bool, T>;
 
 template<typename T>
 concept NonBoolT = !SameAsDecayedT<bool, T>;
@@ -857,6 +860,8 @@ concept ReservableT = requires(T container, std::size_t sz) {
   { container.reserve(sz) } -> std::same_as<void>;
 };
 
+} // namespace jmg
+
 ////////////////////////////////////////////////////////////////////////////////
 // helper macro for final 'else' case of 'if constexpr' case analysis
 // over a type
@@ -867,8 +872,6 @@ concept ReservableT = requires(T container, std::size_t sz) {
     static_assert(always_false<type>,                          \
                   "unknown/unsupported " description " type"); \
   } while (0)
-
-} // namespace jmg
 
 ////////////////////////////////////////////////////////////////////////////////
 // helper macros for sinking exceptions

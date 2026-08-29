@@ -89,5 +89,5 @@ TEST(ObjectTests, TestConceptsAndCharacteristics) {
 
   // TestObject contains 4 fields after TestFieldGroup is properly
   // expanded
-  EXPECT_EQ(4, meta::size<TestObject::Fields>{});
+  EXPECT_EQ(4, ::meta::size<TestObject::Fields>{});
 }

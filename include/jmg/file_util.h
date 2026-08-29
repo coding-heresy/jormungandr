@@ -31,6 +31,8 @@
  */
 #pragma once
 
+#include <unistd.h>
+
 #include <cstring>
 
 #include <filesystem>
@@ -130,7 +132,7 @@ public:
       strm.exceptions(std::ofstream::badbit);
       strm << contents;
     }
-    close(fd);
+    ::close(fd);
     path_ = fileName;
     native_ = path_.native();
   }
